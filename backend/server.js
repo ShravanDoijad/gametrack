@@ -22,6 +22,11 @@ app.use(cors({
 }));
 app.use(cookieParser());
 
+app.get("/", (req, res) => {
+  res.send("API is running...");
+});
+
+
 const connectDB = require('./db/db');
 const turfRouter = require('./routes/turf-route');
 
