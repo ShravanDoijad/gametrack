@@ -19,6 +19,8 @@ app.use(express.json());
 const allowedOrigins = [
   'https://gametrack-git-main-shravans-projects-00476bc1.vercel.app',
   'https://gametrack-btrez6mk0-shravans-projects-00476bc1.vercel.app',
+  
+  'http://localhost:5173',
   'http://localhost:5174'
 ];
 
