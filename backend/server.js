@@ -17,9 +17,14 @@ const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
 app.use(cors({
-  origin: ['https://gametrack-git-main-shravans-projects-00476bc1.vercel.app', 'http://localhost:5174'], 
+  origin: [
+    'https://gametrack-git-main-shravans-projects-00476bc1.vercel.app',
+    'https://gametrack-btrez6mk0-shravans-projects-00476bc1.vercel.app',
+    'http://localhost:5174'
+  ],
   credentials: true
 }));
+
 app.use(cookieParser());
 
 app.get("/", (req, res) => {
