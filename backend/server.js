@@ -12,7 +12,8 @@ const ownerRouter = require('./routes/owner-route');
 const adminRouter= require('./routes/admin-route')
 
 
-const port = 3000;
+const PORT = process.env.PORT || 10000;
+
 
 app.use(express.json());
 app.use(cors({
@@ -29,8 +30,8 @@ app.use('/owner', ownerRouter);
 app.use('/otp', verifyRouter)
 app.use("/admin", adminRouter)
 
-app.listen(port, () => {
-  console.log(`Server is running on http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
 });
 
 connectDB()
