@@ -16,22 +16,8 @@ const PORT = process.env.PORT || 10000;
 
 
 app.use(express.json());
-const allowedOrigins = [
-  'https://gametrack-git-main-shravans-projects-00476bc1.vercel.app',
-  'https://gametrack-btrez6mk0-shravans-projects-00476bc1.vercel.app',
-  
-  'http://localhost:5173',
-  'http://localhost:5174'
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // or: "*"
   credentials: true
 }));
 
