@@ -7,11 +7,15 @@ export default defineConfig({
     react(),
     tailwindcss({
       config: {
-        content: [
-         
-          '!**/node_modules/@mapbox/**',
-        ]
-      }
-    })
-  ]
+        content: ['!**/node_modules/@mapbox/**'],
+      },
+    }),
+  ],
+  build: {
+    outDir: 'dist',
+  },
+ 
+  server: {
+    historyApiFallback: true,
+  }
 })
