@@ -2,6 +2,7 @@ import React, { useContext, useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { BookContext } from './constexts/bookContext';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 
 const PrivateRoute = () => {
     const navigate = useNavigate()
@@ -9,7 +10,7 @@ const PrivateRoute = () => {
 
   if (isLoading) return <div className="text-white p-6">Checking auth...</div>;
 
-  return token ? <Outlet /> : navigate("/login");
+  return token ? <Outlet /> : useEffect(()=>{navigate("/login")}, [token, isLoading]);
 };
 
 
