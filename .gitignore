@@ -1,0 +1,17 @@
+# Node.js
+node_modules/
+.env
+.vite/
+
+# Logs
+*.log
+
+# Build
+dist/
+build/
+.next/
+out/
+
+# System
+.DS_Store
+Thumbs.db
