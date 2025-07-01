@@ -80,10 +80,7 @@ const Profile = () => {
 
     };
 
-    if(!token){
-        toast.warning("Login to StepUp")
-        setloginPanel(true)
-    }
+   
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 px-6 ">

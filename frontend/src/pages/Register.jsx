@@ -7,7 +7,7 @@ import OwnerLogin from './OwnerLogin';
 
 const Register = () => {
   const navigate = useNavigate();
-  const { setloginPanel, token } = useContext(BookContext);
+  const { setloginPanel, token, settoken } = useContext(BookContext);
   const [fullname, setFullname] = useState("");
   const [phone, setPhone] = useState("");
   const [showOwnerPopup, setShowOwnerPopup] = useState(false);
@@ -25,6 +25,7 @@ const Register = () => {
       if (response.data.success) {
         setFullname("");
         setPhone("");
+        settoken(true)
         navigate("/otp", { state: { identifier: phone, type: "phone" } });
       } else {
         alert(response.data.message);

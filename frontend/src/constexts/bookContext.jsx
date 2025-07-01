@@ -6,7 +6,7 @@ import axios from 'axios';
 
 const BookContextProvider = ({ children }) => {
     const navigate = useNavigate()
-    const [isLoading, setisLoading] = useState(false)
+    const [isLoading, setisLoading] = useState(true)
     const [userInfo, setuserInfo] = useState()
     const [selectedSport, setSelectedSport] = useState("");
     const [token, settoken] = useState(false)
@@ -17,7 +17,7 @@ const BookContextProvider = ({ children }) => {
 
     useEffect(() => {
         const fetchToken = async () => {
-            setisLoading(true);
+           
             try {
                 const response = await axios.get('/api/authCheck', { withCredentials: true });
                 if (response.data.success) {

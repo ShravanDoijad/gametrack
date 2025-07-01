@@ -181,13 +181,11 @@ export const Overview = () => {
 
   
   
-
-  const handleFavorite = async () => {
-    if (token) {
-      toast.warn("Login to add Favorite");
-      setloginPanel(true)
-    }
-    else{
+const handleFavorite = async () => {
+  if (!token ) {
+    toast.warn("Login to add Favorite");
+    return setloginPanel(true);
+  }
 
   try {
     const response = await axios.post("/api/addFavorite", {
@@ -201,10 +199,10 @@ export const Overview = () => {
     if (error.response?.status === 409) {
       toast.info("Already added to favorites.");
     } else {
-      console.log(error)
+      console.log(error);
       toast.error(error.response?.data?.message || "Something went wrong");
     }
-  }}
+  }
 };
 
   if (loading) {
