@@ -65,13 +65,15 @@ try {
   if(type === 'email') {
     res.cookie('ownerToken', token, {
       httpOnly: true,
-      secure: false, 
+      secure: true,
+      sameSite: "None", 
       maxAge: 7 * 24 * 60 * 60 * 1000, 
     });
   } else if (type === 'phone') {
     res.cookie('userToken', token, {
       httpOnly: true,
-      secure: false,
+      secure: true,
+      sameSite: "None",
       maxAge: 7* 24 * 60 * 60 * 1000,
     });
   }
