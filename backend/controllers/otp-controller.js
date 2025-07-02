@@ -9,31 +9,30 @@ function generateOtp(length = 6) {
 const Otp = require('../models/otp-model');
 
 async function sendOtp({ identifier, type }) {
-
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-
   try {
-
-    if (identifier == "8999328685") {
-      await Otp.create({ identifier, type, otp: "789456", expiresAt });
-      return ({ success: true, message: 'OTP sent successfully' })
-    }
-
+    
     await Otp.deleteMany({ identifier, type });
 
-    await Otp.create({ identifier, type, otp, expiresAt });
+    // ✅ Fixed OTP for Razorpay form
+    if (identifier === "8999328685") {
+      await Otp.create({ identifier, type, otp: "789456", expiresAt });
+      return ({ success: true, message: 'OTP sent successfully (fixed test OTP)' });
+    }
 
+    // 🔁 Normal case
+    await Otp.create({ identifier, type, otp, expiresAt });
     console.log(`OTP sent to ${identifier}: ${otp}`);
 
-
-    return ({ success: true, message: 'OTP sent successfully' })
+    return ({ success: true, message: 'OTP sent successfully' });
   } catch (err) {
     console.error('Failed to send OTP:', err);
     return { success: false };
   }
 }
+
 
 async function verifyOtp(req, res) {
   const { identifier, type, otp } = req.body;
