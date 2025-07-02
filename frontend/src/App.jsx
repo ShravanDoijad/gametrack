@@ -14,8 +14,7 @@ import Booking from './pages/Booking';
 import Favorite from './pages/Favorite';
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
-import Profile from './pages/profile'
-
+import Profile from './pages/Profile';
 function App() {
   const { menuPanel, loginPanel, token } = useContext(BookContext);
 
