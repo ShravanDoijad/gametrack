@@ -17,7 +17,7 @@ async function sendOtp({ identifier, type }) {
     await Otp.deleteMany({ identifier, type });
 
     // ✅ Fixed OTP for Razorpay form
-    if (identifier === "8999328685") {
+    if (identifier =="8999328685") {
       await Otp.create({ identifier, type, otp: "789456", expiresAt });
       return ({ success: true, message: 'OTP sent successfully (fixed test OTP)' });
     }
@@ -60,8 +60,9 @@ async function verifyOtp(req, res) {
       return res
         .cookie('userToken', token, {
           httpOnly: true,
-          secure: false,
+          secure: true,
           maxAge: 1 * 24 * 60 * 60 * 1000,
+          sameSite: "None"
         })
         .status(200)
         .json({ success: true, message: "OTP verified (Razorpay)", token });
