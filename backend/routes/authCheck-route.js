@@ -3,6 +3,6 @@ const { authCheck } = require('../controllers/authCheck-controller');
 const { userMiddleware} = require('../middleware/authMiddleware')
 const authCheckRouter = express.Router();
 
-authCheckRouter.get('/authCheck',userMiddleware, authCheck);
+authCheckRouter.get('/',userMiddleware, authCheck);
 
 module.exports = authCheckRouter;

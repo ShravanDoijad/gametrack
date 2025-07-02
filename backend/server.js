@@ -55,9 +55,12 @@ app.get("/", (req, res) => {
 });
 
 // 📦 Mount routers (use clean base paths)
-app.use('/api', userRouter, authCheckRouter, turfRouter);
+app.use('/api', userRouter, turfRouter);
 
 app.use('/otp', verifyRouter);
+
+app.use('/api/authCheck', authCheckRouter);
+
 app.use('/owner', ownerRouter);
 app.use('/admin', adminRouter);
 
