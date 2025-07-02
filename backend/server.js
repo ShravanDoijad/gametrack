@@ -18,23 +18,20 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json());
 
 
-
-import cors from 'cors';
-
 const allowedOrigins = [
   'https://gametrack-sigma.vercel.app',
-  "https://gametrack-shravans-projects-00476bc1.vercel.app",
-  "https://gametrack-git-main-shravans-projects-00476bc1.vercel.app",
-
-
   'http://localhost:5173'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
+      console.log("Blocked by CORS:", origin); // ← see what’s hitting your server
       callback(new Error('Not allowed by CORS'));
     }
   },
