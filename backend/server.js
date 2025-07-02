@@ -19,22 +19,25 @@ app.use(express.json());
 
 
 
+import cors from 'cors';
+
 const allowedOrigins = [
   'https://gametrack-sigma.vercel.app',
-  'http://localhost:5173',
-  'http://localhost:5174'
+  'http://localhost:5173'
 ];
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      callback(new Error("Not allowed by CORS"));
+      callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true
-}));
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
 
 
 app.use(cookieParser());
