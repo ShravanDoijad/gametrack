@@ -61,7 +61,18 @@ const UserBookings = () => {
     const filteredBookings = activeTab === 'upcoming' ? [...today, ...upcoming] : history;
 
     const formatDate = (dateString) => format(parseISO(dateString), 'PPpp');
-    const formatTime = (timeString) => format(parse(timeString, 'hh:mm a', new Date()), 'hh:mm a');
+    
+    const formatTime = (timeString) => {
+  if (!timeString) return "Invalid time";
+  try {
+    const parsed = parse(timeString, 'HH:mm', new Date()); 
+    return format(parsed, 'hh:mm a');
+  } catch (err) {
+    console.error("Time format error:", timeString, err);
+    return "Invalid time";
+  }
+};
+
 
     const canCancelBooking = (booking) => {
         const now = new Date();
@@ -137,6 +148,7 @@ const UserBookings = () => {
                 ) : (
                     <div className="space-y-3">
                         {filteredBookings.map((booking) => {
+                            console.log("booking", booking)
                             const isExpanded = expandedCard === booking._id;
                             const isTodayBooking = isToday(parseISO(booking.date));
                             const isConfirmed = booking.status === 'confirmed';
