@@ -1,23 +1,29 @@
 const express = require('express');
-const app = express();
 const dotenv = require('dotenv');
 const cookieParser = require('cookie-parser');
-dotenv.config();
 const cors = require('cors');
 
-const userRouter = require('./routes/user-route')
-const verifyRouter = require('./routes/verifyOtp-route')
+// Load environment variables
+dotenv.config();
+
+const connectDB = require('./db/db');
+const userRouter = require('./routes/user-route');
+const verifyRouter = require('./routes/verifyOtp-route');
 const authCheckRouter = require('./routes/authCheck-route');
 const ownerRouter = require('./routes/owner-route');
-const adminRouter= require('./routes/admin-route')
+const adminRouter = require('./routes/admin-route');
+const turfRouter = require('./routes/turf-route');
 
-
+const app = express();
 const PORT = process.env.PORT || 10000;
 
+// 🔍 Log every incoming origin request BEFORE CORS
+app.use((req, res, next) => {
+  console.log("🔥 Incoming request from Origin:", req.headers.origin);
+  next();
+});
 
-app.use(express.json());
-
-
+// ✅ CORS Setup
 const allowedOrigins = [
   'https://gametrack-sigma.vercel.app',
   'http://localhost:5173'
@@ -25,50 +31,40 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.includes(origin)) {
+    // Allow requests with no origin (like Postman or curl)
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.log("Blocked by CORS:", origin); // ← see what’s hitting your server
+      console.log("⛔ Blocked by CORS:", origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
+  credentials: true
 };
 
 app.use(cors(corsOptions));
 
-app.use((req, res, next) => {
-  console.log("Incoming request from origin:", req.headers.origin);
-  next();
-});
-
-
+// 🧠 JSON + Cookie middleware
+app.use(express.json());
 app.use(cookieParser());
 
+// ✅ Test route
 app.get("/", (req, res) => {
-  res.send("API is running...");
+  res.send("🚀 API is live...");
 });
 
-
-const connectDB = require('./db/db');
-const turfRouter = require('./routes/turf-route');
-
-app.use('/api', userRouter, authCheckRouter, turfRouter);
+// 📦 Mount routers (use clean base paths)
+app.use('/api/users', userRouter);
+app.use('/api/authCheck', authCheckRouter);
+app.use('/api/turfs', turfRouter);
+app.use('/otp', verifyRouter);
 app.use('/owner', ownerRouter);
-app.use('/otp', verifyRouter)
-app.use("/admin", adminRouter)
+app.use('/admin', adminRouter);
 
+// 🚀 Start server
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`🌐 Server running on http://localhost:${PORT}`);
 });
 
-connectDB()
-
-
-
-
-
-
+// 🧬 DB connection
+connectDB();
