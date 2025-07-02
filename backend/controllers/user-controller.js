@@ -39,20 +39,22 @@ const userRegister = async (req, res) => {
       console.log("Existing user login:", phone);
     }
 
-    const otpResult = await sendOtp({ identifier: phone, type: "phone" });
-    if (!otpResult.success) {
-      return res.status(500).json({ success: false, message: "Failed to send OTP" });
-    }
+   
 
-    return res.status(200).json({
-      success: true,
-      message: "OTP sent successfully",
-      userId: user._id,
-    });
-  } catch (error) {
-    console.error("Auth error:", error);
-    return res.status(500).json({ success: false, message: "Internal server error" });
+    const otpResult = await sendOtp({ identifier: phone, type: "phone" });
+  if (!otpResult.success) {
+    return res.status(500).json({ success: false, message: "Failed to send OTP" });
   }
+
+  return res.status(200).json({
+    success: true,
+    message: "OTP sent successfully",
+    userId: user._id,
+  });
+} catch (error) {
+  console.error("Auth error:", error);
+  return res.status(500).json({ success: false, message: "Internal server error" });
+}
 };
 
 const userLogout = async (req, res) => {
@@ -149,8 +151,8 @@ const verifyOrder = async (req, res) => {
         message: "This slot is already booked"
       });
     }
-    
-    
+
+
     await updateTurfBookedSlots(bookingDetails.turfId, bookingDetails)
 
     const newBooking = await Booking.create({
@@ -166,9 +168,9 @@ const verifyOrder = async (req, res) => {
       status: "confirmed",
     });
 
-    
 
-    
+
+
 
     return res.status(200).json({
       success: true,
@@ -182,46 +184,47 @@ const verifyOrder = async (req, res) => {
   }
 }
 
-const getAllBookings = async(req, res)=>{
+const getAllBookings = async (req, res) => {
   try {
-    const user = await User.findOne({phone:req.user.phone});
+    const user = await User.findOne({ phone: req.user.phone });
     console.log(user);
-    
+
     const userId = user._id
     console.log(userId);
-    
-    if(!userId){
-      return res.status(400).json({success:false, message:"Unauthorised, Login First"})
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Unauthorised, Login First" })
     }
-    const allBookings = await Booking.find({userId:userId})
-    res.status(200).json({success: true ,allBookings:allBookings })
-    
+    const allBookings = await Booking.find({ userId: userId })
+    res.status(200).json({ success: true, allBookings: allBookings })
+
   } catch (error) {
-    console.log("Error to Fetch Bookings",error)
+    console.log("Error to Fetch Bookings", error)
     return res.status(500).json({ success: false, message: "Fetch Bookings Error", error: err.message });
   }
 }
 
 const updateUser = async (req, res) => {
   try {
-  const {userId, email, isNotification, preferredTime} = req.body;
-  if(!userId){
-      return res.status(400).json({success:false, message:"Unauthorised, Login First"})
+    const { userId, email, isNotification, preferredTime } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Unauthorised, Login First" })
     }
-  let updatedUser = await User.findByIdAndUpdate(userId, {
-    email:email,
-    isNotification:isNotification,
-    preferredTime:preferredTime
-  })
+    let updatedUser = await User.findByIdAndUpdate(userId, {
+      email: email,
+      isNotification: isNotification,
+      preferredTime: preferredTime
+    })
 
-  res.status(200).json({success: true ,updatedUser:updateUser, message:"User Updated Successfully" })
+    res.status(200).json({ success: true, updatedUser: updateUser, message: "User Updated Successfully" })
 
 
   } catch (err) {
     console.log("Error to Update User", err)
-    res.status(200).json({success:false,
-      message:"Can not Update User",
-      error:err.message
+    res.status(200).json({
+      success: false,
+      message: "Can not Update User",
+      error: err.message
     })
   }
 
@@ -229,20 +232,21 @@ const updateUser = async (req, res) => {
 
 const deleteUser = async (req, res) => {
   try {
-  const {userId} = req.body;
-  if(!userId){
-      return res.status(400).json({success:false, message:"Allready Have not any Account, Login First"})
+    const { userId } = req.body;
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Allready Have not any Account, Login First" })
     }
-   await User.findByIdAndDelete(userId)
-   
-  res.status(200).json({success: true , message:"User Deleted Successfully" })
+    await User.findByIdAndDelete(userId)
+
+    res.status(200).json({ success: true, message: "User Deleted Successfully" })
 
 
   } catch (err) {
     console.log("Error to Delete User", err)
-    res.status(200).json({success:false,
-      message:"Can not Delete User",
-      error:err.message
+    res.status(200).json({
+      success: false,
+      message: "Can not Delete User",
+      error: err.message
     })
   }
 }
@@ -257,7 +261,7 @@ const addFavorite = async (req, res) => {
     }
 
     const user = await User.findById(userId);
-    
+
     const turf = await turfModel.findById(turfId);
     if (!user || !turf) {
       return res.status(404).json({ message: "User or Turf not found." });

@@ -34,13 +34,13 @@ function App() {
           <Route path="/overview/:turfId" element={<Overview />} />
           
           {/* Protected Routes */}
-          <Route element={<PrivateRoute />}>
+          {/* <Route element={<PrivateRoute />}> */}
             <Route path="/booking" element={<Booking />} />
             <Route path="/notification" element={<Notification />} />
             <Route path="/favorite" element={<Favorite />} />
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
-          </Route>
+          {/* </Route> */}
         </Routes>
       </div>
       <Menu/>
