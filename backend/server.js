@@ -23,6 +23,10 @@ import cors from 'cors';
 
 const allowedOrigins = [
   'https://gametrack-sigma.vercel.app',
+  "https://gametrack-shravans-projects-00476bc1.vercel.app",
+  "https://gametrack-git-main-shravans-projects-00476bc1.vercel.app",
+
+
   'http://localhost:5173'
 ];
 
