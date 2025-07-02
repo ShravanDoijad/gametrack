@@ -42,7 +42,7 @@ const Profile = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            let res = await axios.post("/api/updateUser", {
+            let res = await axios.post("/api/users/updateUser", {
                 userId: userInfo._id,
                 email: formData.email,
                 isNotification: formData.preferences.notifyOnBooking,
@@ -64,7 +64,7 @@ const Profile = () => {
     const handleDeleteAccount = async () => {
         setIsDeleting(true);
         try {
-            const res = await axios.post("/api/deleteUser", {
+            const res = await axios.post("/api/users/deleteUser", {
                 userId: userInfo._id
             })
             toast.success(res.data.message)

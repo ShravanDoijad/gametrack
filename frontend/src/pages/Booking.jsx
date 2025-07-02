@@ -115,7 +115,7 @@ const Booking = () => {
 
 
 
-      const res = await axios.post("/api/createOrder", {
+      const res = await axios.post("/api/users/createOrder", {
         amount: amount,
         currency: "INR",
         receipt: `booking_${Date.now()}`,

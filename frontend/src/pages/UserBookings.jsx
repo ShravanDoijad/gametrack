@@ -11,7 +11,7 @@ const UserBookings = () => {
     useEffect(() => {
         const fetchBookings = async () => {
             try {
-                const response = await axios.get('/api/allBookings');
+                const response = await axios.get('/api/users/allBookings');
                 setBookings(response.data.allBookings);
                 setLoading(false);
             } catch (error) {

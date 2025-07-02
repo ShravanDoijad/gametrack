@@ -21,7 +21,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`/api/userRegister`, { fullname, phone });
+      const response = await axios.post(`/api/users/userRegister`, { fullname, phone });
       if (response.data.success) {
         setFullname("");
         setPhone("");

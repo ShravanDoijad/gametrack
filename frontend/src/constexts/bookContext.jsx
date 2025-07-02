@@ -19,7 +19,7 @@ const BookContextProvider = ({ children }) => {
         const fetchToken = async () => {
            
             try {
-                const response = await axios.get('/api/authCheck', { withCredentials: true });
+                const response = await axios.get('/api/auth/authCheck', { withCredentials: true });
                 if (response.data.success) {
                     settoken(response.data.isToken);
                     setuserInfo(response.data.user);
@@ -41,7 +41,7 @@ const BookContextProvider = ({ children }) => {
         e.preventDefault()
         try {
 
-            const response = await axios.post('/api/userLogout');
+            const response = await axios.post('/api/users/userLogout');
 
             settoken(false);
             setmenuPanel(false);

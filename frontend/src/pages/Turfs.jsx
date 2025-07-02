@@ -75,7 +75,7 @@ export const Turfs = () => {
   const fetchTurfs = async () => {
     try {
       setisLoading(true)
-      const response = await axios.get("/api/getAllTurfs");
+      const response = await axios.get("/api/turfs/getAllTurfs");
       setTurfs(response.data);
     } catch (error) {
       console.error("Error fetching turfs:", error);

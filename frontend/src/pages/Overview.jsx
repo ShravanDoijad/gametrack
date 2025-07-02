@@ -159,7 +159,7 @@ export const Overview = () => {
 
     try {
       setloading(true)
-      const res = await axios.get("/api/getSingleTurf", {
+      const res = await axios.get("/api/turfs/getSingleTurf", {
         params: { id: turfId }
       });
       setturfInfo(res.data.turf)
@@ -188,7 +188,7 @@ const handleFavorite = async () => {
   }
 
   try {
-    const response = await axios.post("/api/addFavorite", {
+    const response = await axios.post("/api/users/addFavorite", {
       userId: userInfo._id,
       turfId: turfInfo._id,
     });
