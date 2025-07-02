@@ -63,7 +63,7 @@ app.use('/admin', adminRouter);
 
 // 🚀 Start server
 app.listen(PORT, () => {
-  console.log("🔥 Incoming request from Origin:", req.headers.origin);
+  
   console.log(`🌐 Server running on http://localhost:${PORT}`);
 });
 
