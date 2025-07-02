@@ -40,6 +40,11 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+app.use((req, res, next) => {
+  console.log("Incoming request from origin:", req.headers.origin);
+  next();
+});
+
 
 app.use(cookieParser());
 
