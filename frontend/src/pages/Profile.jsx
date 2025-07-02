@@ -25,7 +25,7 @@ const Profile = () => {
 
 console.log("userInfo", userInfo)
 
-    if (!userInfo || !isLoading) {
+    if (!userInfo || isLoading) {
   return (
     <div className="min-h-screen flex items-center justify-center text-white text-xl">
       Loading your profile...
