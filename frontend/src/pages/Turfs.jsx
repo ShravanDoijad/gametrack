@@ -243,13 +243,13 @@ if (nearestSwitch) {
     setSelectedSport(selectedSport === id ? "" : id);
   };
 
-  if (!location) {
-    return (
-      <div className="w-full min-h-screen px-6 py-4 text-white bg-gradient-to-b from-gray-900 to-gray-950">
-        <p className="text-sm text-gray-400">Fetching your location...</p>
-      </div>
-    );
-  }
+
+  {!location && error && (
+    <div className="text-red-400 text-sm">
+      {error} <br /> Try enabling location manually or refresh the page.
+    </div>
+  )}
+
 
   if (isLoading) {
       return <SkeletonLoader />;
