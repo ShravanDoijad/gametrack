@@ -14,12 +14,16 @@ const BookContextProvider = ({ children }) => {
     const [loginPanel, setloginPanel] = useState(false)
     const [menuPanel, setmenuPanel] = useState(false)
 
+    let backend = import.meta.env.DEV
+  ? "http://localhost:10000"
+  : import.meta.env.VITE_BACKEND;
+
 
     useEffect(() => {
         const fetchToken = async () => {
            
             try {
-                const response = await axios.get('/api/auth/authCheck', { withCredentials: true });
+                const response = await axios.get(`${backend}/api/auth/authCheck`, { withCredentials: true });
                 if (response.data.success) {
                     settoken(response.data.isToken);
                     setuserInfo(response.data.user);

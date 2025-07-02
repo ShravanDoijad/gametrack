@@ -6,19 +6,30 @@ import { LogOut, Pencil, Trash2, Mail, Bell, Clock, User, Phone } from 'lucide-r
 import { toast } from 'react-toastify';
 
 const Profile = () => {
-    const { userInfo, setloginPanel, setuserInfo, handleLogout, token } = useContext(BookContext);
+    const { userInfo, isLoading , setloginPanel, setuserInfo, handleLogout, token } = useContext(BookContext);
+    
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [formData, setFormData] = useState({
-        fullname: userInfo.fullname || '',
-        phone: userInfo.phone || '',
-        email: userInfo.email || '',
-        preferences: {
-            preferredTime: userInfo.preferences?.preferredTime || '',
-            notifyOnBooking: userInfo.preferences?.notifyOnBooking || true
-        }
-    });
+  fullname: userInfo?.fullname || '',
+  phone: userInfo?.phone || '',
+  email: userInfo?.email || '',
+  preferences: {
+    preferredTime: userInfo?.preferences?.preferredTime || '',
+    notifyOnBooking: userInfo?.preferences?.notifyOnBooking ?? true
+  }
+
+
+});
+
+    if (!userInfo || !isLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-white text-xl">
+      Loading your profile...
+    </div>
+  );
+}
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
