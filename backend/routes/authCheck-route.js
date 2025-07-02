@@ -1,8 +1,8 @@
 const express = require('express');
+const router = express.Router();
 const { authCheck } = require('../controllers/authCheck-controller');
-const { userMiddleware} = require('../middleware/authMiddleware')
-const authCheckRouter = express.Router();
+const { userMiddleware } = require('../middleware/authMiddleware');
 
-authCheckRouter.get('/authCheck',userMiddleware, authCheck);
+router.get('/authCheck', userMiddleware, authCheck);
 
-module.exports = authCheckRouter;
+module.exports = router;
