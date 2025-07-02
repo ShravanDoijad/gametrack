@@ -25,8 +25,9 @@ app.use((req, res, next) => {
 
 // ✅ CORS Setup
 const allowedOrigins = [
-  'https://gametrack-sigma.vercel.app',
-  'http://localhost:5173'
+  "https://gametrack-sigma.vercel.app",
+  "http://localhost:5173",
+  undefined, // <- allow requests with no origin
 ];
 
 const corsOptions = {
