@@ -17,6 +17,7 @@ import Favorite from './pages/Favorite';
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
+import axios from "axios"
 import { getToken } from 'firebase/messaging';
 function App() {
   const { menuPanel, loginPanel, token, userInfo } = useContext(BookContext);
@@ -29,10 +30,14 @@ function App() {
         vapidKey:
           "BPTspQidZqvae_uXxp2dkSa3SZFVBb6J5nQxzADibW2mrx7d67lkjcJG5xlwTPYjzBD6wfsWxjME6uisDiCdMH4"
       })
+      try{
       await axios.post("/notifications/save-token", {
         userId: userInfo._id,
         fcmToken: token
-      });
+      });}
+      catch(error){
+        console.log("Token saving Error", error);
+      }
     }
     else if (permission === "denied") {
       toast.warn("You denied important Notifications")
@@ -40,9 +45,10 @@ function App() {
   }
 
   useEffect(() => {
-    requestPermission()
-
-  }, [])
+    if (userInfo?._id) {
+    requestPermission();
+  }
+  }, [userInfo])
 
 
 

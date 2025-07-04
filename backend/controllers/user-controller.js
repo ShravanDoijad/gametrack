@@ -104,7 +104,7 @@ const createOrder = async (req, res) => {
 
 const updateTurfBookedSlots = async (turfId, bookingDetails) => {
   const turf = await turfModel.findById(turfId);
-  console.log("turf", turf)
+  
   const exists = turf.bookedSlots.find(
     (entry) => entry.date === bookingDetails.date
   );
@@ -137,7 +137,7 @@ const verifyOrder = async (req, res) => {
   try {
 
 
-    const { razorpay_order_id,userId, razorpay_payment_id, razorpay_signature, bookingDetails } = req.body;
+    const { razorpay_order_id, userId, razorpay_payment_id, razorpay_signature, bookingDetails } = req.body;
     const sign = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto.
       createHmac("sha256", process.env.RAZORPAY_SECRET)
@@ -188,14 +188,17 @@ const verifyOrder = async (req, res) => {
     });
 
     const user = await User.findById(userId)
-    admin.messaging().send({
-      token: user.fcmToken,
-      notification: {
-        title: "Booking Confirmed",
-        body: "You're all set for 7PM today",
-      }
-    });
-
+    if (user?.fcmToken) {
+      await admin.messaging().send({
+        token: user.fcmToken,
+        notification: {
+          title: "Booking Confirmed",
+          body: `You're all set for ${bookingDetails.slots[0].start} today ⚽️`,
+        },
+      });
+    } else {
+      console.warn("❗️FCM token not found for user, skipping push notification.");
+    }
 
 
 
@@ -214,18 +217,18 @@ const verifyOrder = async (req, res) => {
 const getAllBookings = async (req, res) => {
   try {
     let query = {}
-     if (req.user.phone) {
-    query.phone = req.user.phone;
-  } else if (req.user.email) {
-    query.email = req.user.email;
-  } else if (req.user._id) {
-    query._id = req.user._id;
-  } 
+    if (req.user.phone) {
+      query.phone = req.user.phone;
+    } else if (req.user.email) {
+      query.email = req.user.email;
+    } else if (req.user._id) {
+      query._id = req.user._id;
+    }
     const user = await User.findOne(query);
-   
+
 
     const userId = user._id
-    
+
 
     if (!userId) {
       return res.status(400).json({ success: false, message: "Unauthorised, Login First" })

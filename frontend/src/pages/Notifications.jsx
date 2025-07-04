@@ -71,19 +71,9 @@ export const Notifications = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white p-6">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-4">Notifications</h1>
-        <h2 className="text-lg mb-6">Push Notification Demo</h2>
+       
 
-        <button
-          onClick={requestNotificationPermission}
-          disabled={isSubscribed}
-          className={`mb-8 px-6 py-3 rounded-lg font-medium transition-all ${
-            isSubscribed 
-              ? "bg-green-500/20 text-green-400 border border-green-500/30 cursor-not-allowed"
-              : "bg-white/10 hover:bg-white/20 text-white"
-          }`}
-        >
-          {isSubscribed ? "Subscribed ✅" : "Enable Push Notifications"}
-        </button>
+        
 
         <div className="space-y-4">
           {notifications.map((item, index) => (

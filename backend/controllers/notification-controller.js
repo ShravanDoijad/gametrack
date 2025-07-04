@@ -5,13 +5,13 @@ const User = require('../models/user-model')
 
 const saveFcm =  async (req, res) => {
   try {
-     const { userId, token } = req.body;
+     const { userId, fcmToken } = req.body;
 
-  if (!userId || !token) {
+  if (!userId || !fcmToken) {
     return res.status(400).json({ message: "Missing fields" });
   }
 
-  await User.findByIdAndUpdate(userId, { fcmToken: token });
+  await User.findByIdAndUpdate(userId, { fcmToken: fcmToken });
   res.status(200).json({ message: "Token saved" });
   } catch (error) {
     console.log("Can not Save the Token", error)
