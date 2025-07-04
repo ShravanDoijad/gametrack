@@ -1,12 +1,14 @@
-import { useContext } from 'react';
+import { useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { toast } from "react-toastify"
 import './App.css';
+import { messaging } from "./firebase"
 import Home from './pages/Home';
 import Navbar from './components/Navbar';
 import Register from './pages/Register';
 import OtpVerify from './pages/OtpVerify';
 import Menu from './pages/Menu';
-import { Notification } from './pages/Notification';
+import { Notifications } from './pages/Notifications';
 import { Turfs } from './pages/Turfs';
 import { BookContext } from './constexts/bookContext';
 import { Overview } from './pages/Overview';
@@ -15,8 +17,35 @@ import Favorite from './pages/Favorite';
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
+import { getToken } from 'firebase/messaging';
 function App() {
-  const { menuPanel, loginPanel, token } = useContext(BookContext);
+  const { menuPanel, loginPanel, token, userInfo } = useContext(BookContext);
+
+  async function requestPermission() {
+   
+    const permission = await Notification.requestPermission()
+    if (permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey:
+          "BPTspQidZqvae_uXxp2dkSa3SZFVBb6J5nQxzADibW2mrx7d67lkjcJG5xlwTPYjzBD6wfsWxjME6uisDiCdMH4"
+      })
+      await axios.post("/notifications/save-token", {
+        userId: userInfo._id,
+        fcmToken: token
+      });
+    }
+    else if (permission === "denied") {
+      toast.warn("You denied important Notifications")
+    }
+  }
+
+  useEffect(() => {
+    requestPermission()
+
+  }, [])
+
+
+
 
   return (
     <div className="max-w-screen min-h-screen bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
@@ -29,21 +58,21 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/turfs" element={<Turfs />} />
-          <Route path='/login' element={<Register/>}/>
+          <Route path='/login' element={<Register />} />
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
-          
+
           {/* Protected Routes */}
-          {/* <Route element={<PrivateRoute />}> */}
+          <Route element={<PrivateRoute />}>
             <Route path="/booking" element={<Booking />} />
-            <Route path="/notification" element={<Notification />} />
+            <Route path="/notification" element={<Notifications />} />
             <Route path="/favorite" element={<Favorite />} />
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
-          {/* </Route> */}
+          </Route>
         </Routes>
       </div>
-      <Menu/>
+      <Menu />
     </div>
   );
 }

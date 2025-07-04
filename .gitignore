@@ -12,6 +12,7 @@ build/
 .next/
 out/
 
+gametrack-serviceAccount.json
 # System
 .DS_Store
 Thumbs.db

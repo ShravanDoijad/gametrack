@@ -9,8 +9,19 @@ axios.defaults.baseURL = import.meta.env.VITE_BACKEND;
 import { ToastContainer, toast } from 'react-toastify';
 
 axios.defaults.withCredentials = true;
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/firebase-messaging-sw.js")
+    .then((registration) => {
+      console.log("SW registered:", registration);
+    })
+    .catch((error) => {
+      console.error("SW registration failed:", error);
+    });
+}
 createRoot(document.getElementById('root')).render(
   
+
+
   <BrowserRouter>
   <BookContextProvider>
   <StrictMode>

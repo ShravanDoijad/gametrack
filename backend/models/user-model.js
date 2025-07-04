@@ -3,24 +3,25 @@ const mongoose = require('mongoose');
 const UserSchema = new mongoose.Schema({
   fullname: {
     type: String,
-    required: true,
+    default: "Guest",
     trim: true,
   },
   phone: {
     type: String,
-    required: true,
     unique: true,
+    sparse: true, // ✅ Allows multiple docs with no phone
   },
   email: {
     type: String,
-    default: "",
+    unique: true,
+    sparse: true, // ✅ Allows multiple docs with no email
+    lowercase: true,
+    trim: true,
   },
-
   isVerified: {
     type: Boolean,
     default: false,
   },
-  
   favoriteTurfs: [
     {
       type: mongoose.Schema.Types.ObjectId,
@@ -31,6 +32,11 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  fcmToken: {
+  type: String,
+  default: ""
+},
+
   preferences: {
     preferredTime: { type: String, default: "" },
     notifyOnBooking: { type: Boolean, default: true },
@@ -42,5 +48,5 @@ const UserSchema = new mongoose.Schema({
   otpExpiresAt: Date,
 });
 
-const user = mongoose.model('User', UserSchema)
-module.exports = user;
+const User = mongoose.model("User", UserSchema);
+module.exports = User;

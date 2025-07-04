@@ -25,6 +25,8 @@ const BookContextProvider = ({ children }) => {
             try {
                 const response = await axios.get(`${backend}/api/auth/authCheck`, { withCredentials: true });
                 if (response.data.success) {
+
+                    console.log(response.data)
                     settoken(response.data.isToken);
                     setuserInfo(response.data.user);
                 } else {

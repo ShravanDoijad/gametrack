@@ -1,11 +1,12 @@
 const User = require("../models/user-model");
 const { sendOtp, verifyOtp } = require("./otp-controller");
 const { validationResult } = require('express-validator');
+const jwt = require("jsonwebtoken")
 const Razorpay = require("razorpay");
 const crypto = require('crypto')
 const Booking = require("../models/booking-model");
 const turfModel = require("../models/turf-model");
-const { log } = require("console");
+const admin = require("../firebase-admin")
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -13,48 +14,64 @@ const razorpay = new Razorpay({
 });
 
 const userRegister = async (req, res) => {
-  const { fullname, phone } = req.body;
-
-  if (!phone) {
-    return res.status(400).json({ success: false, message: "Phone is required" });
-  }
-
   try {
-    let user = await User.findOne({ phone });
+    const { phone, email, name } = req.body;
 
-    if (!user) {
-      if (!fullname) {
-        return res.status(400).json({ success: false, message: "Full name is required for new user" });
-      }
-
-      user = await User.create({
-        fullname,
-        phone,
-        isVerified: false,
-        otpExpiresAt: new Date(),
+    if (!phone && !email) {
+      return res.status(400).json({
+        success: false,
+        message: "Either phone or email is required",
       });
-
-      console.log("New user created:", phone);
-    } else {
-      console.log("Existing user login:", phone);
     }
 
-   
+    let user;
 
-    const otpResult = await sendOtp({ identifier: phone, type: "phone" });
-  if (!otpResult.success) {
-    return res.status(500).json({ success: false, message: "Failed to send OTP" });
+    // 👇 Case 1: Login via phone
+    if (phone) {
+      user = await User.findOne({ phone });
+      if (!user) {
+        user = await User.create({
+          phone,
+          fullname: "Guest",
+          isVerified: true,
+        });
+      }
+
+      // 👇 Case 2: Login via Google/email
+    } else if (email) {
+      user = await User.findOne({ email });
+      if (!user) {
+        user = await User.create({
+          email,
+          fullname: name || "Google User",
+          isVerified: true,
+        });
+      }
+    }
+
+    // 🔐 Token Payload
+    const payload = phone ? { phone } : { email };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.cookie("userToken", token, {
+      httpOnly: true,
+      secure: false,
+
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({ success: true, token });
+  } catch (error) {
+    console.error("Unified login error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
-
-  return res.status(200).json({
-    success: true,
-    message: "OTP sent successfully",
-    userId: user._id,
-  });
-} catch (error) {
-  console.error("Auth error:", error);
-  return res.status(500).json({ success: false, message: "Internal server error" });
-}
 };
 
 const userLogout = async (req, res) => {
@@ -118,7 +135,9 @@ const updateTurfBookedSlots = async (turfId, bookingDetails) => {
 
 const verifyOrder = async (req, res) => {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, bookingDetails } = req.body;
+
+
+    const { razorpay_order_id,userId, razorpay_payment_id, razorpay_signature, bookingDetails } = req.body;
     const sign = razorpay_order_id + '|' + razorpay_payment_id;
     const expectedSignature = crypto.
       createHmac("sha256", process.env.RAZORPAY_SECRET)
@@ -168,6 +187,14 @@ const verifyOrder = async (req, res) => {
       status: "confirmed",
     });
 
+    const user = await User.findById(userId)
+    admin.messaging().send({
+      token: user.fcmToken,
+      notification: {
+        title: "Booking Confirmed",
+        body: "You're all set for 7PM today",
+      }
+    });
 
 
 
@@ -186,11 +213,19 @@ const verifyOrder = async (req, res) => {
 
 const getAllBookings = async (req, res) => {
   try {
-    const user = await User.findOne({ phone: req.user.phone });
-    console.log(user);
+    let query = {}
+     if (req.user.phone) {
+    query.phone = req.user.phone;
+  } else if (req.user.email) {
+    query.email = req.user.email;
+  } else if (req.user._id) {
+    query._id = req.user._id;
+  } 
+    const user = await User.findOne(query);
+   
 
     const userId = user._id
-    console.log(userId);
+    
 
     if (!userId) {
       return res.status(400).json({ success: false, message: "Unauthorised, Login First" })
