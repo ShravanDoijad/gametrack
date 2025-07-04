@@ -1,5 +1,5 @@
 const admin = require("firebase-admin");
-const serviceAccount = require("./gametrack-serviceAccount.json");
+
 
 admin.initializeApp({
   credential: admin.credential.cert({
