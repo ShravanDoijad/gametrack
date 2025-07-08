@@ -6,6 +6,7 @@ const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Booking = require("../models/booking-model");
 const turfModel = require("../models/turf-model");
+const bcrypt = require("bcryptjs");
 
 const Owner = require("../models/owner-model");
 const axios = require("axios");
@@ -15,77 +16,68 @@ const razorpay = new Razorpay({
   key_secret: process.env.RAZORPAY_SECRET,
 });
 
+
 const userRegister = async (req, res) => {
   try {
-    const { phone, email } = req.body;
+    const { phone, email, password } = req.body;
 
-    if (!phone && !email) {
+    if ((!phone && !email) || !password) {
       return res.status(400).json({
         success: false,
-        message: "Either phone or email is required",
+        message: "Phone or email and password are required.",
       });
     }
 
-    let user;
+    // Check if user already exists
+    let existingUser = phone
+      ? await User.findOne({ phone })
+      : await User.findOne({ email });
 
-    if (phone) {
-      user = await User.findOne({ phone });
-      if (!user) {
-        user = await User.create({
-          phone,
-          fullname: "Guest",
-          isVerified: true,
-        });
-      }
-
-    } else if (email) {
-      user = await User.findOne({ email });
-      if (!user) {
-        user = await User.create({
-          email,
-          fullname: "Google User",
-          isVerified: true,
-        });
-      }
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: "User already exists. Please login.",
+      });
     }
 
-    const payload = { role: "user" };
-    if (email) payload.email = email;
-    if (phone) payload.phone = phone;
+    // Hash the password
+    const hashedPassword = await User.hashPassword(password); // your static method
+
+    // Create user
+    const newUser = await User.create({
+      fullname: "Guest",
+      password: hashedPassword,
+      isVerified: true,
+      ...(phone && { phone }),
+      ...(email && { email }),
+    });
+
+    const payload = {
+      id: newUser._id,
+      role: "user",
+      ...(email && { email }),
+      ...(phone && { phone }),
+    };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
-    // Check if user is turf owner
-    if (email) {
-      const owner = await Owner.findOne({ email });
-      if (owner) {
-        payload.role = "owner";
-
-
-        res.cookie("ownerToken", token, {
-          httpOnly: true,
-          secure: false,
-          sameSite: 'lax',
-          maxAge: 7 * 24 * 60 * 60 * 1000,
-        });
-
-        return res.status(200).json({ success: true, token });
-      }
-    }
-
 
     res.cookie("userToken", token, {
       httpOnly: true,
       secure: false,
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-
-    return res.status(200).json({ success: true, token });
+    return res.status(200).json({
+      success: true,
+      message: "User registered successfully",
+      token,
+      role: "user",
+    });
   } catch (error) {
-    console.error("Unified login error:", error);
+    console.error("User registration error:", error);
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -93,6 +85,86 @@ const userRegister = async (req, res) => {
     });
   }
 };
+
+
+
+const login = async (req, res) => {
+  try {
+    const { phoneOrEmail, password, role } = req.body;
+
+    if (!phoneOrEmail || !password || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "phone/email, password and role are required",
+      });
+    }
+
+    let account;
+
+    // 🔍 Find user or owner by email or phone
+    if (role === "user") {
+      account = await User.findOne({
+        $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
+      });
+    } else if (role === "owner") {
+      account = await Owner.findOne({
+        $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
+      });
+    } else {
+      return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+
+    if (!account) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Account not found" });
+    }
+
+    // 🔐 Compare password using your schema method
+    const isMatch = await account.comparePassword(password);
+    if (!isMatch) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials" });
+    }
+
+    // 🎟️ Generate JWT
+    const payload = {
+      id: account._id,
+      role: role,
+      email: account.email,
+      phone: account.phone,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    // 🍪 Set cookie based on role
+    const cookieName = role === "owner" ? "ownerToken" : "userToken";
+
+    res.cookie(cookieName, token, {
+      httpOnly: true,
+      secure: false, 
+      sameSite: "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      token,
+    });
+  } catch (error) {
+    console.error("Login Error:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Server error", error: error.message });
+  }
+};
+
+
+
 
 const userLogout = async (req, res) => {
   try {
@@ -246,16 +318,7 @@ const verifyOrder = async (req, res) => {
 
 const getAllBookings = async (req, res) => {
   try {
-    let query = {};
-    if (req.user.phone) {
-      query.phone = req.user.phone;
-    } else if (req.user.email) {
-      query.email = req.user.email;
-    } else if (req.user._id) {
-      query._id = req.user._id;
-    }
-    const user = await User.findOne(query);
-
+    const { data: user, role } = req.user;
     const userId = user._id;
 
     if (!userId) {
@@ -399,7 +462,7 @@ const sendNotification = async (req, res) => {
   }
 };
 
-module.exports = { sendNotification };
+
 
 
 const getFavoriteTurfs = async (req, res) => {
@@ -437,5 +500,8 @@ module.exports = {
   updateUser,
   deleteUser,
   addFavorite,
-  getFavoriteTurfs
+  getFavoriteTurfs,
+  login,
+  sendNotification,
+  
 };

@@ -2,12 +2,12 @@ const express = require('express');
 const { body } = require('express-validator');
 const userRouter = express.Router();
 
-const { userRegister, userLogout, createOrder, verifyOrder, getAllBookings, updateUser, deleteUser, addFavorite, getFavoriteTurfs } = require('../controllers/user-controller');
+const { userRegister, userLogout, createOrder, verifyOrder, getAllBookings, updateUser, deleteUser, addFavorite, getFavoriteTurfs, login } = require('../controllers/user-controller');
 const {userOrOwnerMiddleware} = require("../middleware/authMiddleware")
 
 
 userRouter.post(
-  "/login",
+  "/userRegister",
   [
     body("phone")
       .optional()
@@ -35,7 +35,25 @@ userRouter.post(
   userRegister
 );
 
+userRouter.post(
+  "/login",
+  [
+    body("phone")
+      .optional()
+      .isMobilePhone("en-IN")
+      .withMessage("Enter a valid Indian phone number"),
 
+    body("email")
+      .optional()
+      .isEmail()
+      .withMessage("Enter a valid email"),
+
+    body("password")
+      .notEmpty()
+      .withMessage("Password is required"),
+  ],
+  login
+);
 
 userRouter.post("/createOrder", userOrOwnerMiddleware,createOrder );
 userRouter.post("/verifyPayment", userOrOwnerMiddleware, verifyOrder );

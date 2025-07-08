@@ -5,42 +5,39 @@ const Owner = require("../models/owner-model");
 
 const userOrOwnerMiddleware = async (req, res, next) => {
   try {
-    const userToken = req.cookies?.userToken;
-    const ownerToken = req.cookies?.ownerToken;
+    const { userToken, ownerToken } = req.cookies || {};
 
     if (!userToken && !ownerToken) {
       return res.status(401).json({ message: "Unauthorized. Please login as user or owner." });
     }
 
+    // 🧠 Priority: User token check
     if (userToken) {
       try {
-        const decodedUser = jwt.verify(userToken, process.env.JWT_SECRET);
-        const user = await User.findOne({
-          $or: [{ email: decodedUser.email }, { phone: decodedUser.phone }],
-        }).select("-__v");
+        const decoded = jwt.verify(userToken, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id).select("-__v -password");
 
         if (user) {
-          req.user = { data: user, role: decodedUser.role || "user" };
+          req.user = { data: user, role: "user" };
           return next();
         }
       } catch (err) {
-        console.warn("User token invalid:", err.message);
+        console.warn("Invalid user token:", err.message);
       }
     }
 
+    // 🧠 Fallback: Owner token check
     if (ownerToken) {
       try {
-        const decodedOwner = jwt.verify(ownerToken, process.env.JWT_SECRET);
-        const owner = await Owner.findOne({
-          $or: [{ email: decodedOwner.email }, { phone: decodedOwner.phone }],
-        }).select("-__v");
+        const decoded = jwt.verify(ownerToken, process.env.JWT_SECRET);
+        const owner = await Owner.findById(decoded.id).select("-__v -password");
 
         if (owner) {
-          req.owner = { data: owner, role: decodedOwner.role || "owner" };
+          req.owner = { data: owner, role: "owner" };
           return next();
         }
       } catch (err) {
-        console.warn("Owner token invalid:", err.message);
+        console.warn("Invalid owner token:", err.message);
       }
     }
 
@@ -51,6 +48,7 @@ const userOrOwnerMiddleware = async (req, res, next) => {
   }
 };
 
+module.exports = userOrOwnerMiddleware;
 
 
 const adminMiddleware = (req, res, next) => {

@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import { BookContext } from '../constexts/bookContext';
 
-const Register = () => {
+const Login = () => {
   const { setisLoading, fetchToken } = useContext(BookContext);
   const [form, setForm] = useState({ phone: '', email: '', password: '' });
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ const Register = () => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleRegister = async () => {
+  const handleLogin = async () => {
     const { phone, email, password } = form;
 
     if ((!phone && !email) || !password) {
@@ -31,21 +31,21 @@ const Register = () => {
     }
 
     setisLoading(true);
-    const toastId = toast.loading("Creating account...");
+    const toastId = toast.loading('Logging in...');
 
     try {
-      const res = await axios.post('/api/users/userRegister', form);
+      const res = await axios.post('/api/users/login', form);
 
       if (res.data.success) {
-        toast.success("Registration successful! Logging you in...");
+        toast.success('Login successful! Redirecting...');
         fetchToken();
         setTimeout(() => navigate('/turfs'), 500);
       } else {
-        toast.error(res.data.message || "Registration failed.");
+        toast.error(res.data.message || 'Login failed.');
       }
     } catch (err) {
-      console.error("Registration error:", err);
-      toast.error(err?.response?.data?.message || "Server error. Try again.");
+      console.error('Login error:', err);
+      toast.error(err?.response?.data?.message || 'Something went wrong.');
     } finally {
       toast.dismiss(toastId);
       setisLoading(false);
@@ -61,8 +61,8 @@ const Register = () => {
         variants={containerVariants}
       >
         <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-800 mb-1">Create Your Account</h2>
-          <p className="text-gray-500">Register to get started with your bookings</p>
+          <h2 className="text-3xl font-bold text-gray-800 mb-1">Welcome Back</h2>
+          <p className="text-gray-500">Login to continue to your account</p>
         </div>
 
         <div className="space-y-4">
@@ -77,6 +77,8 @@ const Register = () => {
               className="border border-gray-200 rounded-xl p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
           </div>
+
+          <div className="text-center text-sm text-gray-500">or</div>
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -97,23 +99,23 @@ const Register = () => {
               name="password"
               value={form.password}
               onChange={handleChange}
-              placeholder="Minimum 6 characters"
+              placeholder="Enter your password"
               className="border border-gray-200 rounded-xl p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
             />
           </div>
 
           <button
-            onClick={handleRegister}
+            onClick={handleLogin}
             className="w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold py-3 rounded-xl transition shadow-md hover:shadow-lg"
           >
-            Create Account
+            Login
           </button>
         </div>
 
         <p className="text-center text-sm text-gray-500">
-          Already have an account?{" "}
-          <Link to="/login" className="text-blue-600 font-medium hover:underline">
-            Login here
+          Don’t have an account?{' '}
+          <Link to="/register" className="text-blue-600 font-medium hover:underline">
+            Register here
           </Link>
         </p>
       </motion.div>
@@ -121,4 +123,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default Login;

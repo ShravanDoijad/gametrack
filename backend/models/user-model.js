@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-
+const bcrypt = require('bcryptjs');
 const UserSchema = new mongoose.Schema({
   fullname: {
     type: String,
@@ -9,16 +9,20 @@ const UserSchema = new mongoose.Schema({
   phone: {
     type: String,
     unique: true,
-    sparse: true, // ✅ Allows multiple docs with no phone
+    sparse: true,
+    trim: true,
   },
   email: {
     type: String,
     unique: true,
-    sparse: true, // ✅ Allows multiple docs with no email
+    sparse: true,
     lowercase: true,
     trim: true,
   },
-  
+  password: {
+    type: String,
+    required: true, // ✔️ Now required for auth
+  },
   isVerified: {
     type: Boolean,
     default: false,
@@ -34,10 +38,9 @@ const UserSchema = new mongoose.Schema({
     default: Date.now,
   },
   fcmToken: {
-  type: String,
-  default: ""
-},
-
+    type: String,
+    default: "",
+  },
   preferences: {
     preferredTime: { type: String, default: "" },
     notifyOnBooking: { type: Boolean, default: true },
@@ -48,6 +51,16 @@ const UserSchema = new mongoose.Schema({
   },
   otpExpiresAt: Date,
 });
+
+
+
+ UserSchema.methods.comparePassword = async function(password){
+    return await bcrypt.compare(password, this.password)
+}
+
+UserSchema.statics.hashPassword = async function (password) {
+    return await bcrypt.hash(password, 10)
+}
 
 const User = mongoose.model("User", UserSchema);
 module.exports = User;

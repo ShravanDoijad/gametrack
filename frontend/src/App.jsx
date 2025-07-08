@@ -2,7 +2,7 @@ import { useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { toast } from "react-toastify"
 import './App.css';
-import { messaging } from "./firebase"
+
 import Home from './pages/Home';
 import Navbar from './components/Navbar';
 import Register from './pages/Register';
@@ -18,40 +18,14 @@ import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
 import axios from "axios"
-import { getToken } from 'firebase/messaging';
+
 import Owner from './Owner';
+import Login from './pages/login';
 function App() {
   const { menuPanel, loginPanel, token, userInfo } = useContext(BookContext);
 
   const navigate = useNavigate();
-  const askForPermission = () => {
-    window.OneSignal = window.OneSignal || [];
-    window.OneSignal.push(function () {
-      window.OneSignal.showSlidedownPrompt(); // 🔔 Ask manually
-    });
-  };
-
-  const getPlayerId = () => {
-    window.OneSignal = window.OneSignal || [];
-    window.OneSignal.push(function () {
-      window.OneSignal.getUserId(function (userId) {
-        console.log("Player ID:", userId);
-             axios.post("/api/users/updateUser", {
-              userId: userInfo._id,
-              playerId: playerId,
-      });
-      });
-    });
-  };
-
-  useEffect(() => {
-    // Optional: Automatically ask for permission on mount
-    // askForPermission();
-
-    // Optional: Get player ID automatically
-    getPlayerId();
-  }, []);
-
+  
 
 
 
@@ -61,16 +35,15 @@ function App() {
       {loginPanel && !token && <Register />}
 
       <Navbar />
-      <div className='flex justify-between items-center p-4 bg-gray-800 text-white z-100'>
-      <h1>Push Notification Demo</h1>
-      <button onClick={askForPermission}>Enable Notifications</button>
-    </div>
+     
 
       <div className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/turfs" element={<Turfs />} />
-          <Route path='/login' element={<Register />} />
+          <Route path='/register' element={<Register />} />
+          <Route path='/login' element={<Login />} />
+
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
 

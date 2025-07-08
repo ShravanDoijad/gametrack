@@ -1,18 +1,54 @@
-# Node.js
+# Node modules (backend & frontend)
 node_modules/
-.env
-.vite/
+**/node_modules/
 
 # Logs
+logs
 *.log
-*.json
-# Build
-dist/
-build/
-.next/
-out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-gametrack-serviceAccount.json
-# System
+# OS-specific crap
 .DS_Store
 Thumbs.db
+
+# dotenv / secrets
+.env
+.env.*   # if you have .env.dev, .env.local etc.
+
+# Firebase / OneSignal secrets
+firebase-adminsdk.json
+gametrack-service-account.json
+firebase.json    # (if not needed on frontend)
+onesignal-keys.json
+
+# Builds (optional: if you're deploying separately)
+dist/
+build/
+
+# Vercel / Netlify / Firebase local settings
+.vercel
+.netlify
+firebase-debug.log
+.firebaserc
+.firebase/
+
+# IDE/editor junk
+.vscode/
+.idea/
+*.swp
+
+# Optional: Mac local files
+*.DS_Store
+
+# Optional: Coverage from testing
+coverage/
+*.lcov
+
+# Optional: Ignore specific app data
+*.bak
+*.tgz
+*.gz
+
+bfg.jar
