@@ -20,7 +20,7 @@ import Profile from './pages/Profile';
 import axios from "axios"
 
 import Owner from './Owner';
-import Login from './pages/login';
+import Login from "./pages/Login"
 function App() {
   const { menuPanel, loginPanel, token, userInfo } = useContext(BookContext);
 
