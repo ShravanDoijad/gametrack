@@ -19,46 +19,52 @@ import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
 import axios from "axios"
 import { getToken } from 'firebase/messaging';
+import Owner from './Owner';
 function App() {
   const { menuPanel, loginPanel, token, userInfo } = useContext(BookContext);
 
-  async function requestPermission() {
-   
-    const permission = await Notification.requestPermission()
-    if (permission === "granted") {
-      const token = await getToken(messaging, {
-        vapidKey:
-          "BPTspQidZqvae_uXxp2dkSa3SZFVBb6J5nQxzADibW2mrx7d67lkjcJG5xlwTPYjzBD6wfsWxjME6uisDiCdMH4"
-      })
-      try{
-      await axios.post("/notifications/save-token", {
-        userId: userInfo._id,
-        fcmToken: token
-      });}
-      catch(error){
-        console.log("Token saving Error", error);
-      }
-    }
-    else if (permission === "denied") {
-      toast.warn("You denied important Notifications")
-    }
-  }
+  const navigate = useNavigate();
+  const askForPermission = () => {
+    window.OneSignal = window.OneSignal || [];
+    window.OneSignal.push(function () {
+      window.OneSignal.showSlidedownPrompt(); // 🔔 Ask manually
+    });
+  };
+
+  const getPlayerId = () => {
+    window.OneSignal = window.OneSignal || [];
+    window.OneSignal.push(function () {
+      window.OneSignal.getUserId(function (userId) {
+        console.log("Player ID:", userId);
+             axios.post("/api/users/updateUser", {
+              userId: userInfo._id,
+              playerId: playerId,
+      });
+      });
+    });
+  };
 
   useEffect(() => {
-    if (userInfo?._id) {
-    requestPermission();
-  }
-  }, [userInfo])
+    // Optional: Automatically ask for permission on mount
+    // askForPermission();
+
+    // Optional: Get player ID automatically
+    getPlayerId();
+  }, []);
 
 
 
 
   return (
-    <div className="max-w-screen min-h-screen bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
+    <div className="max-w-screen bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
       {menuPanel && <Menu />}
       {loginPanel && !token && <Register />}
 
       <Navbar />
+      <div className='flex justify-between items-center p-4 bg-gray-800 text-white z-100'>
+      <h1>Push Notification Demo</h1>
+      <button onClick={askForPermission}>Enable Notifications</button>
+    </div>
 
       <div className="flex-grow">
         <Routes>
@@ -76,6 +82,10 @@ function App() {
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
+
+
+          <Route path="/owner/*" element={<Owner />} />
+
         </Routes>
       </div>
       <Menu />

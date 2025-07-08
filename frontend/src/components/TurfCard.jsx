@@ -12,8 +12,7 @@ const TurfCard = ({
   sports,
   
 }) => {
-    console.log("booked slots", bookedSlots)
-    console.log("turfdistance", turf.distance)
+
   const sport = sports.find(s => s.id === selectedSport);
   
   return (

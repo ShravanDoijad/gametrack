@@ -106,6 +106,7 @@ const Booking = () => {
         }],
         sport: selectedSport || turfInfo.sportsAvailable[0],
         amount: amount,
+        slotFees: calculateFee(),
         paymentType: paymentOption,
         turfName: turfInfo.name,
         location: turfInfo.location,

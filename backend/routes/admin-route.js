@@ -4,15 +4,9 @@ const adminController = require('../controllers/admin-controller');
 const upload = require('../middleware/multer');
 const { adminMiddleware } = require('../middleware/authMiddleware');
 
-
-
 adminRouter.post('/adminLogin', adminController.adminLogin);
-adminRouter.post('/adminLogout',adminMiddleware, adminController.adminLogout);
-adminRouter.post('/addTurf',adminMiddleware, upload.array("images", 3)
-, adminController.addTurf)
+adminRouter.post('/adminLogout', adminMiddleware, adminController.adminLogout);
+adminRouter.post('/addTurf', adminMiddleware, upload.array("images", 3), adminController.addTurf);
+adminRouter.post('/addOwner', adminMiddleware, adminController.addOwner);
 
-
-
-
-
-module.exports= adminRouter
+module.exports = adminRouter;

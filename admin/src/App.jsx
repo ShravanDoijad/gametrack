@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
 import AdminLogin from './pages/adminLogin';
 import AddTurf from './pages/AddTurf';
+import AddOwner from './pages/AddOwner';
 
 function App() {
  
@@ -18,6 +19,7 @@ function App() {
           <Routes>
             <Route path="/" element={<AdminLogin />} />
             <Route path='/addTurf' element={<AddTurf/>} />
+            <Route path='/addOwner' element={<AddOwner/>} />
             
           </Routes>
         </div>

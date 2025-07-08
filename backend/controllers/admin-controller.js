@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const Turf = require("../models/turf-model");
+const Owner = require("../models/owner-model");
 const cloudinary = require("../cloudinary");
 const adminLogin = async (req, res) => {
   try {
@@ -85,8 +86,52 @@ const addTurf = async (req, res) => {
   }
 };
 
+
+
+const addOwner = async (req, res) => {
+  try {
+    const { fullname, turfname, turfId, phone, email } = req.body;
+
+    if (!fullname || !turfname || !turfId || !phone || !email) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const existingOwner = await Owner.findOne({ $or: [{ email }, { phone }] });
+    if (existingOwner) {
+      return res.status(400).json({ message: "Owner with this email or phone already exists" });
+    }
+
+    const newOwner = new Owner({
+      fullname,
+      turfname,
+      turfId,
+      phone,
+      email,
+      createdAt: new Date()
+    });
+
+    await newOwner.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Owner added successfully.",
+      owner: newOwner,
+    });
+  } catch (error) {
+    console.error("Error while adding owner:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error.",
+      error: error.message,
+    });
+  }
+};
+
+
+
 module.exports = {
   adminLogin,
   adminLogout,
   addTurf,
+  addOwner
 };

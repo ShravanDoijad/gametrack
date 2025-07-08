@@ -1,31 +1,56 @@
 const jwt = require('jsonwebtoken')
+const User =require("../models/user-model")
 
+const Owner = require("../models/owner-model");
 
-const userMiddleware = (req, res, next) => {
+const userOrOwnerMiddleware = async (req, res, next) => {
   try {
-    const token = req.cookies?.userToken;
+    const userToken = req.cookies?.userToken;
+    const ownerToken = req.cookies?.ownerToken;
 
-    if (!token) {
-      return res.status(401).json({ message: "Unauthorized, Login First" });
+    if (!userToken && !ownerToken) {
+      return res.status(401).json({ message: "Unauthorized. Please login as user or owner." });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    if (userToken) {
+      try {
+        const decodedUser = jwt.verify(userToken, process.env.JWT_SECRET);
+        const user = await User.findOne({
+          $or: [{ email: decodedUser.email }, { phone: decodedUser.phone }],
+        }).select("-__v");
 
-    next();
+        if (user) {
+          req.user = { data: user, role: decodedUser.role || "user" };
+          return next();
+        }
+      } catch (err) {
+        console.warn("User token invalid:", err.message);
+      }
+    }
+
+    if (ownerToken) {
+      try {
+        const decodedOwner = jwt.verify(ownerToken, process.env.JWT_SECRET);
+        const owner = await Owner.findOne({
+          $or: [{ email: decodedOwner.email }, { phone: decodedOwner.phone }],
+        }).select("-__v");
+
+        if (owner) {
+          req.owner = { data: owner, role: decodedOwner.role || "owner" };
+          return next();
+        }
+      } catch (err) {
+        console.warn("Owner token invalid:", err.message);
+      }
+    }
+
+    return res.status(401).json({ message: "Invalid or expired token." });
   } catch (error) {
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({ message: " Please log in again." });
-    }
-
-    if (error.name === "JsonWebTokenError") {
-      return res.status(401).json({ message: "Please log in again." });
-    }
-
-    console.error("User Auth Middleware Error:", error);
+    console.error("Auth Middleware Error:", error);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
 
 
 const adminMiddleware = (req, res, next) => {
@@ -47,7 +72,7 @@ const adminMiddleware = (req, res, next) => {
 
     next();
   } catch (error) {
-    console.log('admin authentication error', error.message);
+    console.log('admin authentication error', error);
     return res.status(401).json({ message: 'Unauthorized! Invalid or expired token.' });
   }
 };
@@ -55,6 +80,6 @@ const adminMiddleware = (req, res, next) => {
 
 
 module.exports = {
-    userMiddleware,
+    userOrOwnerMiddleware,
     adminMiddleware
 }

@@ -53,10 +53,8 @@ const MobileNav = () => {
 
   return (
     <>
-      {/* Main Content (should have padding-bottom equal to nav height) */}
-      
-      {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-gray-900 border-t border-gray-800 z-50 shadow-2xl">
+     
+      <nav className=" bottom-0 left-0 fixed right-0 bg-gray-900 border-t border-gray-800 z-50 shadow-2xl">
         <div className="flex items-center justify-around h-16 px-2">
           {tabs.map((tab) => (
             <React.Fragment key={tab.id}>

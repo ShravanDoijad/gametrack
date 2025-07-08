@@ -13,7 +13,7 @@ import { toast} from 'react-toastify';
 import { motion } from 'framer-motion';
 
 const Register = () => {
-  const { isLoading, setisLoading } = useContext(BookContext);
+  const { isLoading, setisLoading, fetchToken } = useContext(BookContext);
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState(1);
@@ -87,7 +87,8 @@ const Register = () => {
 
       if (res.data.success) {
         toast.success("Login successful! Redirecting...");
-        setTimeout(() => navigate("/turfs"), 1500);
+        fetchToken()
+        setTimeout(() => navigate("/turfs"), 500);
       } else {
         toast.error("Login failed. Please try again.");
       }
@@ -116,7 +117,8 @@ const Register = () => {
       });
 
       toast.success("Google login successful! Redirecting...");
-      setTimeout(() => navigate("/turfs"), 1500);
+      fetchToken()
+      setTimeout(() => navigate("/turfs"), 500);
     } catch (err) {
       console.error("Google login error:", err);
       toast.error("Google sign-in failed. Please try again.");
@@ -127,7 +129,7 @@ const Register = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 px-4 poppins">
+    <div className="flex fixed  items-center justify-center min-h-screen z-40 px-4 poppins">
       
       
       <motion.div 

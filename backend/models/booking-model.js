@@ -15,6 +15,10 @@ const bookingSchema = new mongoose.Schema({
     type: String, // Store as "YYYY-MM-DD"
     required: true,
   },
+  slotFees: {
+    type: Number,
+    required: true,
+  },
   slots: [
     {
       start: String,

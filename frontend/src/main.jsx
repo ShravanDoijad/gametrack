@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import { BrowserRouter } from 'react-router-dom'
 import BookContextProvider from './constexts/bookContext.jsx'
+import { setupOneSignal } from './onesignal-setup';
 import axios from 'axios';
 axios.defaults.baseURL = import.meta.env.VITE_BACKEND; 
 import { ToastContainer, toast } from 'react-toastify';
@@ -18,6 +19,7 @@ if ("serviceWorker" in navigator) {
       console.error("SW registration failed:", error);
     });
 }
+setupOneSignal();
 createRoot(document.getElementById('root')).render(
   
 

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 export const BookContext = createContext();
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const BookContextProvider = ({ children }) => {
     const navigate = useNavigate()
@@ -13,35 +14,58 @@ const BookContextProvider = ({ children }) => {
     const [favorite, setfavorite] = useState()
     const [loginPanel, setloginPanel] = useState(false)
     const [menuPanel, setmenuPanel] = useState(false)
+    const [bookings, setbookings] = useState([])
 
     let backend = import.meta.env.DEV
-  ? "http://localhost:10000"
-  : import.meta.env.VITE_BACKEND;
+        ? "http://localhost:10000"
+        : import.meta.env.VITE_BACKEND;
+
+        
 
 
-    useEffect(() => {
-        const fetchToken = async () => {
-           
-            try {
-                const response = await axios.get(`${backend}/api/auth/authCheck`, { withCredentials: true });
-                if (response.data.success) {
-
-                    console.log(response.data)
-                    settoken(response.data.isToken);
-                    setuserInfo(response.data.user);
-                } else {
-                    console.warn("No valid session found.");
-                    settoken(false);
-                }
-            } catch (error) {
-                console.error("Error fetching token:", error);
-            } finally {
-                setisLoading(false);
+    const fetchToken = async () => {
+        try {
+            // 1️⃣ Try USER auth check
+            const userRes = await axios.get(`/api/auth/authCheck`, { withCredentials: true });
+            if (userRes.data.success) {
+                settoken(userRes.data.isToken);
+                setuserInfo({
+                    ...userRes.data.user,
+                    role: userRes.data.role,
+                });
+                return;
             }
-        };
+        } catch (error) {
+            console.warn("User not authenticated, checking owner...");
+        }
 
-        fetchToken();
-    }, []);
+        try {
+            
+            const ownerRes = await axios.get(`/api/auth/ownerAuthCheck`, { withCredentials: true });
+            if (ownerRes.data.success) {
+                settoken(ownerRes.data.isToken);
+                setuserInfo({
+                    ...ownerRes.data.owner,
+                    role: ownerRes.data.role,
+                });
+                return;
+            }
+        } catch (error) {
+            console.warn("Owner not authenticated either.");
+        }
+
+        
+        settoken(false);
+        setuserInfo(null);
+        console.warn("No valid session found.");
+        setisLoading(false);
+    };
+    useEffect(()=>{
+        fetchToken()
+    },[])
+    
+
+
 
     const handleLogout = async (e) => {
         e.preventDefault()
@@ -58,6 +82,20 @@ const BookContextProvider = ({ children }) => {
         }
     };
 
+    useEffect(() => {
+        const fetchBookings = async () => {
+          try {
+            const response = await axios.get('/owner/turfAllBookings');
+            setbookings(response.data.bookings);
+            setisLoading(false);
+          } catch (err) {
+            console.error("Error fetching bookings:", err);
+            toast.error("Failed to fetch bookings");
+            setisLoading(false);
+          }
+        };
+        fetchBookings();
+      }, []);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371; // Earth's radius in km
@@ -80,6 +118,8 @@ const BookContextProvider = ({ children }) => {
         setmenuPanel,
         setloginPanel,
         handleLogout,
+        bookings,
+        setbookings,
         loginPanel,
         settoken,
         token,
@@ -91,7 +131,8 @@ const BookContextProvider = ({ children }) => {
         setSelectedSport,
         userInfo,
         setuserInfo,
-        calculateDistance
+        calculateDistance,
+        fetchToken
 
     }
     return (

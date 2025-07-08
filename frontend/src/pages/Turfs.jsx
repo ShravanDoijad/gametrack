@@ -140,7 +140,7 @@ if (nearestSwitch) {
       (slot) => slot.date === today
     );
 
-    console.log("todays booking", todayBookings)
+    
 
 
     const openingHour = Number(turf.openingTime.split(":")[0]);
@@ -166,8 +166,7 @@ if (nearestSwitch) {
           )
         )
     );
-    
-    console.log("availablity", availableSlots)
+   
 
     return {
       ...turf,
@@ -381,8 +380,6 @@ if (nearestSwitch) {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTurfs.map((turf) => 
         {
-          console.log(turf)
-          
 
           return (
             <TurfCard
