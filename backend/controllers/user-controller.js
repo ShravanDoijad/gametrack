@@ -65,8 +65,8 @@ const userRegister = async (req, res) => {
 
     res.cookie("userToken", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "lax",
+      secure: true,
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -146,8 +146,8 @@ const login = async (req, res) => {
 
     res.cookie(cookieName, token, {
       httpOnly: true,
-      secure: false, // set to true in production with HTTPS
-      sameSite: "lax",
+      secure: true, // set to true in production with HTTPS
+      sameSite: "None",
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
