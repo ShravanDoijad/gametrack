@@ -28,7 +28,8 @@ const allowedOrigins = [
   "https://gametrack-sigma.vercel.app",
   "https://gametrack-lhzg92l2o-shravans-projects-00476bc1.vercel.app",
   "http://localhost:5173",
-  "http://localhost:5174"
+  "http://localhost:5174",
+  "https://www.gametrack.in"
   
 ];
 
