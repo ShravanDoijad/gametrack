@@ -3,11 +3,10 @@ const dotenv = require('dotenv');
 const webpush = require('web-push');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-
 // Load environment variables
 dotenv.config();
-
 const connectDB = require('./db/db');
+
 const userRouter = require('./routes/user-route');
 const verifyRouter = require('./routes/verifyOtp-route');
 const authCheckRouter = require('./routes/authCheck-route');
@@ -37,7 +36,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Allow requests with no origin (like Postman or curl)
+    
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -50,31 +49,30 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+
 // 🧠 JSON + Cookie middleware
 app.use(express.json());
 app.use(cookieParser());
+
 
 // ✅ Test route
 app.get("/", (req, res) => {
   res.send("🚀 API is live...");
 });
 
+
 // 📦 Mount routers (use clean base paths)
-
-
 app.use('/otp', verifyRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', authCheckRouter);
 app.use('/api/turfs', turfRouter);
-
 app.use('/owner', ownerRouter);
 app.use('/admin', adminRouter);
 
-// 🚀 Start server
+
 app.listen(PORT, () => {
   
   console.log(`🌐 Server running on http://localhost:${PORT}`);
 });
 
-// 🧬 DB connection
 connectDB();

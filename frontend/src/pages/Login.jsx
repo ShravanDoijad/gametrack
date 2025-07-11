@@ -27,14 +27,17 @@ const Login = () => {
     const { phone, email, password } = form;
 
     if ((!phone && !email) || !password) {
-      return toast.error('Phone or Email and Password are required');
-    }
+      return toast.error('Phone or Email *and* Password are required');
 
+    }
+    const phoneOrEmail = phone || email;
+    
+    
     setisLoading(true);
     const toastId = toast.loading('Logging in...');
 
     try {
-      const res = await axios.post('/api/users/login', form);
+      const res = await axios.post('/api/users/login', {phoneOrEmail, password});
 
       if (res.data.success) {
         toast.success('Login successful! Redirecting...');

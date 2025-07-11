@@ -7,6 +7,7 @@ const AddOwner = () => {
     fullname: "",
     email: "",
     phone: "",
+    password: "",  // ← Added this
     turfId: "",
     turfname: ""
   });
@@ -27,7 +28,7 @@ const AddOwner = () => {
     setMessage("");
 
     try {
-      const response = await axios.post("/admin/addOwner", formData);
+      const response = await axios.post("/owner/register", formData);
       setMessage("Owner added successfully ✅");
       setFormData({
         fullname: "",
@@ -38,7 +39,7 @@ const AddOwner = () => {
       });
     } catch (error) {
       setMessage("Error adding owner ❌");
-      console.log(error.response )
+      console.log(error.response)
     } finally {
       setLoading(false);
     }
@@ -70,20 +71,44 @@ const AddOwner = () => {
             </div>
           ))}
 
+          {/* Password Field */}
+          <div>
+            <label className="block text-sm text-gray-300 mb-1">Password</label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              className="w-full p-3 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-lime-400 text-sm placeholder-gray-500"
+              placeholder="Enter password"
+              required
+            />
+          </div>
+
           <button
             type="submit"
             disabled={loading}
             className="w-full py-3 flex justify-center items-center bg-lime-500 hover:bg-lime-600 text-black font-semibold rounded-lg transition duration-200"
           >
-            {loading ? <Loader2 className="animate-spin" /> : <><Send className="mr-2" size={18} /> Add Owner</>}
+            {loading ? (
+              <Loader2 className="animate-spin" />
+            ) : (
+              <>
+                <Send className="mr-2" size={18} /> Add Owner
+              </>
+            )}
           </button>
 
           {message && (
-            <p className={`mt-3 text-sm font-medium ${message.includes("✅") ? "text-lime-400" : "text-rose-400"}`}>
+            <p
+              className={`mt-3 text-sm font-medium ${message.includes("✅") ? "text-lime-400" : "text-rose-400"
+                }`}
+            >
               {message}
             </p>
           )}
         </form>
+
       </div>
     </div>
   );

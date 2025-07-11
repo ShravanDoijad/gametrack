@@ -148,7 +148,7 @@ const Bookings = () => {
                     <td className="px-4 py-2 text-amber-400">₹{advance}</td>
                     <td className="px-4 py-2 text-green-400">₹{estimatedAmount}</td>
                     <td className="px-4 py-2 capitalize">{booking.status}</td>
-                    <td className="px-4 py-2 text-white">{booking.userId.email || booking.userId.phone}</td>
+                    <td className="px-4 py-2 text-white">{booking.userId?.email || booking.userId?.phone}</td>
                   </tr>
                 );
               })}

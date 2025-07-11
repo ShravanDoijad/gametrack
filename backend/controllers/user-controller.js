@@ -40,8 +40,8 @@ const userRegister = async (req, res) => {
       });
     }
 
-    // Hash the password
-    const hashedPassword = await User.hashPassword(password); // your static method
+    
+    const hashedPassword = await User.hashPassword(password); 
 
     // Create user
     const newUser = await User.create({
@@ -90,48 +90,50 @@ const userRegister = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { phoneOrEmail, password, role } = req.body;
+    const { phoneOrEmail, password } = req.body;
+    console.log("Login attempt with:", phoneOrEmail, password);
 
-    if (!phoneOrEmail || !password || !role) {
+    if (!phoneOrEmail || !password) {
       return res.status(400).json({
         success: false,
-        message: "phone/email, password and role are required",
+        message: "Phone/email and password are required",
       });
     }
 
-    let account;
+    let account, role;
 
-    // 🔍 Find user or owner by email or phone
-    if (role === "user") {
-      account = await User.findOne({
-        $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
-      });
-    } else if (role === "owner") {
-      account = await Owner.findOne({
-        $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
-      });
+    const user = await User.findOne({
+      $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
+    }).select('+password');
+
+    const owner = await Owner.findOne({
+      $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
+    }).select('+password');
+
+    if (user) {
+      account = user;
+      role = "user";
+    } else if (owner) {
+      account = owner;
+      role = "owner";
     } else {
-      return res.status(400).json({ success: false, message: "Invalid role" });
+      return res.status(404).json({
+        success: false,
+        message: "Account not found. Please create one!",
+      });
     }
 
-    if (!account) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Account not found" });
-    }
-
-    // 🔐 Compare password using your schema method
     const isMatch = await account.comparePassword(password);
     if (!isMatch) {
-      return res
-        .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials",
+      });
     }
 
-    // 🎟️ Generate JWT
     const payload = {
       id: account._id,
-      role: role,
+      role,
       email: account.email,
       phone: account.phone,
     };
@@ -140,14 +142,13 @@ const login = async (req, res) => {
       expiresIn: "7d",
     });
 
-    // 🍪 Set cookie based on role
     const cookieName = role === "owner" ? "ownerToken" : "userToken";
 
     res.cookie(cookieName, token, {
       httpOnly: true,
-      secure: false, 
+      secure: false, // set to true in production with HTTPS
       sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     return res.status(200).json({
@@ -157,11 +158,14 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login Error:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Server error", error: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message,
+    });
   }
 };
+
 
 
 
@@ -334,8 +338,8 @@ const getAllBookings = async (req, res) => {
       .status(500)
       .json({
         success: false,
-        message: "Fetch Bookings Error",
-        error: err.message,
+        message: "Fetch Bookings Error"
+        
       });
   }
 };

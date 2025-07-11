@@ -29,6 +29,7 @@
     "react-onesignal": "^3.2.3",
     "react-router-dom": "^7.1.5",
     "react-toastify": "^11.0.5",
+    "recharts": "^3.1.0",
     "swiper": "^11.2.8",
     "tailwindcss": "^4.0.5"
   },
