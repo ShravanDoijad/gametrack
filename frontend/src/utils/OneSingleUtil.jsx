@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import axios from 'axios';
 
 const OneSignalInit = ({ userId }) => {
-    useEffect(() => {
+  useEffect(() => {
     const waitForOneSignal = setInterval(async () => {
       const OneSignal = window._oneSignalInstance;
       if (!OneSignal) {
@@ -11,22 +11,27 @@ const OneSignalInit = ({ userId }) => {
       }
 
       clearInterval(waitForOneSignal);
+      console.log("✅ OneSignal is ready", OneSignal);
 
-      const permission = await OneSignal.Notifications.permission;
-      if (permission === "granted") {
-        const user = await OneSignal.User.get();
-        console.log("✅ Player ID:", user.id);
+      const permission = OneSignal.Notifications.permission;
+      console.log("🔔 OneSignal Permission:", permission);
+
+      if (permission ) {
+        const playerId = await OneSignal.getUserId();
+        console.log("✅ Player ID:", playerId);
 
         await axios.post("/api/users/updateUser", {
           userId,
-          playerId: user.id,
+          playerId,
         });
       } else {
         console.warn("🔕 Push not granted");
       }
     }, 1000);
   }, [userId]);
-    return null;
+
+  return null;
 };
+
 
 export default OneSignalInit;
