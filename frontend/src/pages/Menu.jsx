@@ -42,7 +42,7 @@ const MobileNav = () => {
       id: 'profile',
       icon: <User size={22} />,
       label: 'Profile',
-      path: token ? '/profile' : '/login',
+      path: token ? '/profile' : '/register',
       active: location.pathname.includes('profile') || location.pathname.includes('login')
     },
   ];

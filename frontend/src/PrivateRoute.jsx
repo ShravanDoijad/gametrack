@@ -9,7 +9,7 @@ const PrivateRoute = () => {
     return <div className="text-white p-6">Checking auth...</div>;
   }
 
-  return token ? <Outlet /> : <Navigate to="/login" replace />;
+  return token ? <Outlet /> : <Navigate to="/register" replace />;
 };
 
 export default PrivateRoute;

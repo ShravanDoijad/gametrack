@@ -39,7 +39,7 @@ const TurfCard = ({
         </div>
         <div className="absolute top-2 left-2 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full flex items-center">
           <Star size={14} className="text-yellow-400 fill-yellow-400 mr-1" />
-          <span className="text-sm font-medium">{turf.rating}</span>
+          <span className="text-sm font-medium">{turf.rating}||New</span>
         </div>
       </div>
 

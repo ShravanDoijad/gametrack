@@ -7,7 +7,6 @@ const crypto = require("crypto");
 const Booking = require("../models/booking-model");
 const turfModel = require("../models/turf-model");
 const bcrypt = require("bcryptjs");
-
 const Owner = require("../models/owner-model");
 const axios = require("axios");
 
@@ -19,62 +18,47 @@ const razorpay = new Razorpay({
 
 const userRegister = async (req, res) => {
   try {
-    const { phone, email, password } = req.body;
+    const { firstName, lastName, phone } = req.body;
 
-    if ((!phone && !email) || !password) {
+    if (!firstName || !lastName || !phone) {
       return res.status(400).json({
         success: false,
-        message: "Phone or email and password are required.",
+        message: "First name, last name, and phone number are required.",
       });
     }
 
-    // Check if user already exists
-    let existingUser = phone
-      ? await User.findOne({ phone })
-      : await User.findOne({ email });
-
-    if (existingUser) {
+    const existingUser = await User.findOne({ phone });
+    if(existingUser){
+    if ( existingUser.isVerified) {
       return res.status(409).json({
         success: false,
         message: "User already exists. Please login.",
       });
     }
+    else{
+      console.log("existing user", existingUser.phone);
+      await sendOtp({ identifier: existingUser.phone, role: 'user' });
+      return res.status(200).json({
+        success: true,
+        message: "OTP sent for verification",
+        
+      });
+    }
+  }
 
-    
-    const hashedPassword = await User.hashPassword(password); 
 
-    // Create user
     const newUser = await User.create({
-      fullname: "Guest",
-      password: hashedPassword,
-      isVerified: true,
-      ...(phone && { phone }),
-      ...(email && { email }),
+      fullname: `${firstName} ${lastName}`,
+      phone,
+      isVerified: false,
     });
 
-    const payload = {
-      id: newUser._id,
-      role: "user",
-      ...(email && { email }),
-      ...(phone && { phone }),
-    };
-
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "7d",
-    });
-
-    res.cookie("userToken", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    await sendOtp({ identifier: phone, role:'user' });
 
     return res.status(200).json({
       success: true,
-      message: "User registered successfully",
-      token,
-      role: "user",
+      message: "OTP sent for verification",
+      userId: newUser._id,
     });
   } catch (error) {
     console.error("User registration error:", error);
@@ -88,77 +72,51 @@ const userRegister = async (req, res) => {
 
 
 
+
 const login = async (req, res) => {
   try {
-    const { phoneOrEmail, password } = req.body;
-    console.log("Login attempt with:", phoneOrEmail, password);
+    const { identifier } = req.body;
 
-    if (!phoneOrEmail || !password) {
+    if (!identifier) {
       return res.status(400).json({
         success: false,
-        message: "Phone/email and password are required",
+        message: "Phone or email is required",
       });
     }
-
-    let account, role;
-
-    const user = await User.findOne({
-      $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
-    }).select('+password');
 
     const owner = await Owner.findOne({
-      $or: [{ phone: phoneOrEmail }, { email: phoneOrEmail }],
-    }).select('+password');
+      email: identifier 
+    });
+
+    if (owner) {
+      const result = await sendOtp({ identifier, role: 'owner' });
+      return res.status(200).json({
+        success: true,
+        message: `OTP sent to owner account`,
+      });
+    }
+
+    
+    const user = await User.findOne({
+      $or: [{ email: identifier }, { phone: identifier }],
+    });
 
     if (user) {
-      account = user;
-      role = "user";
-    } else if (owner) {
-      account = owner;
-      role = "owner";
-    } else {
-      return res.status(404).json({
-        success: false,
-        message: "Account not found. Please create one!",
+      const result = await sendOtp({ identifier, role: 'user' });
+      return res.status(200).json({
+        success: true,
+        message: `OTP sent to user account`,
       });
     }
 
-    const isMatch = await account.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid credentials",
-      });
-    }
-
-    const payload = {
-      id: account._id,
-      role,
-      email: account.email,
-      phone: account.phone,
-    };
-
-    const token = jwt.sign(payload, process.env.JWT_SECRET, {
-      expiresIn: "7d",
+    return res.status(404).json({
+      success: false,
+      message: "Account not found. Please create one!",
     });
 
-    const cookieName = role === "owner" ? "ownerToken" : "userToken";
-
-    res.cookie(cookieName, token, {
-      httpOnly: true,
-      secure: true, // set to true in production with HTTPS
-      sameSite: "None",
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      token,
-    });
   } catch (error) {
     console.error("Login Error:", error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Server error",
       error: error.message,
@@ -170,9 +128,16 @@ const login = async (req, res) => {
 
 
 
+
 const userLogout = async (req, res) => {
   try {
-    res.clearCookie("userToken");
+    res.clearCookie("userToken",
+      {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+      }
+    );
     res
       .status(200)
       .json({ success: true, message: "User logged out successfully" });
@@ -292,17 +257,11 @@ const verifyOrder = async (req, res) => {
     });
     const user = await User.findById(bookingDetails.userId);
     if (user?.playerId) {
-      await axios.post("https://onesignal.com/api/v1/notifications", {
-        app_id: process.env.ONESIGNAL_APP_ID,
-        include_player_ids: [user.playerId],
-        contents: { en: "Your turf booking is confirmed!" },
-        headings: { en: "Booking Confirmed" },
-      }, {
-        headers: {
-          Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
-          "Content-Type": "application/json"
-        }
-      });
+      await sendNotification({
+    playerId: user.playerId,
+    message: "Your turf booking is confirmed!",
+    heading: "Booking Confirmed"
+  });
     }
 
    
@@ -363,7 +322,7 @@ const updateUser = async (req, res) => {
       .status(200)
       .json({
         success: true,
-        updatedUser: updateUser,
+        updatedUser,
         message: "User Updated Successfully",
       });
   } catch (err) {
@@ -439,32 +398,20 @@ const addFavorite = async (req, res) => {
 };
 
 
-const sendNotification = async (req, res) => {
-  const { playerId, message } = req.body;
-
-  try {
-    const response = await axios.post(
-      "https://onesignal.com/api/v1/notifications",
-      {
-        app_id: process.env.ONESIGNAL_APP_ID,
-        include_player_ids: [playerId],
-        contents: { en: message },
-        headings: { en: "Turf Booking Alert!" },
-      },
-      {
-        headers: {
-          Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
-
-    res.status(200).json({ success: true, data: response.data });
-  } catch (error) {
-    console.error("Push failed:", error.response?.data || error);
-    res.status(500).json({ success: false, error: "Failed to send notification" });
-  }
+const sendNotification = async ({ playerId, message, heading }) => {
+  return await axios.post("https://onesignal.com/api/v1/notifications", {
+    app_id: process.env.ONESIGNAL_APP_ID,
+    include_player_ids: [playerId],
+    contents: { en: message },
+    headings: { en: heading },
+  }, {
+    headers: {
+      Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+  });
 };
+
 
 
 
@@ -472,14 +419,13 @@ const sendNotification = async (req, res) => {
 const getFavoriteTurfs = async (req, res) => {
   try {
     const {data:user, role} = req.user;
-    const customer = await User.findById(user._id).populate("favoriteTurfs");
+    const customer = await User.findById(user._id).populate("favoriteTurfs", "_id name location avarageRating images dayPrice nightPrice");
     if (!customer) {
       return res
         .status(401)
         .json({ message: "Unauthorized, login to Proceed" });
     }
    
-    console.log("user favorite turfs", customer.favoriteTurfs);
     res.status(200).json({
       success: true,
       message: "Favorite Turfs fetched successfully",
@@ -495,6 +441,40 @@ const getFavoriteTurfs = async (req, res) => {
   }
 };
 
+const removeFavoriteTurf = async (req, res) => {
+  try {
+    const {turfId} = req.body;
+    const {data:user, role} = req.user;
+
+    if (!turfId) {
+      return res.status(400).json({ message: "Turf ID is required." });
+    }
+
+    const customer = await User.findById(user._id);
+    if (!customer) {
+      return res.status(404).json({ message: "User not found." });
+    }
+    console.log("turfId", turfId);
+    const turfIndex = customer.favoriteTurfs.indexOf(turfId);
+    console.log("turfIndex", turfIndex);
+    if (turfIndex === -1) {
+      return res.status(404).json({ message: "Turf not found in favorites." });
+    }
+    customer.favoriteTurfs.splice(turfIndex, 1);
+    await customer.save();
+    res.status(200).json({
+      success: true,
+      message: "Turf removed from favorites successfully.",
+      favoriteTurfs: customer.favoriteTurfs,
+    });
+  } catch (error) {
+    console.error("Error removing favorite turf:", error);
+    res.status(500).json({ message: "Server error. Couldn't remove favorite turf." });
+  }
+};
+
+
+
 module.exports = {
   userRegister,
   userLogout,
@@ -507,5 +487,6 @@ module.exports = {
   getFavoriteTurfs,
   login,
   sendNotification,
+  removeFavoriteTurf,
   
 };

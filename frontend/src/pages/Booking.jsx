@@ -241,7 +241,6 @@ const Booking = () => {
 
     const bookedForDate = turfInfo.bookedSlots.find(slot => slot.date === dateStr);
 
-    console.log("turfInfo.bookedSlot", bookedForDate);
 
 
     if (!bookedForDate) {
@@ -257,7 +256,6 @@ const Booking = () => {
       });
     });
 
-    console.log("availaandnf", availableSlots)
 
     setavailableCheckoutSlots(filteredSlots.filter(slot => {
       return !bookedForDate.slots.some(bookedSlot =>
@@ -281,8 +279,7 @@ const Booking = () => {
     }
   }, [selectedDate, turfInfo]);
 
-  console.log("all Slots", allSlots);
-  console.log("out Slots", availableCheckoutSlots);
+
 
 
   const getFilteredCheckoutTimes = () => {

@@ -9,7 +9,6 @@ const Navbar = () => {
   const { setmenuPanel, token, handleLogout, setloginPanel, userInfo } = useContext(BookContext);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  console.log("token", token)
   return (
     <motion.nav
       initial={{ y: -60, opacity: 0 }}

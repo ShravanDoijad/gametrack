@@ -1,30 +1,54 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/user-model');
 const Owner = require('../models/owner-model');
+const Otp = require('../models/otp-model');
 
 function generateOtp(length = 6) {
   return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-const Otp = require('../models/otp-model');
+const accountSid = process.env.TWILIO_ACCOUNT_SID;
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const client = require('twilio')(accountSid, authToken);
 
-async function sendOtp({ identifier, type }) {
+async function sendOtp({ identifier, role }) {
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
+  console.log("cred", identifier, role);
+  
   try {
-    
-    await Otp.deleteMany({ identifier, type });
-
-    // ✅ Fixed OTP for Razorpay form
-    if (identifier =="8999328685") {
-      await Otp.create({ identifier, type, otp: "789456", expiresAt });
-      return ({ success: true, message: 'OTP sent successfully (fixed test OTP)' });
+    let targetPhone
+    if(role=== 'owner') {
+      const owner = await Owner.findOne({ email: identifier });
+      if (!owner) {
+        return { success: false, message: 'Owner not found.' };
+      }
+      targetPhone = owner.phone
     }
+    else if(role === 'user') {
+      targetPhone = identifier;
+    }
+    else {
+      return { success: false, message: 'Invalid role.' };  
+    }
+   
+    await Otp.deleteMany({ identifier:targetPhone, role });
+    await Otp.create({ identifier: targetPhone, role, otp, expiresAt });
 
-    // 🔁 Normal case
-    await Otp.create({ identifier, type, otp, expiresAt });
-    console.log(`OTP sent to ${identifier}: ${otp}`);
+    client.messages
+    .create({
+        from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
+        to: `whatsapp:+91${targetPhone}`,
+        contentSid: process.env.TWILIO_CONTENT_SID,
+        contentVariables: JSON.stringify({
+          "1": otp,
+          "2": "5 minutes"
+        })
+    })
+    .then(message => console.log("send", message.sid))
+    
+    
 
     return ({ success: true, message: 'OTP sent successfully' });
   } catch (err) {
@@ -34,78 +58,94 @@ async function sendOtp({ identifier, type }) {
 }
 
 
-async function verifyOtp(req, res) {
-  const { identifier, type, otp } = req.body;
+const verifyOtp = async (req, res) => {
   try {
-    const token = jwt.sign({ [type]: identifier }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    let model;
-    let query;
+    const { identifier, otp} = req.body;
 
-    if (type === 'email') {
-      model = Owner;
-      query = { email: identifier };
-    } else if (type === 'phone') {
-      model = User;
-      query = { phone: identifier };
+    if (!identifier || !otp) {
+      return res.status(400).json({ success: false, message: 'Credentials and OTP are required.' });
+    }
+    
+    
+    let role;
+    let targetPhone;
+    const owner = await Owner.findOne({email: identifier});
+
+    const user = await User.findOne({$or: [{email: identifier}, {phone: identifier}]});
+    if (owner) {
+      role = 'owner';
+      targetPhone = owner.phone;
+
+    } else if (user) {
+      role = 'user';
+      targetPhone = identifier;
     } else {
-      return res.status(400).json({ success: false, message: "Invalid type" });
+      return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
+    }
+    
+
+    const dbOtp = await Otp.findOne({ identifier: targetPhone, role: role });
+
+    if (!dbOtp) {
+      return res.status(400).json({ success: false, message: 'OTP not found or expired.' });
     }
 
-    if (identifier === "8999328685" && type === "phone" && otp === "789456") {
-      await model.updateOne(query, { isVerified: true, $unset: { otpExpiresAt: "" } });
-      await Otp.deleteOne({ identifier, type });
-
-      const token = jwt.sign({ [type]: identifier }, process.env.JWT_SECRET, { expiresIn: '7d' });
-
-      return res
-        .cookie('userToken', token, {
-          httpOnly: true,
-          secure: true,
-          maxAge: 1 * 24 * 60 * 60 * 1000,
-          sameSite: "None"
-        })
-        .status(200)
-        .json({ success: true, message: "OTP verified (Razorpay)", token });
+    if (dbOtp.otp !== otp) {
+      return res.status(401).json({ success: false, message: 'Invalid OTP.' });
     }
 
-    const existingOtp = await Otp.findOne({ identifier, type });
-    if (!existingOtp) {
-      return res.status(400).json({ success: false, message: "OTP not found or expired" });
-    }
-    if (existingOtp.otp !== otp) {
-      return res.status(400).json({ success: false, message: "Invalid OTP" });
+    if (dbOtp.expiresAt < new Date()) {
+      return res.status(400).json({ success: false, message: 'OTP expired.' });
     }
 
-
-
-    await model.updateOne(query, { isVerified: true, $unset: { otpExpiresAt: "" } });
-
-    await Otp.deleteOne({ identifier, type });
-
-
-    if (type === 'email') {
-      res.cookie('ownerToken', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
-    } else if (type === 'phone') {
-      res.cookie('userToken', token, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+    
+    let account ;
+    if (role === 'owner') {
+      account = owner;
+    }
+    else if (role === 'user') {
+      account = user;
+    }
+    else {
+      return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
     }
 
+    account.isVerified = true;
+    await account.save();
 
-    res.status(200).json({ success: true, message: "OTP verified successfully", token });
-  } catch (error) {
-    console.error("Error verifying OTP:", error);
-    res.status(500).json({ success: false, message: "Internal Server Error" });
+    
+    const payload = {
+      id: account._id,
+      role: role || 'user',
+      email: account.email,
+      phone: account.phone,
+    };
+
+    const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
+
+    const tokenName = role === 'owner' ? 'ownerToken' : 'userToken';
+   
+    res.cookie(tokenName, token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'None',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    
+    await Otp.deleteMany({ identifier: identifier, role: role });
+
+    return res.status(200).json({
+      success: true,
+      message: 'OTP verified successfully. User logged in.',
+      token,
+      role: payload.role,
+    });
+  } catch (err) {
+    console.error('OTP Verification Error:', err);
+    return res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
+};
 
 
 

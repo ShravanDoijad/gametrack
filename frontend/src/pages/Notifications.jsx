@@ -9,50 +9,8 @@ import {
 } from "lucide-react";
 
 export const Notifications = () => {
-  const [isSubscribed, setIsSubscribed] = useState(false);
-
-  const askForPermission = async () => {
-    const OneSignal = window._oneSignalInstance;
-    if (!OneSignal) {
-      console.warn("OneSignal SDK not yet ready, retrying...");
-      setTimeout(askForPermission, 2000);
-      return;
-    }
-
-    try {
-      const permission = await OneSignal.Notifications.requestPermission();
-      console.log("Permission result:", permission);
-      setIsSubscribed(permission === "granted");
-    } catch (err) {
-      console.error("Permission error:", err);
-    }
-  };
-
-  const getPlayerId = async () => {
-    const OneSignal = window._oneSignalInstance;
-    if (!OneSignal) {
-      console.warn("OneSignal not ready yet, retrying...");
-      setTimeout(getPlayerId, 2000);
-      return;
-    }
-
-    try {
-        const userId = await OneSignal.client.getUserId();
-    console.log("OneSignal Player ID:", userId);
 
 
-      // Optional: Save to backend
-      await axios.post("/api/users/updateUser", {
-        playerId: userId,
-      });
-    } catch (err) {
-      console.error("Error getting player ID:", err);
-    }
-  };
-
-  useEffect(() => {
-    getPlayerId();
-  }, []);
 
   const notifications = [
     {
@@ -124,20 +82,6 @@ export const Notifications = () => {
     <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white p-6">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-4">Notifications</h1>
-
-        <div className="flex justify-between items-center mb-4 bg-gray-800 rounded-xl px-4 py-3">
-          <div className="flex items-center gap-2">
-            <BellRing className="text-yellow-300" />
-            <span className="text-sm">Push Notifications</span>
-          </div>
-          <button
-            className="text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg transition"
-            onClick={askForPermission}
-          >
-            {isSubscribed ? "Permission Granted" : "Enable Alerts"}
-          </button>
-        </div>
-
         <div className="space-y-4">
           {notifications.map((item, index) => (
             <div

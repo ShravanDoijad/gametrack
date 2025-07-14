@@ -18,21 +18,23 @@ import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
 import axios from "axios"
+import  OneSignalInit  from './utils/OneSingleUtil';
 
 import Owner from './Owner';
-import Login from "./pages/Login"
 function App() {
-  const { menuPanel, loginPanel, token, userInfo } = useContext(BookContext);
-
+  const { loginPanel, token, userInfo } = useContext(BookContext);
+  
   const navigate = useNavigate();
   
 
 
-
+  console.log("User Info:", userInfo);
   return (
     <div className="max-w-screen bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
-      {menuPanel && <Menu />}
+      
       {loginPanel && !token && <Register />}
+      {token && userInfo && <OneSignalInit userId={userInfo._id} />}
+
 
       <Navbar />
      
@@ -42,7 +44,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/turfs" element={<Turfs />} />
           <Route path='/register' element={<Register />} />
-          <Route path='/login' element={<Login />} />
+          
 
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />

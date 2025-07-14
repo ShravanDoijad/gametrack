@@ -16,13 +16,6 @@ const BookContextProvider = ({ children }) => {
     const [menuPanel, setmenuPanel] = useState(false)
     const [bookings, setbookings] = useState([])
 
-    let backend = import.meta.env.DEV
-        ? "http://localhost:10000"
-        : import.meta.env.VITE_BACKEND;
-
-        
-
-
     const fetchToken = async () => {
         try {
            
@@ -38,6 +31,9 @@ const BookContextProvider = ({ children }) => {
         } catch (error) {
             console.warn("User not authenticated, checking owner...");
         }
+        finally{
+            setisLoading(false);
+        }
 
         try {
             
@@ -52,6 +48,9 @@ const BookContextProvider = ({ children }) => {
             }
         } catch (error) {
             console.warn("Owner not authenticated either.");
+        }
+        finally {
+            setisLoading(false);
         }
 
         
@@ -82,7 +81,9 @@ const BookContextProvider = ({ children }) => {
         }
     };
 
+    if(token && userInfo && userInfo.role === 'owner'){
     useEffect(() => {
+        setisLoading(true);
         const fetchBookings = async () => {
           try {
             const response = await axios.get('/owner/turfAllBookings');
@@ -96,9 +97,10 @@ const BookContextProvider = ({ children }) => {
         };
         fetchBookings();
       }, []);
+    }
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
-        const R = 6371; // Earth's radius in km
+        const R = 6371;
         const dLat = (lat2 - lat1) * (Math.PI / 180);
         const dLon = (lon2 - lon1) * (Math.PI / 180);
         const a =

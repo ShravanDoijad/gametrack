@@ -19,10 +19,6 @@ const UserSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
   },
-  password: {
-    type: String,
-    required: true, // ✔️ Now required for auth
-  },
   isVerified: {
     type: Boolean,
     default: false,
@@ -37,10 +33,10 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  fcmToken: {
-    type: String,
-    default: "",
-  },
+  playerId: {
+  type: String,
+  default: "",
+},
   preferences: {
     preferredTime: { type: String, default: "" },
     notifyOnBooking: { type: Boolean, default: true },
