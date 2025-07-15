@@ -131,13 +131,28 @@ const login = async (req, res) => {
 
 const userLogout = async (req, res) => {
   try {
+    const {data:user} = req.user;
+    const {data:owner}= req.owner;
+    if(user ) {
     res.clearCookie("userToken",
       {
         httpOnly: true,
         secure: true,
         sameSite: "None",
       }
-    );
+    )}
+    else if(owner) {
+      res.clearCookie("ownerToken",
+        {
+          httpOnly: true,
+          secure: true,
+          sameSite: "None",
+        }
+      )}
+    else{
+      return res.status(400).json({ success: false, message: "Invalid role" });
+    }
+
     res
       .status(200)
       .json({ success: true, message: "User logged out successfully" });
@@ -331,7 +346,7 @@ const updateUser = async (req, res) => {
       isNotification: isNotification,
       preferredTime: preferredTime,
     });
-
+    console.log("Updated User:", updatedUser);
     res
       .status(200)
       .json({
