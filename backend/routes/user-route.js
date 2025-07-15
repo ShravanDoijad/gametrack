@@ -4,8 +4,7 @@ const userRouter = express.Router();
 
 const { userRegister, userLogout, createOrder, verifyOrder, getAllBookings, updateUser, deleteUser, addFavorite, getFavoriteTurfs, login, removeFavoriteTurf } = require('../controllers/user-controller');
 const {userOrOwnerMiddleware} = require("../middleware/authMiddleware")
-const admin = require("firebase-admin");
-const serviceAccount = require("../gametrack-key.json");
+
 
 userRouter.post(
   "/userRegister",
