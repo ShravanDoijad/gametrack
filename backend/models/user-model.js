@@ -33,10 +33,7 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
-  playerId: {
-  type: String,
-  default: "",
-},
+  
   preferences: {
     preferredTime: { type: String, default: "" },
     notifyOnBooking: { type: Boolean, default: true },

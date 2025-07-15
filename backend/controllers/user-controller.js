@@ -327,7 +327,7 @@ const updateUser = async (req, res) => {
     }
     let updatedUser = await User.findByIdAndUpdate(userId, {
       email: email,
-      playerId:playerId,
+      fcmToken:playerId,
       isNotification: isNotification,
       preferredTime: preferredTime,
     });
