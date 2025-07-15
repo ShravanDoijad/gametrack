@@ -66,37 +66,7 @@ userRouter.post("/deleteUser", userOrOwnerMiddleware, deleteUser);
 userRouter.post("/removeFavoriteTurf", userOrOwnerMiddleware, removeFavoriteTurf);
 
 
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
 
-userRouter.post("/send-push", async (req, res) => {
-  const { token, title, body } = req.body;
-
-  if (!token) return res.status(400).json({ error: "FCM token is missing" });
-
-  const message = {
-    token,
-    notification: {
-      title,
-      body,
-    },
-    webpush: {
-      notification: {
-        icon: "/logo192.png",
-        click_action: "https://localhost:5173", // change to your prod domain
-      },
-    },
-  };
-
-  try {
-    const response = await admin.messaging().send(message);
-    return res.json({ success: true, response });
-  } catch (error) {
-    console.error("❌ Error sending push:", error);
-    return res.status(500).json({ success: false, error: error.message });
-  }
-});
 
 userRouter.post('/userLogout', userLogout);
 

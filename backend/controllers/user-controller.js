@@ -8,7 +8,7 @@ const Booking = require("../models/booking-model");
 const turfModel = require("../models/turf-model");
 const Owner = require("../models/owner-model");
 const admin = require("../firebase/firebase-admin");
-const { default: Bookings } = require("../../frontend/src/ownerPages/Bookings");
+
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -273,7 +273,7 @@ const verifyOrder = async (req, res) => {
         body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.time}`
         },
       })
-      
+
     return res.status(200).json({
       success: true,
       message: "Payment verified and booking confirmed",
@@ -476,7 +476,7 @@ module.exports = {
   addFavorite,
   getFavoriteTurfs,
   login,
-  sendNotification,
+  
   removeFavoriteTurf,
   
 };
