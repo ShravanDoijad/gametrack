@@ -285,7 +285,7 @@ const verifyOrder = async (req, res) => {
       token: user.fcmToken,
       notification: {
         title: "✅ Booking Confirmed",
-        body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${owner.turfname}`,
+        body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.turfname}`,
       },
     })
 
@@ -293,7 +293,7 @@ const verifyOrder = async (req, res) => {
       token: ownerData.owner.fcmToken,
       notification: {
         title: "📅 New Booking Alert",
-        body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${owner.turfname}`,
+        body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.turfname}`,
       },
     })
 
