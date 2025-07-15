@@ -89,7 +89,9 @@ const BookContextProvider = ({ children }) => {
         e.preventDefault()
         try {
 
-            const response = await axios.post('/api/users/userLogout');
+            const response = await axios.post('/api/users/userLogout',{
+                role: userInfo.role
+            });
 
             settoken(false);
             setmenuPanel(false);

@@ -131,8 +131,7 @@ const login = async (req, res) => {
 
 const userLogout = async (req, res) => {
   try {
-    const {data:user} = req.user;
-    const {data:owner}= req.owner;
+    const { role } = req.body
     if(user ) {
     res.clearCookie("userToken",
       {
