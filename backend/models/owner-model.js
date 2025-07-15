@@ -30,13 +30,14 @@ const OwnerSchema = new mongoose.Schema({
     trim: true,
     lowercase: true,
   },
-  password: {
-    type: String,
-    required: true, // ✔️ Required for owner login
-  },
+  
   isverified: {
     type: Boolean,
     default: false,
+  },
+  fcmToken: {
+    type: String,
+    default: null, 
   },
   atcreated: {
     type: Date,

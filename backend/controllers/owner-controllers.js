@@ -201,7 +201,17 @@ const dashboardDetails= async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
-
+const updateOwner = async()=>{
+    try {
+         const { ownerId, playerId } = req.body;
+         await Owner.findByIdAndUpdate(ownerId, { fcmToken: playerId });
+         res.json({ success: true });
+        
+    } catch (error) {
+        console.log("Error to update the Turf",error);
+        res.json({success: false})
+    }
+}
 
 
 module.exports = {
@@ -212,6 +222,7 @@ module.exports = {
     updateTurfProfile,
     getOwnedTurfs,
     ownerRegister,
-    dashboardDetails
+    dashboardDetails,
+    updateOwner
 
 };

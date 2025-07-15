@@ -19,7 +19,7 @@ Thumbs.db
 
 # Firebase / OneSignal secrets
 firebase-adminsdk.json
-gametrack-service-account.json
+gametrack-key.json
 firebase.json    # (if not needed on frontend)
 onesignal-keys.json
 

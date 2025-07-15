@@ -17,7 +17,7 @@ const turfRouter = require('./routes/turf-route');
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// 🔍 Log every incoming origin request BEFORE CORS
+
 app.use((req, res, next) => {
   console.log("🔥 Incoming request from Origin:", req.headers.origin);
   next();

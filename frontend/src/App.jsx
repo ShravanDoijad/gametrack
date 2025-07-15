@@ -18,14 +18,23 @@ import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
 import axios from "axios"
-import  OneSignalInit  from './utils/OneSingleUtil';
+import PushNotifier from './components/PushNotifier';
 
 import Owner from './Owner';
+import SendTestPush from './components/SendTestPush';
 function App() {
+   const [fcmToken, setFcmToken] = useState(null);
   const { loginPanel, token, userInfo } = useContext(BookContext);
   
   const navigate = useNavigate();
   
+  useEffect(() => {
+    import("./firebase-messaging").then(({ requestPermission }) => {
+      requestPermission().then((token) => {
+        setFcmToken(token);
+      });
+    });
+  }, [fcmToken]);
 
 
   console.log("User Info:", userInfo);
@@ -33,7 +42,8 @@ function App() {
     <div className="max-w-screen bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
       
       {loginPanel && !token && <Register />}
-      {token && userInfo && <OneSignalInit userId={userInfo._id} />}
+      {token && userInfo && userInfo.role==="user" &&  <PushNotifier userId={userInfo._id} type="user" /> }
+      {fcmToken && <SendTestPush playerToken={fcmToken} />}
 
 
       <Navbar />
@@ -56,6 +66,8 @@ function App() {
             <Route path="/favorite" element={<Favorite />} />
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/testpush" element={<SendTestPush />} />
+            
           </Route>
 
 

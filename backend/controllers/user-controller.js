@@ -6,9 +6,9 @@ const Razorpay = require("razorpay");
 const crypto = require("crypto");
 const Booking = require("../models/booking-model");
 const turfModel = require("../models/turf-model");
-const bcrypt = require("bcryptjs");
 const Owner = require("../models/owner-model");
-const axios = require("axios");
+const admin = require("../firebase/firebase-admin");
+const { default: Bookings } = require("../../frontend/src/ownerPages/Bookings");
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -199,7 +199,6 @@ const verifyOrder = async (req, res) => {
   try {
     const {
       razorpay_order_id,
-      userId,
       razorpay_payment_id,
       razorpay_signature,
       bookingDetails,
@@ -256,16 +255,25 @@ const verifyOrder = async (req, res) => {
       status: "confirmed",
     });
     const user = await User.findById(bookingDetails.userId);
-    if (user?.playerId) {
-      await sendNotification({
-    playerId: user.playerId,
-    message: "Your turf booking is confirmed!",
-    heading: "Booking Confirmed"
-  });
-    }
+    const owner = await turfModel.findById(bookingDetails.turfId).populate("owner", "fcmToken");
+    if (!user?.fcmToken || !owner?.fcmToken) return;
 
-   
-
+    await admin.messaging().send({
+      token:user.fcmToken,
+      notification: {
+    title: "✅ Booking Confirmed",
+    body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.time}`,
+  },
+    })
+    
+    await admin.messaging().send({
+      token: owner.owner.fcmToken,
+      notification: {
+        title: "📅 New Booking Alert",
+        body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.time}`
+        },
+      })
+      
     return res.status(200).json({
       success: true,
       message: "Payment verified and booking confirmed",
@@ -396,24 +404,6 @@ const addFavorite = async (req, res) => {
     res.status(500).json({ message: "Server error. Couldn't add favorite." });
   }
 };
-
-
-const sendNotification = async ({ playerId, message, heading }) => {
-  return await axios.post("https://onesignal.com/api/v1/notifications", {
-    app_id: process.env.ONESIGNAL_APP_ID,
-    include_player_ids: [playerId],
-    contents: { en: message },
-    headings: { en: heading },
-  }, {
-    headers: {
-      Authorization: `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
-      "Content-Type": "application/json",
-    },
-  });
-};
-
-
-
 
 
 const getFavoriteTurfs = async (req, res) => {
