@@ -17,7 +17,7 @@ const PushNotifier = ({ userId, ownerId, type }) => {
             playerId: token,
           });
         } else if (type === "owner") {
-          axios.post("/api/owners/updateOwner", {
+          axios.post("/owner/updateOwner", {
             ownerId,
             playerId: token,
           });

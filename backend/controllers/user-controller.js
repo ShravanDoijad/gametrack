@@ -341,6 +341,7 @@ const updateUser = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Unauthorised, Login First" });
     }
+    console.log("Update User Data:", req.body);
     const updateFields = {};
     if (email) updateFields.email = email;
     if (typeof isNotification !== "undefined") updateFields.isNotification = isNotification;
