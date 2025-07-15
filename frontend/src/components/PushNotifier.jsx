@@ -4,8 +4,11 @@ import { requestPermission, onMessageListener } from "../firebase-messaging";
 import axios from "axios";
 
 const PushNotifier = ({ userId, ownerId, type }) => {
+  console.log("Initializing Push Notifier for:", type);
   useEffect(() => {
+    
     requestPermission().then((token) => {
+      console.log("📡 FCM Token:", token);
        if (token) {
         console.log("📡 FCM Token:", token);
         if (type === "user") {
@@ -19,6 +22,8 @@ const PushNotifier = ({ userId, ownerId, type }) => {
             playerId: token,
           });
         }
+
+        console.log("✅ Player ID updated successfully");
       }
       else {
         console.warn("❌ No FCM token received");

@@ -12,7 +12,7 @@ import Customers from "./ownerPages/Customers";
 import PushNotifier from "./components/PushNotifier";
 
 const Owner = () => {
-  const {userInfo} = useContext(BookContext)
+  const {userInfo, token} = useContext(BookContext)
   
   return (
     <div className="min-h-screen w-full bg-gray-50">

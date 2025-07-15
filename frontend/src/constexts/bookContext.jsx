@@ -16,9 +16,28 @@ const BookContextProvider = ({ children }) => {
     const [menuPanel, setmenuPanel] = useState(false)
     const [bookings, setbookings] = useState([])
 
+    useEffect(() => {
+        if (token && userInfo && userInfo.role === 'owner') {
+            setisLoading(true);
+            const fetchBookings = async () => {
+                try {
+                    const response = await axios.get('/owner/turfAllBookings');
+                    setbookings(response.data.bookings);
+                } catch (err) {
+                    console.error("Error fetching bookings:", err);
+                    toast.error("Failed to fetch bookings");
+                } finally {
+                    setisLoading(false);
+                }
+            };
+            fetchBookings();
+        }
+    }, [token, userInfo]);
+
+
     const fetchToken = async () => {
         try {
-           
+
             const userRes = await axios.get(`/api/auth/authCheck`, { withCredentials: true });
             if (userRes.data.success) {
                 settoken(userRes.data.isToken);
@@ -31,12 +50,12 @@ const BookContextProvider = ({ children }) => {
         } catch (error) {
             console.warn("User not authenticated, checking owner...");
         }
-        finally{
+        finally {
             setisLoading(false);
         }
 
         try {
-            
+
             const ownerRes = await axios.get(`/api/auth/ownerAuthCheck`, { withCredentials: true });
             if (ownerRes.data.success) {
                 settoken(ownerRes.data.isToken);
@@ -53,16 +72,16 @@ const BookContextProvider = ({ children }) => {
             setisLoading(false);
         }
 
-        
+
         settoken(false);
         setuserInfo(null);
         console.warn("No valid session found.");
         setisLoading(false);
     };
-    useEffect(()=>{
+    useEffect(() => {
         fetchToken()
-    },[])
-    
+    }, [])
+
 
 
 
@@ -81,23 +100,6 @@ const BookContextProvider = ({ children }) => {
         }
     };
 
-    if(token && userInfo && userInfo.role === 'owner'){
-    useEffect(() => {
-        setisLoading(true);
-        const fetchBookings = async () => {
-          try {
-            const response = await axios.get('/owner/turfAllBookings');
-            setbookings(response.data.bookings);
-            setisLoading(false);
-          } catch (err) {
-            console.error("Error fetching bookings:", err);
-            toast.error("Failed to fetch bookings");
-            setisLoading(false);
-          }
-        };
-        fetchBookings();
-      }, []);
-    }
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371;
