@@ -255,14 +255,20 @@ const verifyOrder = async (req, res) => {
       status: "confirmed",
     });
     const user = await User.findById(bookingDetails.userId);
-    const owner = await turfModel.findById(bookingDetails.turfId).populate("owner", "fcmToken");
-    if (!user?.fcmToken || !owner?.fcmToken) return;
+    const owner = await turfModel.findById(bookingDetails.turfId).populate("owner", "fcmToken turfname");
+    if (!user?.fcmToken || !owner?.fcmToken){
+      console.warn("FCM tokens not found for user or owner");
+      return res.status(400).json({
+        success: false,
+        message: "FCM tokens not found for user or owner",
+      });
+    };
 
     await admin.messaging().send({
       token:user.fcmToken,
       notification: {
     title: "✅ Booking Confirmed",
-    body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.time}`,
+    body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${owner.turfname}`,
   },
     })
     
@@ -270,7 +276,7 @@ const verifyOrder = async (req, res) => {
       token: owner.owner.fcmToken,
       notification: {
         title: "📅 New Booking Alert",
-        body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.time}`
+        body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${owner.turfname}`,
         },
       })
 

@@ -8,7 +8,7 @@ const PushNotifier = ({ userId, ownerId, type }) => {
   useEffect(() => {
     
     requestPermission().then((token) => {
-      console.log("📡 FCM Token:", token);
+      
        if (token) {
         console.log("📡 FCM Token:", token);
         if (type === "user") {
