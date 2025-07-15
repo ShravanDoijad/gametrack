@@ -8,28 +8,14 @@
   <title>Vite + React</title>
   <!-- index.html -->
 
-  <script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-
+=
 </head>
 
 <body>
   <div id="root"></div>
   <script type="module" src="/src/main.jsx"></script>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-  <script>
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    OneSignalDeferred.push(async function (OneSignal) {
-      await OneSignal.init({
-        appId: "f08cbf9d-22b2-4537-a281-ade95d4585a8",
-        safari_web_id: "web.onesignal.auto.2cee7bb2-7604-4e25-b1d2-cbd521c730a5",
-        notifyButton: {
-          enable: true,
-        },
-        allowLocalhostAsSecureOrigin: false,
-      });
-      window._oneSignalInstance = OneSignal;
-    });
-  </script>
+  
 
 </body>
 
