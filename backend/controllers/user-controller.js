@@ -132,7 +132,7 @@ const login = async (req, res) => {
 const userLogout = async (req, res) => {
   try {
     const { role } = req.body
-    if(user ) {
+    if(role==="user" ) {
     res.clearCookie("userToken",
       {
         httpOnly: true,
@@ -140,7 +140,7 @@ const userLogout = async (req, res) => {
         sameSite: "None",
       }
     )}
-    else if(owner) {
+    else if(role==="owner") {
       res.clearCookie("ownerToken",
         {
           httpOnly: true,
