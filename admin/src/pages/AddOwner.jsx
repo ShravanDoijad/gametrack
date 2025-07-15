@@ -7,7 +7,7 @@ const AddOwner = () => {
     fullname: "",
     email: "",
     phone: "",
-    password: "",  // ← Added this
+    // ← Added this
     turfId: "",
     turfname: ""
   });
@@ -71,20 +71,7 @@ const AddOwner = () => {
             </div>
           ))}
 
-          {/* Password Field */}
-          <div>
-            <label className="block text-sm text-gray-300 mb-1">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full p-3 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-lime-400 text-sm placeholder-gray-500"
-              placeholder="Enter password"
-              required
-            />
-          </div>
-
+          
           <button
             type="submit"
             disabled={loading}

@@ -9,10 +9,10 @@ const bcrypt = require('bcryptjs');
 
 const ownerRegister = async (req, res) => {
     try {
-        const { fullname, email, phone, password, turfId, turfname } = req.body;
+        const { fullname, email, phone, turfId, turfname } = req.body;
 
         // Basic validation
-        if (!fullname || !email || !phone || !password || !turfId || !turfname) {
+        if (!fullname || !email || !phone  || !turfId || !turfname) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required",
@@ -28,15 +28,14 @@ const ownerRegister = async (req, res) => {
             });
         }
 
-        // Hash password
-        const hashedPassword = await bcrypt.hash(password, 10);
+       
 
         // Create owner
         const newOwner = new Owner({
             fullname,
             email,
             phone,
-            password: hashedPassword,
+            
             turfId,
             turfname,
         });
