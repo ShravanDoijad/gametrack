@@ -28,23 +28,23 @@ const userRegister = async (req, res) => {
     }
 
     const existingUser = await User.findOne({ phone });
-    if(existingUser){
-    if ( existingUser.isVerified) {
-      return res.status(409).json({
-        success: false,
-        message: "User already exists. Please login.",
-      });
+    if (existingUser) {
+      if (existingUser.isVerified) {
+        return res.status(409).json({
+          success: false,
+          message: "User already exists. Please login.",
+        });
+      }
+      else {
+        console.log("existing user", existingUser.phone);
+        await sendOtp({ identifier: existingUser.phone, role: 'user' });
+        return res.status(200).json({
+          success: true,
+          message: "OTP sent for verification",
+
+        });
+      }
     }
-    else{
-      console.log("existing user", existingUser.phone);
-      await sendOtp({ identifier: existingUser.phone, role: 'user' });
-      return res.status(200).json({
-        success: true,
-        message: "OTP sent for verification",
-        
-      });
-    }
-  }
 
 
     const newUser = await User.create({
@@ -53,7 +53,7 @@ const userRegister = async (req, res) => {
       isVerified: false,
     });
 
-    await sendOtp({ identifier: phone, role:'user' });
+    await sendOtp({ identifier: phone, role: 'user' });
 
     return res.status(200).json({
       success: true,
@@ -85,7 +85,7 @@ const login = async (req, res) => {
     }
 
     const owner = await Owner.findOne({
-      email: identifier 
+      email: identifier
     });
 
     if (owner) {
@@ -96,7 +96,7 @@ const login = async (req, res) => {
       });
     }
 
-    
+
     const user = await User.findOne({
       $or: [{ email: identifier }, { phone: identifier }],
     });
@@ -132,23 +132,25 @@ const login = async (req, res) => {
 const userLogout = async (req, res) => {
   try {
     const { role } = req.body
-    if(role==="user" ) {
-    res.clearCookie("userToken",
-      {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-      }
-    )}
-    else if(role==="owner") {
+    if (role === "user") {
+      res.clearCookie("userToken",
+        {
+          httpOnly: true,
+          secure: true,
+          sameSite: "None",
+        }
+      )
+    }
+    else if (role === "owner") {
       res.clearCookie("ownerToken",
         {
           httpOnly: true,
           secure: true,
           sameSite: "None",
         }
-      )}
-    else{
+      )
+    }
+    else {
       return res.status(400).json({ success: false, message: "Invalid role" });
     }
 
@@ -270,7 +272,7 @@ const verifyOrder = async (req, res) => {
     });
     const user = await User.findById(bookingDetails.userId);
     const owner = await turfModel.findById(bookingDetails.turfId).populate("owner", "fcmToken turfname");
-    if (!user?.fcmToken || !owner?.fcmToken){
+    if (!user?.fcmToken || !owner?.fcmToken) {
       console.warn("FCM tokens not found for user or owner");
       return res.status(400).json({
         success: false,
@@ -279,20 +281,20 @@ const verifyOrder = async (req, res) => {
     };
 
     await admin.messaging().send({
-      token:user.fcmToken,
+      token: user.fcmToken,
       notification: {
-    title: "✅ Booking Confirmed",
-    body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${owner.turfname}`,
-  },
+        title: "✅ Booking Confirmed",
+        body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${owner.turfname}`,
+      },
     })
-    
+
     await admin.messaging().send({
       token: owner.owner.fcmToken,
       notification: {
         title: "📅 New Booking Alert",
         body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${owner.turfname}`,
-        },
-      })
+      },
+    })
 
     return res.status(200).json({
       success: true,
@@ -326,7 +328,7 @@ const getAllBookings = async (req, res) => {
       .json({
         success: false,
         message: "Fetch Bookings Error"
-        
+
       });
   }
 };
@@ -339,12 +341,14 @@ const updateUser = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Unauthorised, Login First" });
     }
-    let updatedUser = await User.findByIdAndUpdate(userId, {
-      email: email,
-      fcmToken:playerId,
-      isNotification: isNotification,
-      preferredTime: preferredTime,
-    });
+    const updateFields = {};
+    if (email) updateFields.email = email;
+    if (typeof isNotification !== "undefined") updateFields.isNotification = isNotification;
+    if (preferredTime) updateFields.preferredTime = preferredTime;
+    if (playerId) updateFields.fcmToken = playerId;
+
+    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, { new: true });
+
     console.log("Updated User:", updatedUser);
     res
       .status(200)
@@ -428,14 +432,14 @@ const addFavorite = async (req, res) => {
 
 const getFavoriteTurfs = async (req, res) => {
   try {
-    const {data:user, role} = req.user;
+    const { data: user, role } = req.user;
     const customer = await User.findById(user._id).populate("favoriteTurfs", "_id name location avarageRating images dayPrice nightPrice");
     if (!customer) {
       return res
         .status(401)
         .json({ message: "Unauthorized, login to Proceed" });
     }
-   
+
     res.status(200).json({
       success: true,
       message: "Favorite Turfs fetched successfully",
@@ -447,14 +451,15 @@ const getFavoriteTurfs = async (req, res) => {
       .status(500)
       .json({
         success: false,
-        message: "Can't fetch favorite Turfs", error: error });
+        message: "Can't fetch favorite Turfs", error: error
+      });
   }
 };
 
 const removeFavoriteTurf = async (req, res) => {
   try {
-    const {turfId} = req.body;
-    const {data:user, role} = req.user;
+    const { turfId } = req.body;
+    const { data: user, role } = req.user;
 
     if (!turfId) {
       return res.status(400).json({ message: "Turf ID is required." });
@@ -496,7 +501,7 @@ module.exports = {
   addFavorite,
   getFavoriteTurfs,
   login,
-  
+
   removeFavoriteTurf,
-  
+
 };

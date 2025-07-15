@@ -200,7 +200,7 @@ const dashboardDetails= async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
-const updateOwner = async()=>{
+const updateOwner = async(req, res)=>{
     try {
          const { ownerId, playerId } = req.body;
          await Owner.findByIdAndUpdate(ownerId, { fcmToken: playerId });
