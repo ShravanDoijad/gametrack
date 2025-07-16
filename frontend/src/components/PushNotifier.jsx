@@ -1,6 +1,6 @@
 // src/components/FirebasePush.jsx
 import { useEffect } from "react";
-import { requestPermission, onMessageListener , deleteToken} from "../firebase-messaging";
+import { requestPermission, onMessageListener } from "../firebase-messaging";
 import axios from "axios";
 
 const PushNotifier = ({ userId, ownerId, type }) => {
