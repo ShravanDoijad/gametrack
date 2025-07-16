@@ -76,7 +76,7 @@ const turfAllBookings = async (req, res) => {
         }
 
         const bookings = await Booking.find({ turfId: turfId }).populate('userId', 'fullname email phone');
-        console.log("bookings", bookings)
+        
         res.status(200).json({ success: true, bookings });
     } catch (error) {
         console.error("Error fetching turf bookings:", error);
@@ -93,7 +93,7 @@ const getCustomers = async (req, res) => {
             return res.status(404).json({ success: false, message: "Turf not found" });
         }
         const bookings = await Booking.find({ turfId: turf._id }).populate('userId', 'name email phone');
-        console.log("Ownerbookings", bookings)
+        
         if (!bookings || bookings.length === 0) {
             return res.status(404).json({ success: false, message: "No bookings found for this turf" });
         }

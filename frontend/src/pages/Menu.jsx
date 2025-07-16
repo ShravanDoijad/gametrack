@@ -25,12 +25,7 @@ const MobileNav = () => {
       path: '/userBookings',
       active: location.pathname.includes('bookings')
     },
-    { 
-      id: 'quick-book',
-      icon: <Plus size={28} />,
-      label: '',
-      special: true
-    },
+    
     { 
       id: 'favorites',
       icon: <Heart size={22} />,

@@ -6,6 +6,11 @@ const NotificationSchema = new mongoose.Schema({
     ref: "User",
     required: true
   },
+  owner: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Owner",
+    required: false
+  },
   title: {
     type: String,
     required: true
@@ -17,6 +22,11 @@ const NotificationSchema = new mongoose.Schema({
   type: {
     type: String,
     default: "info"
+  },
+  role:{
+    type: String,
+    enum: ["user", "owner"],
+    required: true
   },
   isRead: {
     type: Boolean,

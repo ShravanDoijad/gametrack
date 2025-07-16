@@ -8,7 +8,8 @@ const Booking = require("../models/booking-model");
 const turfModel = require("../models/turf-model");
 const Owner = require("../models/owner-model");
 const admin = require("../firebase/firebase-admin");
-
+const Notification = require('../models/notification-model');
+const cron = require("node-cron");
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
@@ -189,7 +190,6 @@ const updateTurfBookedSlots = async (turfId, bookingDetails) => {
     );
   }
 };
-
 const verifyOrder = async (req, res) => {
   try {
     const {
@@ -198,47 +198,57 @@ const verifyOrder = async (req, res) => {
       razorpay_signature,
       bookingDetails,
     } = req.body;
+
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
       .createHmac("sha256", process.env.RAZORPAY_SECRET)
       .update(sign.toString())
       .digest("hex");
 
-    const existingBooking = await Booking.findOne({
-      razorpay_payment_id,
-    });
-    if (existingBooking) {
-      return res
-        .status(409)
-        .json({ success: false, message: "Booking already exists" });
-    }
-
     if (razorpay_signature !== expectedSignature) {
       return res
         .status(400)
-        .json({ success: false, message: "Invalid signature" });
+        .json({ success: false, message: "Invalid payment signature" });
     }
 
-    const isAlreadyBooked = await Booking.findOne({
-      turfId: bookingDetails.turfId,
-      date: bookingDetails.date,
-      "slots.start": bookingDetails.slots[0].start,
-      "slots.end": bookingDetails.slots[0].end,
-      status: { $ne: "cancelled" },
-    });
-
-    if (isAlreadyBooked) {
+    // Check if booking already exists
+    const existingBooking = await Booking.findOne({ razorpay_payment_id });
+    if (existingBooking) {
       return res.status(409).json({
         success: false,
-        message: "This slot is already booked",
+        message: "Booking already exists",
       });
     }
 
+    // Check for slot overlap
+    const overlappingBooking = await Booking.findOne({
+      turfId: bookingDetails.turfId,
+      date: bookingDetails.date,
+      slots: {
+        $elemMatch: {
+          $or: bookingDetails.slots.map((slot) => ({
+            start: slot.start,
+            end: slot.end,
+          })),
+        },
+      },
+      status: { $ne: "cancelled" },
+    });
+
+    if (overlappingBooking) {
+      return res.status(409).json({
+        success: false,
+        message: "One or more slots are already booked",
+      });
+    }
+
+    // Update turf slot availability
     await updateTurfBookedSlots(bookingDetails.turfId, bookingDetails);
 
+    // Create new booking
     const newBooking = await Booking.create({
       turfId: bookingDetails.turfId,
-      userId: bookingDetails.userId,
+      userId: req.user?._id || bookingDetails.userId, // Trust server more
       date: bookingDetails.date,
       slots: bookingDetails.slots,
       sport: bookingDetails.sport,
@@ -248,56 +258,89 @@ const verifyOrder = async (req, res) => {
       razorpay_order_id,
       paymentType: bookingDetails.paymentType,
       status: "confirmed",
+      reminderSent: false, // Add now to support future logic
     });
-    const user = await User.findById(bookingDetails.userId);
-    const ownerData = await turfModel
-      .findById(bookingDetails.turfId)
-      .populate("owner", "fcmToken turfname");
 
-    if (!user?.fcmToken || !ownerData?.owner?.fcmToken) {
-      console.warn("FCM tokens not found for user or owner");
-      return res.status(400).json({
-        success: false,
-        message: "FCM tokens not found for user or owner",
-      });
-    }
+    // Get FCM tokens
+    const user = await User.findById(newBooking.userId);
+    const turf = await turfModel.findById(bookingDetails.turfId).populate("owner", "fcmToken turfname");
 
+    const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
+    const turfName = turf?.owner?.turfname || "your turf";
+
+    // Send push notifications (optional)
     try {
-      await admin.messaging().send({
-        token: user.fcmToken,
-        notification: {
-          title: "✅ Booking Confirmed",
-          body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.owner.turfname}`,
-        },
-      });
+      const messages = [];
 
-      await admin.messaging().send({
-        token: ownerData.owner.fcmToken,
-        notification: {
-          title: "📅 New Booking Alert",
-          body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.owner.turfname}`,
-        },
-      });
+      if (user?.fcmToken) {
+        messages.push(admin.messaging().send({
+          token: user.fcmToken,
+          notification: {
+            title: "✅ Booking Confirmed",
+            body: `Your booking for ${bookingDetails.date} at ${slotTimeText} is confirmed at ${turfName}`,
+          },
+        }));
+      }
+
+      if (turf?.owner?.fcmToken) {
+        messages.push(admin.messaging().send({
+          token: turf.owner.fcmToken,
+          notification: {
+            title: "📅 New Booking Alert",
+            body: `New booking for ${bookingDetails.date} at ${slotTimeText} at ${turfName}`,
+          },
+        }));
+      }
+
+      await Promise.all(messages);
     } catch (err) {
       if (err.code === "messaging/registration-token-not-registered") {
-        console.log("❌ Owner token invalid, clear it from DB");
-        await Owner.findByIdAndUpdate(ownerData.owner._id, { fcmToken: null });
+        console.log("Invalid token, clearing FCM from DB");
+        await Owner.findByIdAndUpdate(turf.owner._id, { fcmToken: null });
       } else {
-        console.log("Other FCM error:", err);
+        console.error("FCM error:", err);
       }
     }
+
+    // Save in-app notifications for both
+    await Promise.all([
+      Notification.create({
+        user: newBooking.userId,
+        owner: turf.owner._id,
+        title: "Booking Confirmed",
+        message: `Your booking for ${bookingDetails.date} at ${slotTimeText} is confirmed at ${turfName}`,
+        type: "booking",
+        role: "user",
+        date: new Date(),
+      }),
+      Notification.create({
+        user: newBooking.userId,
+        owner: turf.owner._id,
+        title: "New Booking Alert",
+        message: `New booking for ${bookingDetails.date} at ${slotTimeText} at ${turfName}`,
+        type: "booking",
+        role: "owner",
+        date: new Date(),
+      }),
+    ]);
+
     return res.status(200).json({
       success: true,
       message: "Payment verified and booking confirmed",
       booking: newBooking,
     });
+
   } catch (err) {
-    console.log("Payment Integration Error", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "DB error", error: err.message });
+    console.error("Payment verification error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: err.message,
+    });
   }
 };
+
+
 
 const getAllBookings = async (req, res) => {
   try {
@@ -355,6 +398,44 @@ const updateUser = async (req, res) => {
     });
   }
 };
+
+cron.schedule("*/5 * * * *", async () => {
+  const now = new Date();
+  const bookings = await Booking.find({}).populate("userId");
+
+  for (let booking of bookings) {
+    const bookingDate = new Date(booking.date);
+    const slotTime = booking.slots[0]?.start; // e.g. '06:00 PM'
+
+    const slotDateTime = new Date(`${booking.date} ${slotTime}`);
+    const diffInMs = slotDateTime.getTime() - now.getTime();
+    const diffInMinutes = diffInMs / (1000 * 60);
+
+    if (diffInMinutes > 59 && diffInMinutes < 61 && !booking.reminderSent) {
+      await Notification.create({
+        user: booking.userId._id,
+        role: "user",
+        title: "Booking Reminder",
+        owner: booking.turfId.owner,
+        message: " Your booking is in 1 hour",
+        type: "reminder"
+      });
+
+      if (diffInMinutes > 10 && diffInMinutes < 12 && !booking.reminderSent) {
+      await Notification.create({
+        user: booking.userId._id,
+        role:"owner",
+        title: "Booking Reminder",
+        owner: booking.turfId.owner,
+        message: "New booking is in 10 minutes",
+        type: "reminder"
+      });}
+
+      booking.reminderSent = true;
+      await booking.save();
+    }
+  }
+});
 
 const deleteUser = async (req, res) => {
   try {
@@ -478,6 +559,43 @@ const removeFavoriteTurf = async (req, res) => {
   }
 };
 
+const getAllNotifications = async (req, res) => {
+  
+  try {
+    let notifications =[];
+    if(req.user){
+      const { data: user } = req.user;
+      notifications = await Notification.find({ user: user._id, role: "user" })
+      .sort({ createdAt: -1 })
+      .limit(20);
+    }else if(req.owner){
+      const { data: owner } = req.owner;
+      notifications = await Notification.find({ owner: owner._id, role: "owner" })
+      .sort({ createdAt: -1 })
+      .limit(20);
+    
+    }
+
+    if (!notifications || notifications.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No notifications found",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      notifications,
+    });
+  } catch (error) {
+    console.error("Error fetching notifications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch notifications",
+      
+    });
+  }
+};
+
 module.exports = {
   userRegister,
   userLogout,
@@ -489,6 +607,6 @@ module.exports = {
   addFavorite,
   getFavoriteTurfs,
   login,
-
+  getAllNotifications,
   removeFavoriteTurf,
 };

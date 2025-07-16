@@ -1,45 +1,50 @@
-// src/components/FirebasePush.jsx
 import { useEffect } from "react";
 import { requestPermission, onMessageListener } from "../firebase-messaging";
 import axios from "axios";
 
 const PushNotifier = ({ userId, ownerId, type }) => {
-  console.log("Initializing Push Notifier for:", type);
-  useEffect( () => {
-    
-    requestPermission().then((token) => {
-      
-       if (token) {
-        console.log("📡 FCM Token:", token);
-        if (type === "user") {
-          axios.post("/api/users/updateUser", {
-            userId,
-            playerId: token,
-          });
-        } else if (type === "owner") {
-          axios.post("/owner/updateOwner", {
-            ownerId,
-            playerId: token,
-          });
+  useEffect(() => {
+    const setupNotifications = async () => {
+      try {
+        const token = await requestPermission();
+
+        if (!token) {
+          console.warn("❌ No FCM token received");
+          return;
         }
 
-        console.log("✅ Player ID updated successfully");
+        console.log("📡 FCM Token:", token);
+
+        if (type === "user" && userId) {
+          await axios.post("/api/users/updateUser", {
+            userId,
+            fcmToken: token,
+          });
+          console.log("✅ User FCM token updated");
+        } else if (type === "owner" && ownerId) {
+          await axios.post("/owner/updateOwner", {
+            ownerId,
+            fcmToken: token,
+          });
+          console.log("✅ Owner FCM token updated");
+        }
+      } catch (err) {
+        console.error("🔥 Push setup error:", err);
       }
-      else {
-        console.warn("❌ No FCM token received");
-      }
-    });
+    };
+
+    setupNotifications();
 
     onMessageListener().then((payload) => {
       console.log("📬 Foreground notification received:", payload);
       const { title, body } = payload.notification;
 
       new Notification(title, {
-        body: body,
-        icon: "/favicon.ico", 
+        body,
+        icon: "/GameTrack.jpg",
       });
     });
-  }, []);
+  }, [userId, ownerId, type]);
 
   return null;
 };

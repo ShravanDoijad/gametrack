@@ -4,7 +4,6 @@ const Owner = require("../models/owner-model")
 const ownerMiddleware = async(req, res, next) => {
   try {
     const token = req.cookies?.ownerToken;
-    console.log("owner", token)
     if (!token) {
       return res.status(401).json({ message: "Unauthorized, Login First" });
     }

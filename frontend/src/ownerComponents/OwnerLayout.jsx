@@ -14,6 +14,7 @@ const OwnerLayout = () => {
     { path: "/owner/revenue", icon: <DollarSign size={20} />, label: "Revenue" },
     { path: "/owner/customers", icon: <Users size={20} />, label: "Customers" },
     { path: "/owner/turf-profile", icon: <Settings size={20} />, label: "Turf Profile" },
+    {path: "/owner/turfTodaysbookings", icon: <Calendar size={20} />, label: "Today's Bookings" },
   ];
 
   return (
@@ -29,7 +30,7 @@ const OwnerLayout = () => {
       {/* Sidebar */}
       <aside
         className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-          fixed lg:static z-40 w-64 bg-gray-800 text-white min-h-screen p-4 
+          fixed md:static md:translate-x-0 z-40 w-64 bg-gray-800 text-white min-h-screen p-4 
           transition-transform duration-300 ease-in-out`}
       >
         <button
@@ -58,7 +59,7 @@ const OwnerLayout = () => {
         </nav>
       </aside>
 
-      <main className="flex-1 bg-gray-100  w-full min-h-screen">
+      <main className="flex-1 w-full min-h-screen">
         <Outlet />
       </main>
     </div>

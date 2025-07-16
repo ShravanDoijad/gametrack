@@ -16,7 +16,6 @@ const Navbar = () => {
       transition={{ duration: 0.6, ease: 'easeOut' }}
       className="sora px-6 py-4 text-white flex justify-between items-center border-b border-gray-800 bg-gradient-to-r from-gray-900/80 to-gray-950/80 backdrop-blur-lg z-50"
     >
-      {/* Logo with creative animation */}
       <motion.div
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
@@ -24,7 +23,7 @@ const Navbar = () => {
         className="cursor-pointer"
       >
         <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
-          Turf<span className="text-white">Finder</span>
+          Game<span className="text-white">Track</span>
         </h1>
       </motion.div>
 

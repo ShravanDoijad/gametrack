@@ -7,17 +7,16 @@ const messaging = getMessaging(firebaseApp);
 export const requestPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
-    await deleteToken(messaging);
-      console.log("🧹 Old token deleted");
+    
     if (permission === "granted") {
       const token = await getToken(messaging, {
         vapidKey: import.meta.env.VITE_VAPID_KEY, 
       });
-      console.log("✅ FCM Token:", token);
+      console.log(" FCM Token:", token);
       
       return token;
     } else {
-      console.warn("❌ Notification permission denied");
+      console.warn(" Notification permission denied");
     }
   } catch (err) {
     console.error("🔥 Token Error", err);

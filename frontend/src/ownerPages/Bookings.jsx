@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import {
   Calendar,
   ArrowUpDown,
@@ -88,7 +89,7 @@ const Bookings = () => {
           </div>
         </div>
 
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4 flex flex-wrap gap-2 items-center">
           {['all', 'upcoming', 'confirmed', 'advance', 'past'].map(filter => (
             <button
               key={filter}
@@ -101,7 +102,9 @@ const Bookings = () => {
             >
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </button>
+          
           ))}
+        <Link className='text-sm ml-2 text-blue-500 hover:underline' to={'/owner/turfTodaysbookings'} >today's Bookings</Link>
           <button
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
             className={`px-4 py-2 rounded-lg text-sm font-sora font-medium flex items-center ml-auto ${

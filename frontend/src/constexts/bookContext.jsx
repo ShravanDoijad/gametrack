@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 
 const BookContextProvider = ({ children }) => {
     const navigate = useNavigate()
-    const [isLoading, setisLoading] = useState(true)
+    const [isLoading, setisLoading] = useState(false)
     const [userInfo, setuserInfo] = useState()
     const [selectedSport, setSelectedSport] = useState("");
     const [token, settoken] = useState(false)
@@ -36,11 +36,15 @@ const BookContextProvider = ({ children }) => {
 
 
     const fetchToken = async () => {
-        try {
+        setisLoading(true); // start loading
 
-            const userRes = await axios.get(`/api/auth/authCheck`, { withCredentials: true });
+        try {
+            const userRes = await axios.get(`/api/auth/authCheck`, {
+                withCredentials: true,
+            });
+
             if (userRes.data.success) {
-                settoken(userRes.data.isToken);
+                settoken(true);
                 setuserInfo({
                     ...userRes.data.user,
                     role: userRes.data.role,
@@ -48,17 +52,16 @@ const BookContextProvider = ({ children }) => {
                 return;
             }
         } catch (error) {
-            console.warn("User not authenticated, checking owner...");
-        }
-        finally {
-            setisLoading(false);
+            console.warn("User not authenticated");
         }
 
         try {
+            const ownerRes = await axios.get(`/api/auth/ownerAuthCheck`, {
+                withCredentials: true,
+            });
 
-            const ownerRes = await axios.get(`/api/auth/ownerAuthCheck`, { withCredentials: true });
             if (ownerRes.data.success) {
-                settoken(ownerRes.data.isToken);
+                settoken(true);
                 setuserInfo({
                     ...ownerRes.data.owner,
                     role: ownerRes.data.role,
@@ -66,18 +69,16 @@ const BookContextProvider = ({ children }) => {
                 return;
             }
         } catch (error) {
-            console.warn("Owner not authenticated either.");
-        }
-        finally {
-            setisLoading(false);
+            console.warn("Owner not authenticated");
         }
 
-
+        // If nothing worked
         settoken(false);
         setuserInfo(null);
-        console.warn("No valid session found.");
+        console.warn("No valid session found");
         setisLoading(false);
     };
+
     useEffect(() => {
         fetchToken()
     }, [])
@@ -89,7 +90,7 @@ const BookContextProvider = ({ children }) => {
         e.preventDefault()
         try {
 
-            const response = await axios.post('/api/users/userLogout',{
+            const response = await axios.post('/api/users/userLogout', {
                 role: userInfo.role
             });
 

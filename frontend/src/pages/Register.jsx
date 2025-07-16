@@ -85,7 +85,7 @@ const Register = () => {
     }
   };
   const renderCredentialsTab = () => (
-    <div className="space-y-4">
+    <div className="space-y-4 ">
       {!isLogin && (
         <>
           <input
@@ -208,7 +208,7 @@ const Register = () => {
   );
 
   return (
-    <div className="flex fixed items-center justify-center min-h-screen z-40 px-4 poppins">
+    <div className="flex fixed items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 justify-center min-h-screen z-40 px-4 poppins">
       <motion.div
         className="w-full max-w-md p-8 rounded-3xl shadow-lg space-y-6 backdrop-blur-sm bg-white/90"
         initial="hidden"
