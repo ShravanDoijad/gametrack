@@ -203,13 +203,14 @@ const dashboardDetails= async (req, res) => {
 
 const updateOwner = async (req, res) => {
   try {
-    const { ownerId, playerId } = req.body;
-    if (!ownerId || !playerId) {
+    const { ownerId, fcmToken } = req.body;
+
+    if (!ownerId || !fcmToken) {
       return res.status(400).json({ success: false, message: "Missing data" });
     }
 
     const updatedOwner = await Owner.findByIdAndUpdate(ownerId, {
-      fcmToken: playerId,
+      fcmToken: fcmToken,
     }, { new: true });
 
     console.log("✅ Owner updated:", updatedOwner);

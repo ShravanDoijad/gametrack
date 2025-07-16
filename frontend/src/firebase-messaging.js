@@ -5,23 +5,25 @@ import firebaseApp from "./firebase";
 const messaging = getMessaging(firebaseApp);
 
 export const requestPermission = async () => {
+  console.log("🔔 Requesting notification permission...");
   try {
     const permission = await Notification.requestPermission();
-    
     if (permission === "granted") {
       const token = await getToken(messaging, {
-        vapidKey: import.meta.env.VITE_VAPID_KEY, 
+        vapidKey: import.meta.env.VITE_VAPID_KEY,
       });
-      console.log(" FCM Token:", token);
-      
+      console.log("✅ Token received:", token);
       return token;
     } else {
-      console.warn(" Notification permission denied");
+      console.warn("❌ Notification permission denied or blocked:", permission);
+      return null;
     }
   } catch (err) {
-    console.error("🔥 Token Error", err);
+    console.error("🔥 Permission request failed:", err);
+    return null;
   }
 };
+
 
 
 export const onMessageListener = () =>

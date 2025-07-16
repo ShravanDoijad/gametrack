@@ -36,7 +36,7 @@ function App() {
 
     return () => clearTimeout(timer);
   }, [isLoading]);
-
+  console.log("ownerId", userInfo)
   if (isLoading || showSplash) {
     
       <div className="min-h-screen flex flex-col items-center justify-center bg-black">

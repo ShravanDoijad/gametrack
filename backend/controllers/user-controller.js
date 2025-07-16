@@ -272,7 +272,7 @@ const verifyOrder = async (req, res) => {
 
     const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
     const turfName = turf?.owner?.turfname || "your turf";
-
+    console.log("user and owner", user, turf.owner)
 
     if (user?.fcmToken) {
       try {
