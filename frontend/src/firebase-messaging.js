@@ -1,5 +1,5 @@
 // src/firebase-messaging.js
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { getMessaging, getToken, onMessage, deleteToken } from "firebase/messaging";
 import firebaseApp from "./firebase";
 
 const messaging = getMessaging(firebaseApp);
@@ -7,6 +7,8 @@ const messaging = getMessaging(firebaseApp);
 export const requestPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
+    await deleteToken(messaging);
+      console.log("🧹 Old token deleted");
     if (permission === "granted") {
       const token = await getToken(messaging, {
         vapidKey: import.meta.env.VITE_VAPID_KEY, 
