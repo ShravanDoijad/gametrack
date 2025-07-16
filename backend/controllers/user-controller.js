@@ -375,7 +375,7 @@ const getAllBookings = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { userId, email, isNotification, preferredTime, playerId } = req.body;
+    const { userId, email, isNotification, preferredTime,fcmToken } = req.body;
     if (!userId) {
       return res
         .status(400)
@@ -387,7 +387,7 @@ const updateUser = async (req, res) => {
     if (typeof isNotification !== "undefined")
       updateFields.isNotification = isNotification;
     if (preferredTime) updateFields.preferredTime = preferredTime;
-    if (playerId) updateFields.fcmToken = playerId;
+    if (fcmToken) updateFields.fcmToken = fcmToken;
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
       new: true,
