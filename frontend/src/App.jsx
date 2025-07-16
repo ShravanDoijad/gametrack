@@ -60,7 +60,7 @@ function App() {
             <Route path="/favorite" element={<Favorite />} />
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/testpush" element={<SendTestPush />} />
+          
             
           </Route>
 

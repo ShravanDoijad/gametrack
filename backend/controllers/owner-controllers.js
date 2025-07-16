@@ -200,17 +200,26 @@ const dashboardDetails= async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
-const updateOwner = async(req, res)=>{
-    try {
-         const { ownerId, playerId } = req.body;
-         await Owner.findByIdAndUpdate(ownerId, { fcmToken: playerId });
-         res.json({ success: true });
-        
-    } catch (error) {
-        console.log("Error to update the Turf",error);
-        res.json({success: false})
+
+const updateOwner = async (req, res) => {
+  try {
+    const { ownerId, playerId } = req.body;
+    if (!ownerId || !playerId) {
+      return res.status(400).json({ success: false, message: "Missing data" });
     }
-}
+
+    const updatedOwner = await Owner.findByIdAndUpdate(ownerId, {
+      fcmToken: playerId,
+    }, { new: true });
+
+    console.log("✅ Owner updated:", updatedOwner);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("🔥 Update Owner Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 
 
 module.exports = {

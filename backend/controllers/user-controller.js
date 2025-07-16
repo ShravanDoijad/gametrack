@@ -9,12 +9,10 @@ const turfModel = require("../models/turf-model");
 const Owner = require("../models/owner-model");
 const admin = require("../firebase/firebase-admin");
 
-
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
 });
-
 
 const userRegister = async (req, res) => {
   try {
@@ -34,18 +32,15 @@ const userRegister = async (req, res) => {
           success: false,
           message: "User already exists. Please login.",
         });
-      }
-      else {
+      } else {
         console.log("existing user", existingUser.phone);
-        await sendOtp({ identifier: existingUser.phone, role: 'user' });
+        await sendOtp({ identifier: existingUser.phone, role: "user" });
         return res.status(200).json({
           success: true,
           message: "OTP sent for verification",
-
         });
       }
     }
-
 
     const newUser = await User.create({
       fullname: `${firstName} ${lastName}`,
@@ -53,7 +48,7 @@ const userRegister = async (req, res) => {
       isVerified: false,
     });
 
-    await sendOtp({ identifier: phone, role: 'user' });
+    await sendOtp({ identifier: phone, role: "user" });
 
     return res.status(200).json({
       success: true,
@@ -70,9 +65,6 @@ const userRegister = async (req, res) => {
   }
 };
 
-
-
-
 const login = async (req, res) => {
   try {
     const { identifier } = req.body;
@@ -85,24 +77,23 @@ const login = async (req, res) => {
     }
 
     const owner = await Owner.findOne({
-      email: identifier
+      email: identifier,
     });
 
     if (owner) {
-      const result = await sendOtp({ identifier, role: 'owner' });
+      const result = await sendOtp({ identifier, role: "owner" });
       return res.status(200).json({
         success: true,
         message: `OTP sent to owner account`,
       });
     }
 
-
     const user = await User.findOne({
       $or: [{ email: identifier }, { phone: identifier }],
     });
 
     if (user) {
-      const result = await sendOtp({ identifier, role: 'user' });
+      const result = await sendOtp({ identifier, role: "user" });
       return res.status(200).json({
         success: true,
         message: `OTP sent to user account`,
@@ -113,7 +104,6 @@ const login = async (req, res) => {
       success: false,
       message: "Account not found. Please create one!",
     });
-
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({
@@ -124,33 +114,22 @@ const login = async (req, res) => {
   }
 };
 
-
-
-
-
-
 const userLogout = async (req, res) => {
   try {
-    const { role } = req.body
+    const { role } = req.body;
     if (role === "user") {
-      res.clearCookie("userToken",
-        {
-          httpOnly: true,
-          secure: true,
-          sameSite: "None",
-        }
-      )
-    }
-    else if (role === "owner") {
-      res.clearCookie("ownerToken",
-        {
-          httpOnly: true,
-          secure: true,
-          sameSite: "None",
-        }
-      )
-    }
-    else {
+      res.clearCookie("userToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+      });
+    } else if (role === "owner") {
+      res.clearCookie("ownerToken", {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+      });
+    } else {
       return res.status(400).json({ success: false, message: "Invalid role" });
     }
 
@@ -271,32 +250,42 @@ const verifyOrder = async (req, res) => {
       status: "confirmed",
     });
     const user = await User.findById(bookingDetails.userId);
-    const ownerData = await turfModel.findById(bookingDetails.turfId).populate("owner", "fcmToken turfname");
-    
+    const ownerData = await turfModel
+      .findById(bookingDetails.turfId)
+      .populate("owner", "fcmToken turfname");
+
     if (!user?.fcmToken || !ownerData?.owner?.fcmToken) {
       console.warn("FCM tokens not found for user or owner");
       return res.status(400).json({
         success: false,
         message: "FCM tokens not found for user or owner",
       });
-    };
+    }
 
-    await admin.messaging().send({
-      token: user.fcmToken,
-      notification: {
-        title: "✅ Booking Confirmed",
-        body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.turfname}`,
-      },
-    })
+    try {
+      await admin.messaging().send({
+        token: user.fcmToken,
+        notification: {
+          title: "✅ Booking Confirmed",
+          body: `Your booking is confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.owner.turfname}`,
+        },
+      });
 
-    await admin.messaging().send({
-      token: ownerData.owner.fcmToken,
-      notification: {
-        title: "📅 New Booking Alert",
-        body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.turfname}`,
-      },
-    })
-
+      await admin.messaging().send({
+        token: ownerData.owner.fcmToken,
+        notification: {
+          title: "📅 New Booking Alert",
+          body: `New booking confirmed for ${bookingDetails.date} at ${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end} at ${ownerData.owner.turfname}`,
+        },
+      });
+    } catch (err) {
+      if (err.code === "messaging/registration-token-not-registered") {
+        console.log("❌ Owner token invalid, clear it from DB");
+        await Owner.findByIdAndUpdate(ownerData.owner._id, { fcmToken: null });
+      } else {
+        console.log("Other FCM error:", err);
+      }
+    }
     return res.status(200).json({
       success: true,
       message: "Payment verified and booking confirmed",
@@ -324,13 +313,10 @@ const getAllBookings = async (req, res) => {
     res.status(200).json({ success: true, allBookings: allBookings });
   } catch (error) {
     console.log("Error to Fetch Bookings", error);
-    return res
-      .status(500)
-      .json({
-        success: false,
-        message: "Fetch Bookings Error"
-
-      });
+    return res.status(500).json({
+      success: false,
+      message: "Fetch Bookings Error",
+    });
   }
 };
 
@@ -345,20 +331,21 @@ const updateUser = async (req, res) => {
     console.log("Update User Data:", req.body);
     const updateFields = {};
     if (email) updateFields.email = email;
-    if (typeof isNotification !== "undefined") updateFields.isNotification = isNotification;
+    if (typeof isNotification !== "undefined")
+      updateFields.isNotification = isNotification;
     if (preferredTime) updateFields.preferredTime = preferredTime;
     if (playerId) updateFields.fcmToken = playerId;
 
-    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, { new: true });
+    const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
+      new: true,
+    });
 
     console.log("Updated User:", updatedUser);
-    res
-      .status(200)
-      .json({
-        success: true,
-        updatedUser,
-        message: "User Updated Successfully",
-      });
+    res.status(200).json({
+      success: true,
+      updatedUser,
+      message: "User Updated Successfully",
+    });
   } catch (err) {
     console.log("Error to Update User", err);
     res.status(200).json({
@@ -373,12 +360,10 @@ const deleteUser = async (req, res) => {
   try {
     const { userId } = req.body;
     if (!userId) {
-      return res
-        .status(400)
-        .json({
-          success: false,
-          message: "Allready Have not any Account, Login First",
-        });
+      return res.status(400).json({
+        success: false,
+        message: "Allready Have not any Account, Login First",
+      });
     }
     await User.findByIdAndDelete(userId);
 
@@ -431,11 +416,13 @@ const addFavorite = async (req, res) => {
   }
 };
 
-
 const getFavoriteTurfs = async (req, res) => {
   try {
     const { data: user, role } = req.user;
-    const customer = await User.findById(user._id).populate("favoriteTurfs", "_id name location avarageRating images dayPrice nightPrice");
+    const customer = await User.findById(user._id).populate(
+      "favoriteTurfs",
+      "_id name location avarageRating images dayPrice nightPrice"
+    );
     if (!customer) {
       return res
         .status(401)
@@ -449,12 +436,11 @@ const getFavoriteTurfs = async (req, res) => {
     });
   } catch (error) {
     console.log("Can't fetch favorite Turfs", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Can't fetch favorite Turfs", error: error
-      });
+    res.status(500).json({
+      success: false,
+      message: "Can't fetch favorite Turfs",
+      error: error,
+    });
   }
 };
 
@@ -486,11 +472,11 @@ const removeFavoriteTurf = async (req, res) => {
     });
   } catch (error) {
     console.error("Error removing favorite turf:", error);
-    res.status(500).json({ message: "Server error. Couldn't remove favorite turf." });
+    res
+      .status(500)
+      .json({ message: "Server error. Couldn't remove favorite turf." });
   }
 };
-
-
 
 module.exports = {
   userRegister,
@@ -505,5 +491,4 @@ module.exports = {
   login,
 
   removeFavoriteTurf,
-
 };
