@@ -6,6 +6,7 @@ const PushNotifier = ({ userId, ownerId, type }) => {
   useEffect(() => {
     const setupNotifications = async () => {
       try {
+        // ✅ Always ask for permission, regardless of role
         const token = await requestPermission();
 
         if (!token) {
@@ -15,6 +16,7 @@ const PushNotifier = ({ userId, ownerId, type }) => {
 
         console.log("📡 FCM Token:", token);
 
+        // ✅ Now update based on the type
         if (type === "user" && userId) {
           await axios.post("/api/users/updateUser", {
             userId,
@@ -35,6 +37,7 @@ const PushNotifier = ({ userId, ownerId, type }) => {
 
     setupNotifications();
 
+    // ✅ Listen for foreground notifications
     onMessageListener().then((payload) => {
       console.log("📬 Foreground notification received:", payload);
       const { title, body } = payload.notification;
