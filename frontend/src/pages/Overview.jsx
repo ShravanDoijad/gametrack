@@ -24,7 +24,7 @@ import { useNavigate } from "react-router-dom";
 import footballIcon from "../assets/football.png";
 import cricketIcon from "../assets/cricket.png";
 import badmintonIcon from "../assets/badminton.png";
-import turfImage from "../assets/turf1.jpg";
+
 import userAvatar from "../assets/user.png";
 import football from "../assets/football.png";
 import cricket from "../assets/cricket.png";

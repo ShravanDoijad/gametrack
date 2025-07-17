@@ -41,12 +41,14 @@ const PushNotifier = ({ userId, ownerId, type }) => {
 
       new Notification(title, {
         body,
-        icon: "/GameTrack.jpg",
-      });
+        
+        icon: "/icons/logo-192.png", 
+        badge: "/icons/logo-96.png",
+      })
     });
   }, [userId, ownerId, type]);
 
-  return null; // ✅ It must return something (even null)
+  return null; 
 };
 
 export default PushNotifier;

@@ -415,7 +415,7 @@ cron.schedule("*/5 * * * *", async () => {
 
   for (let booking of bookings) {
     const bookingDate = new Date(booking.date);
-    const slotTime = booking.slots[0]?.start; // e.g. '06:00 PM'
+    const slotTime = booking.slots[0]?.start;
 
     const slotDateTime = new Date(`${booking.date} ${slotTime}`);
     const diffInMs = slotDateTime.getTime() - now.getTime();
