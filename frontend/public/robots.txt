@@ -1,0 +1,7 @@
+
+User-agent: *
+Disallow: /admin/
+Disallow: /owner/
+Disallow:
+
+Sitemap: https://www.gametrack.in/sitemap_index.xml
