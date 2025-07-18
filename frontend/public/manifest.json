@@ -3,8 +3,8 @@
   "short_name": "GameTrack",
   "start_url": "/",
   "display": "standalone",
-    "background_color": "#10b981",
-  "theme_color": "#10b981",
+    "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "/icons/logo-192.png",
