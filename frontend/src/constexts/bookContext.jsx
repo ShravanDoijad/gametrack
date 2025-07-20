@@ -15,6 +15,7 @@ const BookContextProvider = ({ children }) => {
     const [loginPanel, setloginPanel] = useState(false)
     const [menuPanel, setmenuPanel] = useState(false)
     const [bookings, setbookings] = useState([])
+    
 
     useEffect(() => {
         if (token && userInfo && userInfo.role === 'owner') {
@@ -36,7 +37,7 @@ const BookContextProvider = ({ children }) => {
 
 
     const fetchToken = async () => {
-        setisLoading(true); // start loading
+        setisLoading(true); 
 
         try {
             const userRes = await axios.get(`/api/auth/authCheck`, {
@@ -55,24 +56,6 @@ const BookContextProvider = ({ children }) => {
             console.warn("User not authenticated");
         }
 
-        try {
-            const ownerRes = await axios.get(`/api/auth/ownerAuthCheck`, {
-                withCredentials: true,
-            });
-
-            if (ownerRes.data.success) {
-                settoken(true);
-                setuserInfo({
-                    ...ownerRes.data.owner,
-                    role: ownerRes.data.role,
-                });
-                return;
-            }
-        } catch (error) {
-            console.warn("Owner not authenticated");
-        }
-
-        // If nothing worked
         settoken(false);
         setuserInfo(null);
         console.warn("No valid session found");

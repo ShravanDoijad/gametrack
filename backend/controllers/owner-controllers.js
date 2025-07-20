@@ -12,7 +12,7 @@ const ownerRegister = async (req, res) => {
         const { fullname, email, phone, turfId, turfname } = req.body;
 
         // Basic validation
-        if (!fullname || !email || !phone  || !turfId || !turfname) {
+        if (!fullname || !email || !phone || !turfId || !turfname) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required",
@@ -28,14 +28,14 @@ const ownerRegister = async (req, res) => {
             });
         }
 
-       
+
 
         // Create owner
         const newOwner = new Owner({
             fullname,
             email,
             phone,
-            
+
             turfId,
             turfname,
         });
@@ -68,7 +68,7 @@ module.exports = { ownerRegister };
 
 const turfAllBookings = async (req, res) => {
     try {
-        const { data: owner, role } = req.owner;
+        const { data: owner, role } = req.auth;
         const turfId = owner.turfId;
 
         if (!turfId) {
@@ -76,7 +76,7 @@ const turfAllBookings = async (req, res) => {
         }
 
         const bookings = await Booking.find({ turfId: turfId }).populate('userId', 'fullname email phone');
-        
+
         res.status(200).json({ success: true, bookings });
     } catch (error) {
         console.error("Error fetching turf bookings:", error);
@@ -87,13 +87,13 @@ const turfAllBookings = async (req, res) => {
 
 const getCustomers = async (req, res) => {
     try {
-        const { data: owner, role } = req.owner;
+        const { data: owner, role } = req.auth;
         const turf = await Turf.findById(owner.turfId)
         if (!turf) {
             return res.status(404).json({ success: false, message: "Turf not found" });
         }
         const bookings = await Booking.find({ turfId: turf._id }).populate('userId', 'name email phone');
-        
+
         if (!bookings || bookings.length === 0) {
             return res.status(404).json({ success: false, message: "No bookings found for this turf" });
         }
@@ -126,7 +126,7 @@ const getCustomers = async (req, res) => {
 
 const getTurfDetails = async (req, res) => {
     try {
-        const { data: owner, role } = req.owner;
+        const { data: owner, role } = req.auth;
         const turf = await Turf.findById(owner.turfId);
         if (!turf) {
             return res.status(404).json({ success: false, message: "Turf not found" });
@@ -140,7 +140,7 @@ const getTurfDetails = async (req, res) => {
 
 const updateTurfProfile = async (req, res) => {
     try {
-        const { data: owner, role } = req.owner;
+        const { data: owner, role } = req.auth;
         const turfId = owner.turfId;
         const turfData = req.body;
 
@@ -158,7 +158,7 @@ const updateTurfProfile = async (req, res) => {
 
 const getOwnedTurfs = async (req, res) => {
     try {
-        const { data: owner, role } = req.owner;
+        const { data: owner, role } = req.auth;
         if (!owner || !owner.turfId) {
             return res.status(400).json({ success: false, message: "Owner or Turf ID not found" });
         }
@@ -173,52 +173,51 @@ const getOwnedTurfs = async (req, res) => {
     }
 }
 
-const dashboardDetails= async (req, res) => {
-  try {
-    const {turfId} = req.query
-    if (!turfId) {
-      return res.status(400).json({ success: false, message: "Turf ID is required" });
+const dashboardDetails = async (req, res) => {
+    try {
+        const { turfId } = req.query
+        if (!turfId) {
+            return res.status(400).json({ success: false, message: "Turf ID is required" });
+        }
+        const bookings = await Booking.find({ turfId: turfId })
+        const details = []
+        bookings.forEach((booking) => {
+            details.push({
+                userId: booking.userId,
+                date: booking.date,
+                slots: booking.slots,
+                slotFees: booking.slotFees,
+                amountPaid: booking.amountPaid,
+                paymentType: booking.paymentType,
+                status: booking.status,
+                createdAt: booking.createdAt
+            })
+        })
+        res.status(200).json({ success: true, details });
     }
-    const bookings = await Booking.find({ turfId: turfId })
-    const details = []
-    bookings.forEach((booking) => {
-      details.push({
-        userId: booking.userId,
-        date: booking.date,
-        slots: booking.slots,
-        slotFees: booking.slotFees,
-        amountPaid: booking.amountPaid,
-        paymentType: booking.paymentType,
-        status: booking.status,
-        createdAt: booking.createdAt
-      })
-    })
-    res.status(200).json({ success: true, details });
-  }
-  catch{
-    console.error("Error fetching dashboard details:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
-  }
+    catch {
+        console.error("Error fetching dashboard details:", error);
+        res.status(500).json({ success: false, message: "Internal server error" });
+    }
 }
 
 const updateOwner = async (req, res) => {
-  try {
-    const { ownerId, fcmToken } = req.body;
+    try {
+        const { ownerId, fcmToken } = req.body;
 
-    if (!ownerId || !fcmToken) {
-      return res.status(400).json({ success: false, message: "Missing data" });
+        if (!ownerId || !fcmToken) {
+            return res.status(400).json({ success: false, message: "Missing data" });
+        }
+
+        const updatedOwner = await Owner.findByIdAndUpdate(ownerId, {
+            $addToSet: { fcmTokens: fcmToken }
+        }, { new: true });
+
+        res.json({ success: true });
+    } catch (error) {
+        console.error("🔥 Update Owner Error:", error);
+        res.status(500).json({ success: false, error: error.message });
     }
-
-    const updatedOwner = await Owner.findByIdAndUpdate(ownerId, {
-      fcmToken: fcmToken,
-    }, { new: true });
-
-    console.log("✅ Owner updated:", updatedOwner);
-    res.json({ success: true });
-  } catch (error) {
-    console.error("🔥 Update Owner Error:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
 };
 
 

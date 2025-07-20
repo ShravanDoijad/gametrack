@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { setmenuPanel, token, handleLogout, setloginPanel, userInfo } = useContext(BookContext);
+  const { setmenuPanel, token, handleLogout, setloginPanel, userInfo, setShowPanel } = useContext(BookContext);
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
@@ -32,7 +32,7 @@ const Navbar = () => {
 
         <div className="relative">
           <button
-            onClick={() => token ? navigate('/notification') : setloginPanel(true)}
+            onClick={() => token ? navigate('/notification') : navigate('/register')}
             className="p-2 rounded-full hover:bg-gray-800 transition-colors relative"
           >
             <Bell className="text-gray-200" size={20} />
@@ -117,7 +117,8 @@ const Navbar = () => {
                 ) : (
                   <button
                     onClick={() => {
-                      setloginPanel(true);
+                      
+                      navigate('/register');
                       setShowDropdown(false);
                     }}
                     className="w-full px-4 py-3 text-sm text-center text-white bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 transition-colors"

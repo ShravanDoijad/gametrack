@@ -255,7 +255,7 @@ if (nearestSwitch) {
     }
 
   return (
-    <div className="w-full min-h-screen px-6 py-4 text-white bg-gradient-to-b from-gray-900 to-gray-950">
+    <div className="w-full  px-6 py-4 text-white bg-gradient-to-b from-gray-900 to-gray-950">
       <div className="flex  sm:flex-row items-center justify-between mb-6 gap-4">
         <button
           onClick={() => setNearestSwitch(!nearestSwitch)}

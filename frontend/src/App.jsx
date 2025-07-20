@@ -19,40 +19,38 @@ import Profile from './pages/Profile';
 import PushNotifier from './components/PushNotifier';
 import Owner from './Owner';
 import OwnerPrivateRoute from './OwnerPrivateRoute';
+import { Error404 } from './components/Error404';
+import { Error403 } from './components/Error403';
 
 function App() {
   const { loginPanel, token, userInfo, isLoading } = useContext(BookContext);
-  const navigate = useNavigate();
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
-    // Ensure splash stays for at least 4 seconds even if isLoading finishes
     const timer = setTimeout(() => {
       setShowSplash(false);
-      if (!token) {
-        navigate("/");
-      }
     }, 4000);
-
     return () => clearTimeout(timer);
-  }, [isLoading]);
-  console.log("ownerId", userInfo)
-  if (isLoading || showSplash) {
-    
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black">
-        <img
-          src="/gametrack.jpg"
-          alt="GameTrack Logo"
-          className="w-28 h-28 animate-bounce rounded-full shadow-lg"
-        />
-        <p className="text-white mt-4 animate-pulse text-sm tracking-wider">Preparing your arena...</p>
-      </div>
-    
-  }
+  }, []);
 
+  // ✅ Show splash until both splash timer ends AND token check finishes
+  // if (showSplash || isLoading) {
+  //   return (
+  //     <div className="min-h-screen flex flex-col items-center justify-center bg-black">
+  //       <img
+  //         src="/icons/logo-512.png"
+  //         alt="GameTrack Logo"
+  //         className="w-28 h-28 animate-bounce rounded-full shadow-lg"
+  //       />
+  //       <p className="text-white mt-4 animate-pulse text-sm tracking-wider">Preparing your arena...</p>
+  //     </div>
+  //   );
+  // }
+
+  // ✅ App content after splash + loading
   return (
-    <div className="max-w-screen min-h-[80vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
-      {loginPanel && !token && <Register />}
+    <div className="max-w-screen min-h-[92vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
+      {loginPanel && <Register />}
       {token && userInfo?.role === "user" && <PushNotifier userId={userInfo._id} type="user" />}
       {token && userInfo?.role === "owner" && <PushNotifier ownerId={userInfo._id} type="owner" />}
 
@@ -60,7 +58,6 @@ function App() {
 
       <div className="flex-grow mt-6">
         <Routes>
-         
           <Route path="/" element={<Turfs />} />
           <Route path="/register" element={<Register />} />
           <Route path="/otp" element={<OtpVerify />} />
@@ -74,11 +71,15 @@ function App() {
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
+          <Route path="/forbidden" element={<Error403/>} />
 
           {/* Protected Owner Routes */}
           <Route element={<OwnerPrivateRoute />}>
             <Route path="/owner/*" element={<Owner />} />
           </Route>
+
+          {/* Catch-all route */}
+          <Route path="*" element={<Error404/>} />
         </Routes>
       </div>
 
@@ -86,5 +87,6 @@ function App() {
     </div>
   );
 }
+
 
 export default App;

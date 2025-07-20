@@ -41,6 +41,7 @@ const Booking = () => {
   const [availableTimes, setAvailableTimes] = useState([]);
   const [paymentOption, setPaymentOption] = useState(null);
   const [allSlots, setallSlots] = useState([])
+  const [loading, setloading] = useState(false)
 
   const handleDateSelect = (date) => {
     const timezoneAdjustedDate = new Date(
@@ -114,15 +115,15 @@ const Booking = () => {
         policies: turfInfo.onSitePolicies
       };
 
-
+      setloading(true)
 
       const res = await axios.post("/api/users/createOrder", {
         amount: amount,
         currency: "INR",
         receipt: `booking_${Date.now()}`,
-        notes: {
-          bookingDetails: JSON.stringify(bookingDetails)
-        }
+        
+        bookingDetails: JSON.stringify(bookingDetails)
+        
       });
 
       const { order } = res.data;
@@ -155,6 +156,9 @@ const Booking = () => {
             console.error(err);
             toast.warning("Payment verification error");
           }
+          finally{
+            setloading(false)
+          }
         },
         prefill: {
           name: userInfo.fullname,
@@ -171,7 +175,12 @@ const Booking = () => {
       console.log(err);
       toast.error("Payment Error");
     }
+    finally{
+      setloading(false)
+    }
   };
+
+
 
 
   const generateAvailableTimeSlots = (selectedDate, turfInfo) => {
@@ -339,6 +348,12 @@ const Booking = () => {
     slot.military !== turfInfo.closingTime
     
   )
+  {loading && (
+  <div className="flex justify-center items-center min-h-[100px]">
+    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+  </div>
+)}
+
 
   return (
     <div className="px-6 pb-24 text-white font-sans">

@@ -214,7 +214,7 @@ const handleFavorite = async () => {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="w-full min-h-screen flex items-center justify-center text-white"
+        className="w-full mt-30 flex items-center justify-center text-white"
       >
         Turf not found
       </motion.div>
@@ -231,14 +231,14 @@ const handleFavorite = async () => {
 
 
   return (
-    <div className="w-full min-h-screen  text-white relative animate-fadeIn">
+    <div className="w-full pb-10  text-white relative animate-fadeIn">
       {mapView && <MapView longitude={turfInfo.location.coordinates[0]}
         latitude={turfInfo.location.coordinates[1]}
         userLat={userCoords.latitude}
         userLng={userCoords.longitude}
         setmapView={setmapView} />}
 
-      <div className="px-6 pt-6 pb-4 bg-gradient-to-b from-gray-900 to-transparent sticky top-0 z-10 backdrop-blur-sm">
+      <div className="px-6 pt-6  bg-gradient-to-b from-gray-900 to-transparent sticky top-0 z-10 backdrop-blur-sm">
         <div className="flex items-start justify-between w-full">
           <div>
             <h2 className="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-lime-400 to-emerald-500">
@@ -276,7 +276,7 @@ const handleFavorite = async () => {
       </div>
 
 
-      <div className="px-6 pb-28">
+      <div className="px-6 ">
 
         <div
           onClick={handleDoubleTap}

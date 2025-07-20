@@ -116,21 +116,21 @@ const verifyOtp = async (req, res) => {
     
     const payload = {
       id: account._id,
-      role: role || 'user',
+      role: role,
       email: account.email,
       phone: account.phone,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-    const tokenName = role === 'owner' ? 'ownerToken' : 'userToken';
+  
    
-    res.cookie(tokenName, token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'None',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('authToken', token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'None',
+  maxAge: 7 * 24 * 60 * 60 * 1000, 
+});
 
     
     await Otp.deleteMany({ identifier: identifier, role: role });

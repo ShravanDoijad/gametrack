@@ -13,30 +13,30 @@ const PushNotifier = ({ userId, ownerId, type }) => {
           return;
         }
 
-        console.log("📡 Received FCM token:", token);
+        console.log("Received FCM token:", token);
 
         if (type === "user" && userId) {
           await axios.post("/api/users/updateUser", {
             userId,
             fcmToken: token,
           });
-          console.log("✅ User FCM token updated");
+          console.log("User FCM token updated");
         } else if (type === "owner" && ownerId) {
           await axios.post("/owner/updateOwner", {
             ownerId,
             fcmToken: token,
           });
-          console.log("✅ Owner FCM token updated");
+          console.log("Owner FCM token updated");
         }
       } catch (err) {
-        console.error("🔥 Push setup error:", err);
+        console.error("Push setup error:", err);
       }
     };
 
     setupNotifications();
 
     onMessageListener().then((payload) => {
-      console.log("📬 Foreground notification received:", payload);
+      console.log(" Foreground notification received:", payload);
       const { title, body } = payload.notification;
 
       new Notification(title, {
@@ -44,6 +44,7 @@ const PushNotifier = ({ userId, ownerId, type }) => {
         
         icon: "/icons/logo-192.png", 
         badge: "/icons/logo-96.png",
+       
       })
     });
   }, [userId, ownerId, type]);

@@ -1,47 +1,39 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import { BookContext } from '../constexts/bookContext';
-import { Phone, Mail, Lock } from 'lucide-react';
+import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
 
 const Register = () => {
-  const { setisLoading, settoken } = useContext(BookContext);
+  const { setisLoading, settoken, setloginPanel } = useContext(BookContext);
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', otp: '' });
   const [activeTab, setActiveTab] = useState('credentials');
   const [isLogin, setIsLogin] = useState(false);
   const [loginTab, setLoginTab] = useState('phone');
+  const panelRef = useRef();
   const navigate = useNavigate();
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: { duration: 0.5, ease: 'easeOut' },
-    },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: 'easeOut' } },
+    exit: { opacity: 0, y: 20, transition: { duration: 0.3 } }
   };
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   const sendOtp = async () => {
     try {
       setisLoading(true);
-
       if (isLogin) {
         const identifier = loginTab === 'phone' ? form.phone : form.email;
         if (!identifier) return toast.error(`${loginTab === 'phone' ? 'Phone number' : 'Email'} is required`);
-        const res = await axios.post('/api/users/login', loginTab === 'phone' ? { identifier: form.phone } : { identifier: form.email });
-        console.log("login Res", res.data)
+        const res = await axios.post('/api/users/login', { identifier });
         if (res.data.success) {
           toast.success('OTP sent');
           setActiveTab('otp');
-        } else {
-          toast.error(res.data.message || 'Failed to send OTP');
-        }
+        } else toast.error(res.data.message || 'Failed to send OTP');
       } else {
         const { firstName, lastName, phone } = form;
         if (!firstName || !lastName || !phone) return toast.error('All fields are required');
@@ -49,9 +41,7 @@ const Register = () => {
         if (res.data.success) {
           toast.success('OTP sent');
           setActiveTab('otp');
-        } else {
-          toast.error(res.data.message || 'Failed to send OTP');
-        }
+        } else toast.error(res.data.message || 'Failed to send OTP');
       }
     } catch (err) {
       console.error(err);
@@ -64,170 +54,227 @@ const Register = () => {
   const handleVerify = async () => {
     try {
       setisLoading(true);
-        const { phone, email, otp } = form;
-
-        if ((!phone && !email)|| !otp) return toast.error('phone or email *and* OTP are required');
-        const identifier = phone || email;
-        const res = await axios.post('/otp/verifyOtp', { identifier, otp });
-        if (res.data.success) {
-          toast.success('Registration successful!');
-          settoken(true)
-          setTimeout(() => navigate('/turfs'), 500);
-        } else {
-          toast.error(res.data.message || 'Registration failed');
-        }
-      }
-     catch (err) {
+      const { phone, email, otp } = form;
+      if ((!phone && !email) || !otp) return toast.error('Phone/email and OTP are required');
+      const identifier = phone || email;
+      const res = await axios.post('/otp/verifyOtp', { identifier, otp });
+      if (res.data.success) {
+        toast.success('Login Successful!');
+        settoken(true);
+        setTimeout(() => navigate('/turfs'), 500);
+      } else toast.error(res.data.message || 'Verification failed');
+    } catch (err) {
       console.error(err);
-      toast.error(err.response.data.message ||'Server error');
+      toast.error(err.response?.data?.message || 'Server error');
     } finally {
       setisLoading(false);
     }
   };
+
   const renderCredentialsTab = () => (
-    <div className="space-y-4 ">
+    <div className="space-y-6">
       {!isLogin && (
-        <>
-          <input
-            type="text"
-            name="firstName"
-            value={form.firstName}
-            onChange={handleChange}
-            placeholder="First Name"
-            className="border border-gray-200 rounded-xl p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="text"
-            name="lastName"
-            value={form.lastName}
-            onChange={handleChange}
-            placeholder="Last Name"
-            className="border border-gray-200 rounded-xl p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">First Name</label>
+            <input 
+              type="text" 
+              name="firstName" 
+              value={form.firstName} 
+              onChange={handleChange} 
+              placeholder="John" 
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Last Name</label>
+            <input 
+              type="text" 
+              name="lastName" 
+              value={form.lastName} 
+              onChange={handleChange} 
+              placeholder="Doe" 
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
+        </div>
       )}
 
       {isLogin && (
-        <div className="flex space-x-2 mb-2">
-          <button
-            onClick={() => setLoginTab('phone')}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-sm font-medium border ${loginTab === 'phone' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 border-gray-300'}`}
+        <div className="flex space-x-2 mb-2 bg-gray-100 p-1 rounded-lg">
+          <button 
+            onClick={() => setLoginTab('phone')} 
+            className={`flex items-center justify-center gap-2 flex-1 py-2 px-4 rounded-md transition-all ${loginTab === 'phone' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600'}`}
           >
             <Phone size={16} /> Phone
           </button>
-          <button
-            onClick={() => setLoginTab('email')}
-            className={`flex-1 flex items-center justify-center gap-1 py-2 rounded-lg text-sm font-medium border ${loginTab === 'email' ? 'bg-blue-500 text-white' : 'bg-white text-gray-600 border-gray-300'}`}
+          <button 
+            onClick={() => setLoginTab('email')} 
+            className={`flex items-center justify-center gap-2 flex-1 py-2 px-4 rounded-md transition-all ${loginTab === 'email' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600'}`}
           >
             <Mail size={16} /> Email
           </button>
         </div>
       )}
 
-      {(!isLogin || loginTab === 'phone') && (
-        <input
-          type="tel"
-          name="phone"
-          value={form.phone}
-          onChange={handleChange}
-          placeholder="Phone Number"
-          className="border border-gray-200 rounded-xl p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      )}
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-gray-700">
+          {(!isLogin || loginTab === 'phone') ? 'Phone Number' : 'Email Address'}
+        </label>
+        {(!isLogin || loginTab === 'phone') ? (
+          <input 
+            type="tel" 
+            name="phone" 
+            value={form.phone} 
+            onChange={handleChange} 
+            placeholder="+91 9876543210" 
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        ) : (
+          <input 
+            type="email" 
+            name="email" 
+            value={form.email} 
+            onChange={handleChange} 
+            placeholder="your@email.com" 
+            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+          />
+        )}
+      </div>
 
-      {isLogin && loginTab === 'email' && (
-        <input
-          type="email"
-          name="email"
-          value={form.email}
-          onChange={handleChange}
-          placeholder="Email"
-          className="border border-gray-200 rounded-xl p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      )}
-
-      <button
-        onClick={sendOtp}
-        className="w-full bg-blue-600 text-white font-semibold py-3 rounded-xl transition hover:bg-blue-700"
+      <button 
+        onClick={sendOtp} 
+        className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:shadow-md transition-all transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
       >
         Send OTP
       </button>
 
-      <p className="text-center text-sm text-gray-500">
-        {isLogin ? (
-          <>Don't have an account?{' '}
-          <button onClick={() => { setIsLogin(false); setActiveTab('credentials'); }} className="text-blue-600 font-medium hover:underline">Register here</button></>
-        ) : (
-          <>Already have an account?{' '}
-          <button onClick={() => { setIsLogin(true); setActiveTab('credentials'); }} className="text-blue-600 font-medium hover:underline">Login here</button></>
-        )}
-      </p>
+      <div className="text-center pt-4 border-t border-gray-200">
+        <p className="text-sm text-gray-600">
+          {isLogin ? (
+            <>Don't have an account?{' '}
+              <button 
+                onClick={() => { setIsLogin(false); setActiveTab('credentials'); }} 
+                className="text-blue-600 font-medium hover:underline focus:outline-none"
+              >
+                Register
+              </button>
+            </>
+          ) : (
+            <>Already have an account?{' '}
+              <button 
+                onClick={() => { setIsLogin(true); setActiveTab('credentials'); }} 
+                className="text-blue-600 font-medium hover:underline focus:outline-none"
+              >
+                Login
+              </button>
+            </>
+          )}
+        </p>
+      </div>
     </div>
   );
 
   const renderOtpTab = () => (
-    <div className="space-y-4">
-      <div className="flex items-center justify-center gap-2 mb-4">
-        <Lock size={24} className="text-blue-500" />
-        <h3 className="text-xl font-semibold">Enter OTP</h3>
+    <div className="space-y-6">
+      <div className="flex flex-col items-center justify-center gap-2 mb-4">
+        <div className="p-3 bg-blue-100 rounded-full text-blue-600">
+          <Lock size={24} />
+        </div>
+        <h3 className="text-xl font-semibold text-gray-800">Enter OTP</h3>
+        <p className="text-sm text-gray-500">
+          Code sent to {loginTab === 'phone' ? form.phone : form.email}
+        </p>
       </div>
-      
-      <p className="text-center text-gray-500 mb-4">
-        We've sent a 6-digit code to {loginTab === 'phone' ? form.phone : form.email}
-      </p>
 
-      <input
-        type="text"
-        name="otp"
-        value={form.otp}
-        onChange={handleChange}
-        placeholder="Enter OTP"
-        className="border border-gray-200 rounded-xl p-3 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-gray-700">Verification Code</label>
+        <input 
+          type="text" 
+          name="otp" 
+          value={form.otp} 
+          onChange={handleChange} 
+          placeholder="Enter 6-digit OTP" 
+          className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-center tracking-widest font-mono"
+        />
+      </div>
 
-      <div className="flex space-x-3">
-        <button
-          onClick={() => setActiveTab('credentials')}
-          className="flex-1 bg-gray-200 text-gray-800 font-semibold py-3 rounded-xl transition hover:bg-gray-300"
+      <div className="flex gap-3">
+        <button 
+          onClick={() =>setloginPanel(false)} 
+          className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
         >
-          Back
+          <ArrowLeft size={16} /> Back
         </button>
-        <button
-          onClick={handleVerify}
-          className="flex-1 bg-blue-600 text-white font-semibold py-3 rounded-xl transition hover:bg-blue-700"
+        <button 
+          onClick={handleVerify} 
+          className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:shadow-md transition-all"
         >
           {isLogin ? 'Login' : 'Register'}
         </button>
       </div>
 
-      <p className="text-center text-sm text-gray-500">
-        Didn't receive code?{' '}
-        <button onClick={sendOtp} className="text-blue-600 font-medium hover:underline">Resend OTP</button>
-      </p>
+      <div className="text-center pt-4 border-t border-gray-200">
+        <p className="text-sm text-gray-600">
+          Didn't receive code?{' '}
+          <button 
+            onClick={sendOtp} 
+            className="text-blue-600 font-medium hover:underline focus:outline-none"
+          >
+            Resend OTP
+          </button>
+        </p>
+      </div>
     </div>
   );
 
   return (
-    <div className="flex fixed items-center top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 justify-center min-h-screen z-40 px-4 poppins">
-      <motion.div
-        className="w-full max-w-md p-8 rounded-3xl shadow-lg space-y-6 backdrop-blur-sm bg-white/90"
-        initial="hidden"
-        animate="visible"
-        variants={containerVariants}
-      >
-        <div className="text-center">
-          <h2 className="text-3xl font-bold text-gray-800 mb-1">
-            {isLogin ? 'Login' : 'Create Your Account'}
-          </h2>
-          <p className="text-gray-500">
-            {isLogin 
-              ? activeTab === 'credentials' ? 'Login to continue' : 'Verify your account'
-              : activeTab === 'credentials' ? 'Register to get started' : 'Verify your account'}
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br fixed  from-gray-50 to-gray-100 flex flex-col">
+      <div className="container mx-auto px-4 py-8 flex-1 flex flex-col">
+        <button
+          onClick={() => setloginPanel(false)|| navigate('/')}
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 self-start transition-colors"
+        >
+          <ArrowLeft size={18} /> Back to home
+        </button>
 
-        {activeTab === 'credentials' ? renderCredentialsTab() : renderOtpTab()}
-      </motion.div>
+        <div className="flex-1 flex items-center justify-center">
+          <motion.div
+            ref={panelRef}
+            className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200"
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            variants={containerVariants}
+          >
+            <div className="p-8">
+              <div className="text-center mb-8">
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center justify-center gap-3">
+                  {isLogin ? (
+                    <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                      <LogIn size={24} />
+                    </div>
+                  ) : (
+                    <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                      <UserPlus size={24} />
+                    </div>
+                  )}
+                  {isLogin ? 'Welcome Back' : 'Create Account'}
+                </h2>
+                <p className="text-gray-500 mt-2">
+                  {activeTab === 'credentials' ? 
+                    (isLogin ? 'Sign in to continue to your account' : 'Get started with your account') : 
+                    'Enter the verification code we sent you'}
+                </p>
+              </div>
+              
+              <div className="space-y-6">
+                {activeTab === 'credentials' ? renderCredentialsTab() : renderOtpTab()}
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </div>
     </div>
   );
 };
