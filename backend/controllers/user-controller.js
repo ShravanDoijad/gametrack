@@ -117,22 +117,13 @@ const login = async (req, res) => {
 
 const userLogout = async (req, res) => {
   try {
-    const { role } = req.body;
-    if (role === "user") {
-      res.clearCookie("userToken", {
+    
+      res.clearCookie("authToken", {
         httpOnly: true,
         secure: true,
         sameSite: "None",
       });
-    } else if (role === "owner") {
-      res.clearCookie("ownerToken", {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-      });
-    } else {
-      return res.status(400).json({ success: false, message: "Invalid role" });
-    }
+    
 
     res
       .status(200)
@@ -155,19 +146,23 @@ const createOrder = async (req, res) => {
   try {
     const { turfId, userId, date, slots } = bookingDetails;
 
-    // 1. Check if user already booked same slot
+
+
+
+    
     const existingUserBooking = await Booking.findOne({
       turfId,
       userId,
       date,
       slots: {
         $elemMatch: {
-          $or: slots.map((slot) => ({
-            start: slot.start,
-            end: slot.end,
+          $or: bookingDetails?.slots.map((slot) => ({
+            start: { $lt: slot.end },  
+            end: { $gt: slot.start },  
           })),
         },
       },
+
       status: { $ne: "cancelled" },
     });
 
@@ -200,7 +195,7 @@ const createOrder = async (req, res) => {
     const order = await razorpay.orders.create(options);
     res.json({ order });
   } catch (err) {
-    console.error(err);
+    console.log(err);
     res.status(500).json({ error: "Order creation failed" });
   }
 };
@@ -397,7 +392,7 @@ const updateUser = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Unauthorised, Login First" });
     }
-    
+
     const updateFields = {};
     if (email) updateFields.email = email;
     if (typeof isNotification !== "undefined")

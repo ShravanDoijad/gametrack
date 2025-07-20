@@ -122,7 +122,7 @@ const Booking = () => {
         currency: "INR",
         receipt: `booking_${Date.now()}`,
         
-        bookingDetails: JSON.stringify(bookingDetails)
+        bookingDetails: bookingDetails
         
       });
 
