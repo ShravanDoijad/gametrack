@@ -11,44 +11,49 @@ const MobileNav = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   console.log("userInfo", userInfo)
 
-  const tabs = [
-    { 
-      id: 'home',
-      icon: <Home size={22} />,
-      label: 'Explore',
-      path: '/',
-      active: location.pathname === '/'
-    },
-    { 
-      id: 'bookings',
-      icon: <CalendarDays size={22} />,
-      label: 'Bookings',
-      path: '/userBookings',
-      active: location.pathname.includes('bookings')
-    },
-    userInfo.role==="owner"?
-    {
-      id: 'timeSlots',
-      icon:<CalendarClock size={22} />,
-      label: 'timrManager',
-      path: '/owner/time-slots',
-      active: location.pathname.includes('owner/time-slots')
-    }:
-    { 
-      id: 'favorites',
-      icon: <Heart size={22} />,
-      label: 'Favorites',
-      path: '/favorite',
-      active: location.pathname.includes('favorites')
-    },
-    { 
-      id: 'profile',
-      icon: <User size={22} />,
-      label: 'Profile',
-      path: token ? '/profile' : '/register',
-      active: location.pathname.includes('profile') || location.pathname.includes('login')
-    },
-  ];
+const commonTabs = [
+  { 
+    id: 'home',
+    icon: <Home size={22} />,
+    label: 'Explore',
+    path: '/',
+    active: location.pathname === '/'
+  },
+  { 
+    id: 'bookings',
+    icon: <CalendarDays size={22} />,
+    label: 'Bookings',
+    path: '/userBookings',
+    active: location.pathname.includes('bookings')
+  },
+  { 
+    id: 'profile',
+    icon: <User size={22} />,
+    label: 'Profile',
+    path: token ? '/profile' : '/register',
+    active: location.pathname.includes('profile') || location.pathname.includes('login')
+  },
+];
+
+
+if (userInfo?.role === 'owner') {
+  commonTabs.splice(2, 0, {
+    id: 'timeSlots',
+    icon: <CalendarClock size={22} />,
+    label: 'Time Manager',
+    path: '/owner/time-slots',
+    active: location.pathname.includes('owner/time-slots')
+  });
+} else {
+  commonTabs.splice(2, 0, {
+    id: 'favorites',
+    icon: <Heart size={22} />,
+    label: 'Favorites',
+    path: '/favorite',
+    active: location.pathname.includes('favorites')
+  });
+}
+
 
   const handleQuickBook = () => {
     navigate("/turfs")
@@ -59,7 +64,7 @@ const MobileNav = () => {
      
       <nav className=" bottom-0 left-0 fixed right-0 bg-gray-900 border-t border-gray-800 z-50 shadow-2xl">
         <div className="flex items-center justify-around h-16 px-2">
-          {tabs.map((tab) => (
+          {commonTabs.map((tab) => (
             <React.Fragment key={tab.id}>
               {tab.special ? (
                 <motion.button
