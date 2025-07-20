@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user-model");
 const Owner = require("../models/owner-model");
 
-const userOrOwnerMiddleware = async (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
   try {
     const { authToken } = req.cookies;
 
@@ -59,6 +59,6 @@ const adminMiddleware = (req, res, next) => {
 };
 
 module.exports = {
-  userOrOwnerMiddleware,
+  authMiddleware,
   adminMiddleware,
 };

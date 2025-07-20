@@ -71,7 +71,8 @@ export const Turfs = () => {
   const [currentPickerMode, setCurrentPickerMode] = useState("check-in");
   const [availableHours, setAvailableHours] = useState([1, 2, 3, 4]);
   const { location, error } = Geolocation();
-  const {isLoading, setisLoading, selectedSport, setSelectedSport, calculateDistance}= useContext(BookContext)
+  const {selectedSport, setSelectedSport, calculateDistance}= useContext(BookContext)
+  const [isLoading, setisLoading] = useState(false)
   const fetchTurfs = async () => {
     try {
       setisLoading(true)

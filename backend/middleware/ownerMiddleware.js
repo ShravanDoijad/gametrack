@@ -3,7 +3,7 @@ const Owner = require("../models/owner-model");
 
 const ownerMiddleware = async (req, res, next) => {
   try {
-    const token = req.cookies?.ownerToken;
+    const token = req.cookies?.authToken;
 
     if (!token) {
       return res.status(401).json({ message: "Unauthorized. Please log in as owner." });
@@ -19,7 +19,7 @@ const ownerMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: "Owner not found." });
     }
 
-    req.owner = { data: owner, role: "owner" };
+    req.auth = { data: owner, role: "owner" };
     next();
 
   } catch (error) {

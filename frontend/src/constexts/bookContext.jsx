@@ -53,6 +53,7 @@ const BookContextProvider = ({ children }) => {
                 return;
             }
         } catch (error) {
+            console.log(error)
             console.warn("User not authenticated");
         }
 

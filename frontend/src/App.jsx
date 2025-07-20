@@ -29,23 +29,23 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 4000);
+    }, 3000);
     return () => clearTimeout(timer);
   }, []);
 
   // ✅ Show splash until both splash timer ends AND token check finishes
-  // if (showSplash || isLoading) {
-  //   return (
-  //     <div className="min-h-screen flex flex-col items-center justify-center bg-black">
-  //       <img
-  //         src="/icons/logo-512.png"
-  //         alt="GameTrack Logo"
-  //         className="w-28 h-28 animate-bounce rounded-full shadow-lg"
-  //       />
-  //       <p className="text-white mt-4 animate-pulse text-sm tracking-wider">Preparing your arena...</p>
-  //     </div>
-  //   );
-  // }
+  if (showSplash || isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-black">
+        <img
+          src="/icons/logo-512.png"
+          alt="GameTrack Logo"
+          className="w-28 h-28 animate-bounce rounded-full shadow-lg"
+        />
+        <p className="text-white mt-4 animate-pulse text-sm tracking-wider">Preparing your arena...</p>
+      </div>
+    );
+  }
 
   // ✅ App content after splash + loading
   return (
@@ -63,7 +63,7 @@ function App() {
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
 
-          {/* Protected User Routes */}
+
           <Route element={<PrivateRoute />}>
             <Route path="/booking" element={<Booking />} />
             <Route path="/notification" element={<Notifications />} />

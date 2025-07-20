@@ -3,7 +3,7 @@ const { body } = require('express-validator');
 const userRouter = express.Router();
 
 const { userRegister, userLogout, createOrder, verifyOrder, getAllBookings, updateUser, deleteUser, addFavorite, getFavoriteTurfs, login, removeFavoriteTurf, getAllNotifications } = require('../controllers/user-controller');
-const {userOrOwnerMiddleware} = require("../middleware/authMiddleware")
+const {authMiddleware} = require("../middleware/authMiddleware")
 
 
 userRouter.post(
@@ -55,15 +55,15 @@ userRouter.post(
   login
 );
 
-userRouter.post("/createOrder", userOrOwnerMiddleware,createOrder );
-userRouter.post("/verifyPayment", userOrOwnerMiddleware, verifyOrder );
-userRouter.get("/allBookings", userOrOwnerMiddleware, getAllBookings);
-userRouter.post("/updateUser", userOrOwnerMiddleware, updateUser);
-userRouter.post("/addFavorite", userOrOwnerMiddleware, addFavorite);
-userRouter.get("/getFavoriteTurfs", userOrOwnerMiddleware, getFavoriteTurfs);
-userRouter.post("/deleteUser", userOrOwnerMiddleware, deleteUser);
-userRouter.post("/removeFavoriteTurf", userOrOwnerMiddleware, removeFavoriteTurf);
-userRouter.get("/getNotfications", userOrOwnerMiddleware, getAllNotifications);
+userRouter.post("/createOrder", authMiddleware,createOrder );
+userRouter.post("/verifyPayment", authMiddleware, verifyOrder );
+userRouter.get("/allBookings", authMiddleware, getAllBookings);
+userRouter.post("/updateUser", authMiddleware, updateUser);
+userRouter.post("/addFavorite", authMiddleware, addFavorite);
+userRouter.get("/getFavoriteTurfs", authMiddleware, getFavoriteTurfs);
+userRouter.post("/deleteUser", authMiddleware, deleteUser);
+userRouter.post("/removeFavoriteTurf", authMiddleware, removeFavoriteTurf);
+userRouter.get("/getNotfications", authMiddleware, getAllNotifications);
 
 
 

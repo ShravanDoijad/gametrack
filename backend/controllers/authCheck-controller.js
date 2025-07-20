@@ -7,10 +7,10 @@ const authCheck = async (req, res) => {
 
     const { data, role } = auth;
 
+    console.log("data", data)
+
     if (role === "user") {
-      if (!data.isVerified) {
-        return res.status(401).json({ success: false, message: "User not verified" });
-      }
+      
       const { _id, fullname, phone, email, favoriteTurfs, preferences } = data;
       return res.status(200).json({
         success: true,
@@ -26,7 +26,7 @@ const authCheck = async (req, res) => {
         success: true,
         isToken: true,
         role,
-        owner: { _id, fullname, email, phone, turfname, turfId }
+        user: { _id, fullname, email, phone, turfname, turfId }
       });
     }
 

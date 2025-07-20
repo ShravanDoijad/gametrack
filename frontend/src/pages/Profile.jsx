@@ -23,16 +23,16 @@ const Profile = () => {
 
 });
 
-console.log("userInfo", userInfo)
 
-    if (!userInfo || isLoading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center text-white text-xl">
-      Loading your profile...
-    </div>
-  );
 
-}
+//     if (!userInfo || isLoading) {
+//   return (
+//     <div className="min-h-screen flex items-center justify-center text-white text-xl">
+//       Loading your profile...
+//     </div>
+//   );
+
+// }
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;

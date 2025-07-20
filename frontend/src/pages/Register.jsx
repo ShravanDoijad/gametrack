@@ -7,7 +7,8 @@ import { BookContext } from '../constexts/bookContext';
 import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
 
 const Register = () => {
-  const { setisLoading, settoken, setloginPanel } = useContext(BookContext);
+  const {  settoken, setloginPanel } = useContext(BookContext);
+  const [isLoading, setisLoading] = useState(false)
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', otp: '' });
   const [activeTab, setActiveTab] = useState('credentials');
   const [isLogin, setIsLogin] = useState(false);

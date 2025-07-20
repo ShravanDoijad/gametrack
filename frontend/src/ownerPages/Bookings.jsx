@@ -11,12 +11,12 @@ import {
 import { BookContext } from "../constexts/bookContext";
 
 const Bookings = () => {
-  const { bookings, setbookings, isLoading, setisLoading } = useContext(BookContext);
+  const { bookings, setbookings} = useContext(BookContext);
   console.log("Bookings data:", bookings);
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
-
+  
   const filteredBookings = bookings.filter(booking => {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'advance') return booking.paymentType === 'advance';
@@ -40,19 +40,6 @@ const Bookings = () => {
     });
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-black">
-        <div className="flex flex-col items-center">
-          <div className="relative">
-            <Loader2 className="animate-spin h-16 w-16 text-lime-400" />
-            <Zap className="absolute inset-0 m-auto h-8 w-8 text-lime-300 animate-pulse" />
-          </div>
-          <span className="mt-4 text-lime-200 font-sora font-light tracking-wider animate-pulse">Loading booking data...</span>
-        </div>
-      </div>
-    );
-  }
 
   if (error) {
     return (

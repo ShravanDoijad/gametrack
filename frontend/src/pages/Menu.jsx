@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { Home, CalendarDays, Heart, User, Plus,  } from "lucide-react";
+import { Home, CalendarDays, Heart, User, Plus, CalendarClock  } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { BookContext } from "../constexts/bookContext";
@@ -9,6 +9,7 @@ const MobileNav = () => {
   const location = useLocation();
   const { token, userInfo } = useContext(BookContext);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  console.log("userInfo", userInfo)
 
   const tabs = [
     { 
@@ -25,7 +26,14 @@ const MobileNav = () => {
       path: '/userBookings',
       active: location.pathname.includes('bookings')
     },
-    
+    userInfo.role==="owner"?
+    {
+      id: 'timeSlots',
+      icon:<CalendarClock size={22} />,
+      label: 'timrManager',
+      path: '/owner/time-slots',
+      active: location.pathname.includes('owner/time-slots')
+    }:
     { 
       id: 'favorites',
       icon: <Heart size={22} />,

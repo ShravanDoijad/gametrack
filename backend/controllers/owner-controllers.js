@@ -222,6 +222,173 @@ const updateOwner = async (req, res) => {
 
 
 
+const addSlot = async (req, res) => {
+  const { turfId } = req.params;
+  const { date, start, end } = req.body;
+
+  try {
+    const turf = await Turf.findById(turfId);
+    if (!turf) return res.status(404).json({ error: "Turf not found" });
+
+    let daySlot = turf.availableSlots.find((slot) => slot.date === date);
+
+    if (!daySlot) {
+      turf.availableSlots.push({ date, slots: [{ start, end }] });
+    } else {
+      daySlot.slots.push({ start, end });
+    }
+
+    await turf.save();
+    res.status(200).json({ message: "Slot added successfully", turf });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+const deleteSlot = async (req, res) => {
+  const { turfId } = req.params;
+  const { date, start, end } = req.body;
+
+  try {
+    const turf = await Turf.findById(turfId);
+    if (!turf) return res.status(404).json({ error: "Turf not found" });
+
+    turf.availableSlots = turf.availableSlots.map((slotDay) => {
+      if (slotDay.date === date) {
+        slotDay.slots = slotDay.slots.filter(
+          (s) => s.start !== start || s.end !== end
+        );
+      }
+      return slotDay;
+    }).filter(slotDay => slotDay.slots.length > 0); 
+
+    await turf.save();
+    res.status(200).json({ message: "Slot deleted successfully", turf });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+const getSlots = async (req, res) => {
+  const { turfId, date } = req.query;
+  try {
+    const turf = await Turf.findById(turfId);
+    if (!turf) return res.status(404).json({ error: "Turf not found" });
+
+    res.status(200).json({ availableSlots: turf.availableSlots });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+const updateSlotStatus = async (req, res) => {
+  const { turfId, date, start, end, newStatus } = req.body;
+
+  try {
+    const turf = await Turf.findById(turfId);
+    if (!turf) return res.status(404).json({ message: "Turf not found" });
+
+    let day = turf.bookedSlots.find((d) => d.date === date);
+
+    if (newStatus === "booked") {
+      // If no record exists for the day, create it
+      if (!day) {
+        turf.bookedSlots.push({
+          date,
+          slots: [{ start, end }],
+        });
+      } else {
+        const exists = day.slots.some(
+          (s) => s.start === start && s.end === end
+        );
+        if (!exists) day.slots.push({ start, end });
+      }
+    } else if (newStatus === "available") {
+      if (!day) return res.status(404).json({ message: "No booked slot for this date" });
+
+      day.slots = day.slots.filter(
+        (s) => !(s.start === start && s.end === end)
+      );
+
+      // If slots array becomes empty, remove the date entry
+      if (day.slots.length === 0) {
+        turf.bookedSlots = turf.bookedSlots.filter((d) => d.date !== date);
+      }
+    }
+
+    await turf.save();
+    return res.status(200).json({ message: "Slot status updated successfully" });
+  } catch (err) {
+    console.error("Error updating slot status:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+
+
+const getAvailableSlots = async (req, res) => {
+  try {
+    const { turfId } = req.params;
+    const { date } = req.query;
+
+    if (!date) return res.status(400).json({ error: "Date is required." });
+
+    const turf = await Turf.findById(turfId);
+    if (!turf) return res.status(404).json({ error: "Turf not found." });
+
+    const { openingTime, closingTime, bookedSlots } = turf;
+
+    const allSlots = generateSlots(openingTime, closingTime); // [{ start, end }]
+    const bookedDay = bookedSlots.find((s) => s.date === date);
+    const bookedTime = bookedDay?.slots || [];
+
+    const slotsWithStatus = allSlots.map((slot) => {
+      const isBooked = bookedTime.some(
+        (b) => b.start === slot.start && b.end === slot.end
+      );
+
+      return {
+        ...slot,
+        status: isBooked ? "booked" : "available"
+      };
+    });
+
+    res.json({ slots: slotsWithStatus });
+  } catch (err) {
+    console.error("Error getting slots:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+};
+
+
+function generateSlots(openingTime, closingTime) {
+  const slots = [];
+  let [hour, minute] = openingTime.split(":").map(Number);
+  const [endHour, endMinute] = closingTime.split(":").map(Number);
+
+  while (hour < endHour || (hour === endHour && minute < endMinute)) {
+    const startHour = hour.toString().padStart(2, "0");
+    const startMin = minute.toString().padStart(2, "0");
+
+    hour += 1;
+
+    const endHourStr = hour.toString().padStart(2, "0");
+    const endMin = startMin;
+
+    slots.push({
+      start: `${startHour}:${startMin}`,
+      end: `${endHourStr}:${endMin}`,
+      _id: `${startHour}${startMin}-${endHourStr}${endMin}` // string ID
+    });
+  }
+
+  return slots;
+}
+
+
 module.exports = {
 
     turfAllBookings,
@@ -231,6 +398,12 @@ module.exports = {
     getOwnedTurfs,
     ownerRegister,
     dashboardDetails,
-    updateOwner
+    updateOwner,
+    deleteSlot,
+    getSlots,
+    addSlot,
+    updateSlotStatus,
+    getAvailableSlots
+    
 
 };

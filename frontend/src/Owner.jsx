@@ -12,6 +12,7 @@ import Customers from "./ownerPages/Customers";
 import PushNotifier from "./components/PushNotifier";
 import TodaysBookings from "./ownerPages/TodaysBookings";
 import OwnerPrivateRoute from "./OwnerPrivateRoute";
+import TimeSlots from "./ownerPages/TimeSlots";
 
 const Owner = () => {
   const {userInfo, token} = useContext(BookContext)
@@ -27,7 +28,8 @@ const Owner = () => {
           <Route path="bookings" element={<Bookings />} />
           <Route path="revenue" element={<Revenue />} />
           <Route path="turf-profile" element={<TurfProfile />} />
-          {/* Add more owner-specific routes here */}
+          <Route path="time-slots" element={<TimeSlots />} />
+          
           <Route path="/turfTodaysbookings" element={<TodaysBookings />} />
           
           <Route path="*" element={<div className="text-center text-gray-400">Page Not Found</div>} />

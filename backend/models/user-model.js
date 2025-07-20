@@ -19,10 +19,7 @@ const UserSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
   },
-  isVerified: {
-    type: Boolean,
-    default: false,
-  },
+ 
   favoriteTurfs: [
     {
       type: mongoose.Schema.Types.ObjectId,
