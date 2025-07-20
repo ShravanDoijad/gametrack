@@ -34,18 +34,18 @@ function App() {
   }, []);
 
   // ✅ Show splash until both splash timer ends AND token check finishes
-  if (showSplash || isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black">
-        <img
-          src="/icons/logo-512.png"
-          alt="GameTrack Logo"
-          className="w-28 h-28 animate-bounce rounded-full shadow-lg"
-        />
-        <p className="text-white mt-4 animate-pulse text-sm tracking-wider">Preparing your arena...</p>
-      </div>
-    );
-  }
+  // if (showSplash && isLoading) {
+  //   return (
+  //     <div className="min-h-screen flex flex-col items-center justify-center bg-black">
+  //       <img
+  //         src="/icons/logo-512.png"
+  //         alt="GameTrack Logo"
+  //         className="w-28 h-28 animate-bounce rounded-full shadow-lg"
+  //       />
+  //       <p className="text-white mt-4 animate-pulse text-sm tracking-wider">Preparing your arena...</p>
+  //     </div>
+  //   );
+  // }
 
   // ✅ App content after splash + loading
   return (
