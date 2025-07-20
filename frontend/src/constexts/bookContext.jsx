@@ -56,7 +56,9 @@ const BookContextProvider = ({ children }) => {
             console.log(error)
             console.warn("User not authenticated");
         }
-
+        finally{
+            setisLoading(false)
+        }
         settoken(false);
         setuserInfo(null);
         console.warn("No valid session found");
