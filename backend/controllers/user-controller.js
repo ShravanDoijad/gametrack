@@ -301,8 +301,9 @@ const verifyOrder = async (req, res) => {
     } else {
       console.warn("No user FCM token found");
     }
+    const ownerToken = Array.isArray(turf.owner.fcmTokens) ? turf.owner.fcmTokens[0] : null;
 
-    if (turf?.owner?.fcmToken) {
+    if (ownerToken) {
       try {
         console.log("Sending push to OWNER", turf.owner.fcmToken);
         await admin.messaging().send({
