@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import { BookContext } from '../constexts/bookContext';
-import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
+import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft, MessageCircle } from 'lucide-react';
 
 const Register = () => {
   const { settoken, setloginPanel, fetchToken } = useContext(BookContext);
@@ -190,9 +190,13 @@ const Register = () => {
           <Lock size={24} />
         </div>
         <h3 className="text-xl font-semibold text-gray-800">Enter OTP</h3>
-        <p className="text-sm text-gray-500">
-          Code sent to {loginTab === 'phone' ? form.phone : form.email}
-        </p>
+        {loginTab === 'phone' && (
+          <div className="w-full flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm shadow-sm">
+            <MessageCircle size={18} className="text-green-600" />
+            OTP has been sent to your WhatsApp. Please check your messages.
+          </div>
+        )}
+
       </div>
 
       <div className="space-y-1">
