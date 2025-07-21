@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { requestPermission, onMessageListener } from "../firebase-messaging";
 import axios from "axios";
-
+import  notificationIcon from "../assets/logo-192.png"
 const PushNotifier = ({ userId, ownerId, type }) => {
   useEffect(() => {
     const setupNotifications = async () => {
@@ -42,7 +42,7 @@ const PushNotifier = ({ userId, ownerId, type }) => {
       new Notification(title, {
         body,
         
-        icon: "/icons/logo-192.png", 
+        icon: {notificationIcon}, 
         badge: "/icons/logo-96.png",
        
       })
