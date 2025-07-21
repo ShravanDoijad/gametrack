@@ -127,7 +127,7 @@ const Bookings = () => {
                     const end = parseInt(slot.end.split(":"[0]));
                     totalHours += (end - start);
                   });
-                  const rate = booking.slotFees || 600; 
+                  const rate = booking.slotFees;
                   estimatedAmount = totalHours * rate - advance;
                 }
 

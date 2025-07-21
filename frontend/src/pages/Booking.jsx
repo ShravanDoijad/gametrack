@@ -93,9 +93,8 @@ const Booking = () => {
 
   const handlePayment = async () => {
     try {
-      const amount = paymentOption === "advance"
-        ? calculateFee() * 0.5
-        : calculateFee();
+      const amount =250;
+        
 
       const bookingDetails = {
         turfId: turfInfo._id,
