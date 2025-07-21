@@ -128,7 +128,7 @@ const verifyOtp = async (req, res) => {
     res.cookie("authToken", token, {
       httpOnly: true,
       secure: true, // true in production (HTTPS)
-      sameSite: "Strict",
+      sameSite: "None",
       maxAge: 7 * 86400000 // 1 day
     });
 

@@ -6,6 +6,7 @@ const messaging = getMessaging(firebaseApp);
 
 export const requestPermission = async () => {
   console.log("🔔 Requesting notification permission...");
+  
   try {
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
