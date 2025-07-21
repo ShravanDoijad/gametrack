@@ -565,7 +565,7 @@ const Booking = () => {
                       }`}
                   >
                     <div className="font-bold">Advance</div>
-                    <div className="text-xs">₹{calculateFee() / 2} (50%)</div>
+                    <div className="text-xs">₹ 250</div>
                   </motion.button>
                 )}
 
@@ -604,7 +604,7 @@ const Booking = () => {
                 : "bg-gray-700 text-gray-400 cursor-not-allowed"
                 }`}
             >
-              {paymentOption === "advance" ? `Pay Advance (₹${calculateFee() * 0.5})` :
+              {paymentOption === "advance" ? `Pay Advance (₹ 250})` :
                 paymentOption === "full" ? `Pay Full (₹${calculateFee()})` :
                   "Select Payment Option"}
             </motion.button>
