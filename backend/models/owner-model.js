@@ -35,10 +35,11 @@ const OwnerSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
-  fcmToken: {
-    type: String,
-    default: null, 
-  },
+  fcmTokens: {
+  type: [String],
+  default: [],
+},
+
   atcreated: {
     type: Date,
     default: Date.now,

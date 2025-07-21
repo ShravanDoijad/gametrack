@@ -117,13 +117,13 @@ const login = async (req, res) => {
 
 const userLogout = async (req, res) => {
   try {
-    
-      res.clearCookie("authToken", {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-      });
-    
+
+    res.clearCookie("authToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+    });
+
 
     res
       .status(200)
@@ -149,7 +149,7 @@ const createOrder = async (req, res) => {
 
 
 
-    
+
     const existingUserBooking = await Booking.findOne({
       turfId,
       userId,
@@ -157,8 +157,8 @@ const createOrder = async (req, res) => {
       slots: {
         $elemMatch: {
           $or: bookingDetails?.slots.map((slot) => ({
-            start: { $lt: slot.end },  
-            end: { $gt: slot.start },  
+            start: { $lt: slot.end },
+            end: { $gt: slot.start },
           })),
         },
       },
@@ -302,24 +302,35 @@ const verifyOrder = async (req, res) => {
       console.warn("No user FCM token found");
     }
     
-    if (turf.owner.fcmToken) {
-      try {
-        console.log("Sending push to OWNER", turf.owner.fcmToken);
-        await admin.messaging().send({
-          token: turf.owner.fcmToken,
-          notification: {
-            title: "New Booking Alert",
-            body: `New booking on ${bookingDetails.date} at ${slotTimeText} at ${turfName}`,
-          },
-        });
-      } catch (err) {
-        console.error(" Failed to send owner push:", err.code, err.message);
-        if (err.code === "messaging/registration-token-not-registered") {
-          await Owner.findByIdAndUpdate(turf.owner._id, { fcmToken: null });
+
+    if (turf.owner.fcmTokens && turf.owner.fcmTokens.length > 0) {
+      const sent = new Set();
+
+      for (const token of turf.owner.fcmTokens) {
+        if (sent.has(token)) continue;
+
+        try {
+          console.log("📲 Sending push to OWNER", token);
+          await admin.messaging().send({
+            token,
+            notification: {
+              title: "New Booking Alert",
+              body: `New booking on ${bookingDetails.date} at ${slotTimeText} at ${turfName}`,
+            },
+          });
+          sent.add(token);
+        } catch (err) {
+          console.error("❌ Failed to send owner push:", err.code, err.message);
+
+          if (err.code === "messaging/registration-token-not-registered") {
+            await Owner.findByIdAndUpdate(turf.owner._id, {
+              $pull: { fcmTokens: token },
+            });
+          }
         }
       }
     } else {
-      console.warn(" No owner FCM token found");
+      console.warn("⚠️ No owner FCM tokens found");
     }
     await Promise.all([
       Notification.create({
