@@ -16,28 +16,28 @@ async function sendOtp({ identifier, role }) {
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   console.log("cred", identifier, role);
-  
+
   try {
     let targetPhone
-    if(role=== 'owner') {
+    if (role === 'owner') {
       const owner = await Owner.findOne({ email: identifier });
       if (!owner) {
         return { success: false, message: 'Owner not found.' };
       }
       targetPhone = owner.phone
     }
-    else if(role === 'user') {
+    else if (role === 'user') {
       targetPhone = identifier;
     }
     else {
-      return { success: false, message: 'Invalid role.' };  
+      return { success: false, message: 'Invalid role.' };
     }
-   
-    await Otp.deleteMany({ identifier:targetPhone, role });
+
+    await Otp.deleteMany({ identifier: targetPhone, role });
     await Otp.create({ identifier: targetPhone, role, otp, expiresAt });
 
     client.messages
-    .create({
+      .create({
         from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
         to: `whatsapp:+91${targetPhone}`,
         contentSid: process.env.TWILIO_CONTENT_SID,
@@ -45,10 +45,10 @@ async function sendOtp({ identifier, role }) {
           "1": otp,
           "2": "5 minutes"
         })
-    })
-    .then(message => console.log("send", message.sid))
-    
-    
+      })
+      .then(message => console.log("send", message.sid))
+
+
 
     return ({ success: true, message: 'OTP sent successfully' });
   } catch (err) {
@@ -60,18 +60,18 @@ async function sendOtp({ identifier, role }) {
 
 const verifyOtp = async (req, res) => {
   try {
-    const { identifier, otp} = req.body;
+    const { identifier, otp } = req.body;
 
     if (!identifier || !otp) {
       return res.status(400).json({ success: false, message: 'Credentials and OTP are required.' });
     }
-    
-    
+
+
     let role;
     let targetPhone;
-    const owner = await Owner.findOne({email: identifier});
+    const owner = await Owner.findOne({ email: identifier });
 
-    const user = await User.findOne({$or: [{email: identifier}, {phone: identifier}]});
+    const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
     if (owner) {
       role = 'owner';
       targetPhone = owner.phone;
@@ -82,7 +82,7 @@ const verifyOtp = async (req, res) => {
     } else {
       return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
     }
-    
+
 
     const dbOtp = await Otp.findOne({ identifier: targetPhone, role: role });
 
@@ -98,8 +98,8 @@ const verifyOtp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'OTP expired.' });
     }
 
-    
-    let account ;
+
+    let account;
     if (role === 'owner') {
       account = owner;
     }
@@ -113,7 +113,7 @@ const verifyOtp = async (req, res) => {
     account.isVerified = true;
     await account.save();
 
-    
+
     const payload = {
       id: account._id,
       role: role,
@@ -123,16 +123,15 @@ const verifyOtp = async (req, res) => {
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-  
-   
-    res.cookie('authToken', token, {
-  httpOnly: true,
-  secure: true,
-  sameSite: 'None',
-  maxAge: 7 * 24 * 60 * 60 * 1000, 
-});
 
-    
+
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: true, // true in production (HTTPS)
+      sameSite: "Strict",
+      maxAge: 7 * 86400000 // 1 day
+    });
+
     await Otp.deleteMany({ identifier: identifier, role: role });
 
     return res.status(200).json({

@@ -210,8 +210,8 @@ const updateOwner = async (req, res) => {
         }
 
         await Owner.findByIdAndUpdate(ownerId, {
-            $addToSet: { fcmTokens: fcmToken }
-        }, { new: true });
+             fcmToken: fcmToken 
+        });
         res.json({ success: true });
     } catch (error) {
         console.error("🔥 Update Owner Error:", error);

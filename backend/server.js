@@ -50,19 +50,18 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-
-// 🧠 JSON + Cookie middleware
 app.use(express.json());
 app.use(cookieParser());
 
 
-// ✅ Test route
 app.get("/", (req, res) => {
-  res.send("🚀 API is live...");
+  res.send(" API is live...");
 });
 
+app.get("/api/ping", (req, res) => res.status(200).send("pong"));
 
-// 📦 Mount routers (use clean base paths)
+
+
 app.use('/otp', verifyRouter);
 app.use('/api/users', userRouter);
 app.use('/api/auth', authCheckRouter);

@@ -127,7 +127,7 @@ const userLogout = async (req, res) => {
 
     res
       .status(200)
-      .json({ success: true, message: "User logged out successfully" });
+      .json({ success: true, message: " Logged out successfully" });
   } catch (error) {
     console.error("Error logging out user:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -301,9 +301,8 @@ const verifyOrder = async (req, res) => {
     } else {
       console.warn("No user FCM token found");
     }
-    const ownerToken = Array.isArray(turf.owner.fcmTokens) ? turf.owner.fcmTokens[0] : null;
-
-    if (ownerToken) {
+    
+    if (turf.owner.fcmToken) {
       try {
         console.log("Sending push to OWNER", turf.owner.fcmToken);
         await admin.messaging().send({
@@ -322,8 +321,6 @@ const verifyOrder = async (req, res) => {
     } else {
       console.warn(" No owner FCM token found");
     }
-
-    // In-app notifications
     await Promise.all([
       Notification.create({
         user: userId,

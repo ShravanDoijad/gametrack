@@ -7,7 +7,7 @@ import { BookContext } from '../constexts/bookContext';
 import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
 
 const Register = () => {
-  const {  settoken, setloginPanel } = useContext(BookContext);
+  const {  settoken, setloginPanel, fetchToken } = useContext(BookContext);
   const [isLoading, setisLoading] = useState(false)
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', otp: '' });
   const [activeTab, setActiveTab] = useState('credentials');
@@ -34,6 +34,7 @@ const Register = () => {
         if (res.data.success) {
           toast.success('OTP sent');
           setActiveTab('otp');
+
         } else toast.error(res.data.message || 'Failed to send OTP');
       } else {
         const { firstName, lastName, phone } = form;
@@ -61,8 +62,8 @@ const Register = () => {
       const res = await axios.post('/otp/verifyOtp', { identifier, otp });
       if (res.data.success) {
         toast.success('Login Successful!');
-        settoken(true);
-        setTimeout(() => navigate('/turfs'), 500);
+        fetchToken()
+        setTimeout(() => navigate('/'), 500);
       } else toast.error(res.data.message || 'Verification failed');
     } catch (err) {
       console.error(err);
