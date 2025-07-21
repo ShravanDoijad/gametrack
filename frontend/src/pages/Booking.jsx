@@ -334,8 +334,8 @@ const Booking = () => {
       hour = 0;
     }
 
-    // If check-in is at or after 6 PM (18:00), use night price
-    return hour >= 18 ? turfInfo.nightPrice : turfInfo.dayPrice;
+
+    return hour >= 19 ? turfInfo.nightPrice : turfInfo.dayPrice;
   };
 
   // Then use it in your calculateFee:
