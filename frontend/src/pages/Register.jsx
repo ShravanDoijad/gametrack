@@ -7,7 +7,7 @@ import { BookContext } from '../constexts/bookContext';
 import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft } from 'lucide-react';
 
 const Register = () => {
-  const {  settoken, setloginPanel, fetchToken } = useContext(BookContext);
+  const { settoken, setloginPanel, fetchToken } = useContext(BookContext);
   const [isLoading, setisLoading] = useState(false)
   const [form, setForm] = useState({ firstName: '', lastName: '', phone: '', email: '', otp: '' });
   const [activeTab, setActiveTab] = useState('credentials');
@@ -79,23 +79,23 @@ const Register = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">First Name</label>
-            <input 
-              type="text" 
-              name="firstName" 
-              value={form.firstName} 
-              onChange={handleChange} 
-              placeholder="John" 
+            <input
+              type="text"
+              name="firstName"
+              value={form.firstName}
+              onChange={handleChange}
+              placeholder="John"
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Last Name</label>
-            <input 
-              type="text" 
-              name="lastName" 
-              value={form.lastName} 
-              onChange={handleChange} 
-              placeholder="Doe" 
+            <input
+              type="text"
+              name="lastName"
+              value={form.lastName}
+              onChange={handleChange}
+              placeholder="Doe"
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
             />
           </div>
@@ -104,14 +104,14 @@ const Register = () => {
 
       {isLogin && (
         <div className="flex space-x-2 mb-2 bg-gray-100 p-1 rounded-lg">
-          <button 
-            onClick={() => setLoginTab('phone')} 
+          <button
+            onClick={() => setLoginTab('phone')}
             className={`flex items-center justify-center gap-2 flex-1 py-2 px-4 rounded-md transition-all ${loginTab === 'phone' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600'}`}
           >
             <Phone size={16} /> Phone
           </button>
-          <button 
-            onClick={() => setLoginTab('email')} 
+          <button
+            onClick={() => setLoginTab('email')}
             className={`flex items-center justify-center gap-2 flex-1 py-2 px-4 rounded-md transition-all ${loginTab === 'email' ? 'bg-white shadow-sm text-blue-600' : 'text-gray-600'}`}
           >
             <Mail size={16} /> Email
@@ -124,28 +124,34 @@ const Register = () => {
           {(!isLogin || loginTab === 'phone') ? 'Phone Number' : 'Email Address'}
         </label>
         {(!isLogin || loginTab === 'phone') ? (
-          <input 
-            type="tel" 
-            name="phone" 
-            value={form.phone} 
-            onChange={handleChange} 
-            placeholder="+91 9876543210" 
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-          />
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 text-sm">
+              +91
+            </div>
+            <input
+              type="tel"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              placeholder="9876543210"
+              className="w-full pl-12 pr-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            />
+          </div>
         ) : (
-          <input 
-            type="email" 
-            name="email" 
-            value={form.email} 
-            onChange={handleChange} 
-            placeholder="your@email.com" 
+          <input
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={handleChange}
+            placeholder="your@email.com"
             className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
           />
         )}
+
       </div>
 
-      <button 
-        onClick={sendOtp} 
+      <button
+        onClick={sendOtp}
         className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:shadow-md transition-all transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
       >
         Send OTP
@@ -155,8 +161,8 @@ const Register = () => {
         <p className="text-sm text-gray-600">
           {isLogin ? (
             <>Don't have an account?{' '}
-              <button 
-                onClick={() => { setIsLogin(false); setActiveTab('credentials'); }} 
+              <button
+                onClick={() => { setIsLogin(false); setActiveTab('credentials'); }}
                 className="text-blue-600 font-medium hover:underline focus:outline-none"
               >
                 Register
@@ -164,8 +170,8 @@ const Register = () => {
             </>
           ) : (
             <>Already have an account?{' '}
-              <button 
-                onClick={() => { setIsLogin(true); setActiveTab('credentials'); }} 
+              <button
+                onClick={() => { setIsLogin(true); setActiveTab('credentials'); }}
                 className="text-blue-600 font-medium hover:underline focus:outline-none"
               >
                 Login
@@ -191,25 +197,25 @@ const Register = () => {
 
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Verification Code</label>
-        <input 
-          type="text" 
-          name="otp" 
-          value={form.otp} 
-          onChange={handleChange} 
-          placeholder="Enter 6-digit OTP" 
+        <input
+          type="text"
+          name="otp"
+          value={form.otp}
+          onChange={handleChange}
+          placeholder="Enter 6-digit OTP"
           className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-center tracking-widest font-mono"
         />
       </div>
 
       <div className="flex gap-3">
-        <button 
-          onClick={() =>setloginPanel(false)} 
+        <button
+          onClick={() => setloginPanel(false)}
           className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
         >
           <ArrowLeft size={16} /> Back
         </button>
-        <button 
-          onClick={handleVerify} 
+        <button
+          onClick={handleVerify}
           className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:shadow-md transition-all"
         >
           {isLogin ? 'Login' : 'Register'}
@@ -219,8 +225,8 @@ const Register = () => {
       <div className="text-center pt-4 border-t border-gray-200">
         <p className="text-sm text-gray-600">
           Didn't receive code?{' '}
-          <button 
-            onClick={sendOtp} 
+          <button
+            onClick={sendOtp}
             className="text-blue-600 font-medium hover:underline focus:outline-none"
           >
             Resend OTP
@@ -234,7 +240,7 @@ const Register = () => {
     <div className="min-h-screen bg-gradient-to-br fixed  from-gray-50 to-gray-100 flex flex-col">
       <div className="container mx-auto px-4 py-8 flex-1 flex flex-col">
         <button
-          onClick={() => setloginPanel(false)|| navigate('/')}
+          onClick={() => setloginPanel(false) || navigate('/')}
           className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 self-start transition-colors"
         >
           <ArrowLeft size={18} /> Back to home
@@ -264,12 +270,12 @@ const Register = () => {
                   {isLogin ? 'Welcome Back' : 'Create Account'}
                 </h2>
                 <p className="text-gray-500 mt-2">
-                  {activeTab === 'credentials' ? 
-                    (isLogin ? 'Sign in to continue to your account' : 'Get started with your account') : 
+                  {activeTab === 'credentials' ?
+                    (isLogin ? 'Sign in to continue to your account' : 'Get started with your account') :
                     'Enter the verification code we sent you'}
                 </p>
               </div>
-              
+
               <div className="space-y-6">
                 {activeTab === 'credentials' ? renderCredentialsTab() : renderOtpTab()}
               </div>
