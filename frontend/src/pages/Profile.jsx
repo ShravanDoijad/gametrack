@@ -4,10 +4,11 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { LogOut, Pencil, Trash2, Mail, Bell, Clock, User, Phone } from 'lucide-react';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
     const { userInfo, isLoading , setloginPanel, setuserInfo, handleLogout, token } = useContext(BookContext);
-    
+    const navigate =useNavigate()
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -25,14 +26,14 @@ const Profile = () => {
 
 
 
-//     if (!userInfo || isLoading) {
-//   return (
-//     <div className="min-h-screen flex items-center justify-center text-white text-xl">
-//       Loading your profile...
-//     </div>
-//   );
+    if (!userInfo || isLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-white text-xl">
+      Loading your profile...
+    </div>
+  );
 
-// }
+}
 
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -357,7 +358,7 @@ const Profile = () => {
                     ) : (
                         <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-8 text-center">
                             <p className="text-gray-400">You haven't marked any turf as favorite yet.</p>
-                            <button className="mt-4 px-4 py-2 text-lime-400 border border-lime-400 rounded-full hover:bg-lime-400/10 transition-colors">
+                            <button onClick={()=>navigate("/")} className="mt-4 px-4 py-2 text-lime-400 border border-lime-400 rounded-full hover:bg-lime-400/10 transition-colors">
                                 Explore Turfs
                             </button>
                         </div>

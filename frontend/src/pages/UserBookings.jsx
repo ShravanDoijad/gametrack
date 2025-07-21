@@ -213,20 +213,6 @@ const UserBookings = () => {
                                                 </div>
                                             </div>
 
-                                            {showCancelButton && (
-                                                <div className="mt-4 flex justify-end">
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleCancelBooking(booking._id);
-                                                        }}
-                                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm transition-colors"
-                                                    >
-                                                        Cancel Booking
-                                                    </button>
-                                                </div>
-                                            )}
-
                                             {!showCancelButton && (
                                                 <div className="mt-4 text-right">
                                                     <p className="text-sm text-gray-400 italic">

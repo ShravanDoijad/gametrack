@@ -121,9 +121,9 @@ const Booking = () => {
         amount: amount,
         currency: "INR",
         receipt: `booking_${Date.now()}`,
-        
+
         bookingDetails: bookingDetails
-        
+
       });
 
       const { order } = res.data;
@@ -156,7 +156,7 @@ const Booking = () => {
             console.error(err);
             toast.warning("Payment verification error");
           }
-          finally{
+          finally {
             setloading(false)
           }
         },
@@ -175,7 +175,7 @@ const Booking = () => {
       console.log(err);
       toast.error("Payment Error");
     }
-    finally{
+    finally {
       setloading(false)
     }
   };
@@ -344,20 +344,21 @@ const Booking = () => {
     return calculateDuration() * pricePerHour;
   };
 
-  const filteredCheckinTimes = allSlots.filter(slot=>
+  const filteredCheckinTimes = allSlots.filter(slot =>
     slot.military !== turfInfo.closingTime
-    
+
   )
-  {loading && (
-  <div className="flex justify-center items-center min-h-[100px]">
-    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-  </div>
-)}
+
 
 
   return (
     <div className="px-6 pb-24 text-white font-sans">
       <h2 className="font-bold text-2xl sora mb-4">Schedule Your Game</h2>
+      {loading && (
+        <div className="flex justify-center items-center min-h-[100px]">
+          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
 
       <div className="flex gap-3 flex-wrap pb-2">
         {next7Days.map((day, idx) => (
@@ -472,7 +473,7 @@ const Booking = () => {
           className="fixed inset-0 z-50 flex justify-center items-center bg-black/70 backdrop-blur-sm px-4"
         >
           <div className="w-full max-w-md bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl border border-gray-700 shadow-2xl font-sora relative overflow-hidden">
- 
+
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -mr-16 -mt-16"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-yellow-500/10 rounded-full -ml-12 -mb-12"></div>
 
@@ -548,7 +549,6 @@ const Booking = () => {
               </div>
             </div>
 
-            {/* Payment options - highlight based on turf settings */}
             <div className="mb-6 relative z-10">
               <p className="font-semibold mb-3 text-white sora text-md">
                 Select Payment Option
@@ -569,18 +569,7 @@ const Booking = () => {
                   </motion.button>
                 )}
 
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setPaymentOption("full")}
-                  className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${paymentOption === "full"
-                    ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-black border-transparent shadow-lg"
-                    : "bg-gray-800 text-white border-gray-600 hover:border-blue-400"
-                    }`}
-                >
-                  <div className="font-bold">Full Payment</div>
-                  <div className="text-xs">₹{calculateFee()}</div>
-                </motion.button>
+                
               </div>
 
               {turfInfo.allowAdvancePayment && (
@@ -604,7 +593,7 @@ const Booking = () => {
               </div>
             )}
 
-            {/* Final CTA */}
+            \
             <motion.button
               whileHover={paymentOption ? { scale: 1.02 } : {}}
               whileTap={paymentOption ? { scale: 0.98 } : {}}

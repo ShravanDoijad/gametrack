@@ -9,6 +9,7 @@ import {
   BellRing,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { requestPermission } from "../firebase-messaging"
 
 export const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
@@ -71,8 +72,22 @@ export const Notifications = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white px-6 pt-6 font-sans">
+    <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-950 text-white px-6  sans">
       <div className="max-w-2xl mx-auto">
+        <div className="text-center p-4 mb-6 text-white">
+          <div className="mb-3 text-sm text-gray-300">
+            🚨 <span className="text-yellow-400 font-semibold">Don’t miss important updates!</span><br />
+            Tap below to enable notifications. Stay in the loop 
+          </div>
+
+          <button
+            onClick={requestPermission}
+            className="px-5 py-2.5 rounded-2xl bg-gradient-to-r from-lime-500 via-lime-300 to-green-500 text-black font-semibold shadow-lg hover:scale-105 transition-transform duration-200"
+          >
+            Enable Notifications
+          </button>
+        </div>
+
         <h1 className="text-3xl font-bold mb-6 sora">Notifications</h1>
 
         {notifications.length === 0 ? (
@@ -87,9 +102,8 @@ export const Notifications = () => {
             {notifications.map((item, index) => (
               <div
                 key={index}
-                className={`relative flex items-start gap-4 p-4 rounded-xl ${
-                  cardStyles[item.type] || "bg-black/20 border border-gray-700"
-                } transition hover:scale-[1.01] hover:shadow-md`}
+                className={`relative flex items-start gap-4 p-4 rounded-xl ${cardStyles[item.type] || "bg-black/20 border border-gray-700"
+                  } transition hover:scale-[1.01] hover:shadow-md`}
               >
                 <div className="shrink-0 mt-1.5">
                   {iconMap[item.type] || <BellRing className="text-white w-5 h-5" />}
