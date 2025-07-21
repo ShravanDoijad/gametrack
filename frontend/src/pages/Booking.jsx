@@ -93,7 +93,7 @@ const Booking = () => {
 
   const handlePayment = async () => {
     try {
-      const amount =250;
+      const amount = 250;
         
 
       const bookingDetails = {
