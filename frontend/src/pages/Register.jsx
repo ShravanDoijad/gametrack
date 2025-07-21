@@ -250,10 +250,10 @@ const Register = () => {
           <ArrowLeft size={18} /> Back to home
         </button>
 
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex-1 flex ">
           <motion.div
             ref={panelRef}
-            className="w-full max-w-md bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200"
+            className="w-full max-w-md  bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200"
             initial="hidden"
             animate="visible"
             exit="exit"
