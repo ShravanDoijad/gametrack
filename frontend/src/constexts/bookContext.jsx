@@ -14,8 +14,10 @@ const BookContextProvider = ({ children }) => {
     const [favorite, setfavorite] = useState()
     const [loginPanel, setloginPanel] = useState(false)
     const [menuPanel, setmenuPanel] = useState(false)
+    const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
     const [bookings, setbookings] = useState([])
-    
+
 
     useEffect(() => {
         if (token && userInfo && userInfo.role === 'owner') {
@@ -37,8 +39,7 @@ const BookContextProvider = ({ children }) => {
 
 
     const fetchToken = async () => {
-        setisLoading(true); 
-
+        setisLoading(true);
         try {
             const userRes = await axios.get(`/api/auth/authCheck`, {
                 withCredentials: true,
@@ -50,20 +51,20 @@ const BookContextProvider = ({ children }) => {
                     ...userRes.data.user,
                     role: userRes.data.role,
                 });
-                return;
+            } else {
+                settoken(false);
+                setuserInfo(null);
             }
         } catch (error) {
             console.log(error)
-            console.warn("User not authenticated");
+            settoken(false);
+            setuserInfo(null);
+        } finally {
+            setisLoading(false);
+            setHasCheckedAuth(true);
         }
-        finally{
-            setisLoading(false)
-        }
-        settoken(false);
-        setuserInfo(null);
-        console.warn("No valid session found");
-        setisLoading(false);
     };
+
 
     useEffect(() => {
         fetchToken()
@@ -125,8 +126,8 @@ const BookContextProvider = ({ children }) => {
         userInfo,
         setuserInfo,
         calculateDistance,
-        fetchToken
-
+        fetchToken,
+        hasCheckedAuth
     }
     return (
         <BookContext.Provider value={value}>

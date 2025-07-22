@@ -120,15 +120,10 @@ const Bookings = () => {
                 const advance = booking.paymentType === 'advance' ? booking.amountPaid : 0;
 
                 let estimatedAmount = 0;
-                if (booking.paymentType === 'advance' && booking.slots?.length > 0) {
-                  let totalHours = 0;
-                  booking.slots.forEach(slot => {
-                    const start = parseInt(slot.start.split(":"[0]));
-                    const end = parseInt(slot.end.split(":"[0]));
-                    totalHours += (end - start);
-                  });
+                if (booking.paymentType === 'advance') {
+
                   const rate = booking.slotFees;
-                  estimatedAmount = totalHours * rate - advance;
+                  estimatedAmount = rate - booking.amountPaid;
                 }
 
                 return (

@@ -22,6 +22,7 @@ const UserBookings = () => {
         fetchBookings();
     }, []);
 
+   
     const categorizeBookings = () => {
         const now = new Date();
         const currentHour = getHours(now);
@@ -90,14 +91,6 @@ const UserBookings = () => {
         return !isWithin24Hours && isAfter24HoursFromBooking;
     };
 
-    const handleCancelBooking = async (bookingId) => {
-        try {
-            await axios.delete(`/api/bookings/${bookingId}`);
-            setBookings(bookings.filter(booking => booking._id !== bookingId));
-        } catch (error) {
-            console.error('Error cancelling booking:', error);
-        }
-    };
 
 
 
@@ -148,7 +141,7 @@ const UserBookings = () => {
                 ) : (
                     <div className="space-y-3">
                         {filteredBookings.map((booking) => {
-                            console.log("booking", booking)
+                            
                             const isExpanded = expandedCard === booking._id;
                             const isTodayBooking = isToday(parseISO(booking.date));
                             const isConfirmed = booking.status === 'confirmed';
@@ -170,8 +163,8 @@ const UserBookings = () => {
                                                         {formatDate(booking.date)}
                                                     </p>
                                                 </div>
-                                                <p className="text-gray-300 text-sm">
-                                                    Turf: {booking.turf?.name || "Unknown Turf"}
+                                                <p className="text-gray-300 sora font-bold text-sm">
+                                                    {booking.turfId?.name || "Unknown Turf"}
                                                 </p>
                                                 <p className="text-gray-300 text-sm">
                                                     {booking.slots.map(slot => `${formatTime(slot.start)} - ${formatTime(slot.end)}`).join(', ')}
@@ -213,13 +206,13 @@ const UserBookings = () => {
                                                 </div>
                                             </div>
 
-                                            {!showCancelButton && (
+                                            
                                                 <div className="mt-4 text-right">
                                                     <p className="text-sm text-gray-400 italic">
                                                         Cancellation not allowed due to policy.
                                                     </p>
                                                 </div>
-                                            )}
+                                            
                                         </div>
                                     )}
                                 </div>

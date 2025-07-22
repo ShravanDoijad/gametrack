@@ -35,16 +35,9 @@ const Revenue = () => {
       if (b.paymentType === 'full') full += b.amountPaid;
 
       if (b.slots && b.slots.length > 0) {
-        let hours = 0;
-
-        b.slots.forEach(slot => {
-          const startHour = parseInt(slot.start.split(':')[0]);
-          const endHour = parseInt(slot.end.split(':')[0]);
-          hours += endHour - startHour;
-        });
-
-        const rate = b.slotFees || 600;
-        estimate += ((hours * rate) - b.amountPaid);
+    
+        const rate = b.slotFees ;
+        estimate += (rate - b.amountPaid);
       }
     });
 
@@ -116,24 +109,7 @@ const Revenue = () => {
           </div>
         </div>
 
-        {/* Payout Summary */}
-        <div className="bg-gray-900 border border-gray-700 rounded-lg shadow p-5">
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center">
-            <Banknote className="mr-2 text-lime-500" size={20} />
-            Payout Summary
-          </h3>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="border-l-4 border-green-500 pl-4">
-              <p className="text-gray-400 text-sm">Paid to Bank (2 Days Ago)</p>
-              <h2 className="text-xl font-semibold text-green-400">₹{payoutDone}</h2>
-            </div>
-            <div className="border-l-4 border-yellow-400 pl-4">
-              <p className="text-gray-400 text-sm">Pending Payout (Yesterday & Today)</p>
-              <h2 className="text-xl font-semibold text-yellow-400">₹{pendingPayout}</h2>
-            </div>
-          </div>
-        </div>
+        
       </div>
     </div>
   );

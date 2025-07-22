@@ -384,7 +384,8 @@ const getAllBookings = async (req, res) => {
         .status(400)
         .json({ success: false, message: "Unauthorised, Login First" });
     }
-    const allBookings = await Booking.find({ userId: userId });
+    const allBookings = await Booking.find({ userId: userId }).populate("turfId", "name");
+    console.log("all bookings",allBookings)
     res.status(200).json({ success: true, allBookings: allBookings });
   } catch (error) {
     console.log("Error to Fetch Bookings", error);

@@ -99,7 +99,7 @@ const Dashboard = () => {
   };
 
   const currentChartData = generateChartData(dashboardData);
-  const totalRevenue = dashboardData?.reduce((acc, booking) => acc + (booking.amountPaid || 0), 0);
+  const totalRevenue = dashboardData?.reduce((acc, booking) => acc + (booking.slotFees || 0), 0);
 
   return (
     <div className="p-4 min-h-screen bg-black text-white">

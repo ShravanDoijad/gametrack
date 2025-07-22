@@ -23,7 +23,7 @@ import { Error404 } from './components/Error404';
 import { Error403 } from './components/Error403';
 
 function App() {
-  const { loginPanel, token, userInfo, isLoading } = useContext(BookContext);
+  const { loginPanel, token, userInfo, isLoading, hasCheckedAuth  } = useContext(BookContext);
   const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
@@ -33,7 +33,7 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
 
-  if (showSplash && isLoading) {
+  if (showSplash || isLoading || !hasCheckedAuth) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-black">
         <img
