@@ -16,7 +16,7 @@ const BookContextProvider = ({ children }) => {
     const [menuPanel, setmenuPanel] = useState(false)
     const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
     const [selectedTurfId, setSelectedTurfId] = useState('');
-    
+      const [turfs, setTurfs] = useState([]);
     const [bookings, setbookings] = useState([])
 
 
@@ -144,7 +144,9 @@ const BookContextProvider = ({ children }) => {
         fetchToken,
         hasCheckedAuth,
         selectedTurfId,
-        setSelectedTurfId
+        setSelectedTurfId,
+        setTurfs,
+        turfs
     }
     return (
         <BookContext.Provider value={value}>

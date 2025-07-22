@@ -8,11 +8,11 @@ import {
 import { BarChartBig, LineChart as LineChartIcon, Calendar, Clock3, TrendingUp } from 'lucide-react';
 
 const Dashboard = () => {
-  const [turfs, setTurfs] = useState([]);
+
   const [dashboardData, setDashboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('month');
-  const {selectedTurfId, setSelectedTurfId}= useContext(BookContext)
+  const {selectedTurfId, setSelectedTurfId, turfs, setTurfs}= useContext(BookContext)
  
 
   useEffect(() => {
