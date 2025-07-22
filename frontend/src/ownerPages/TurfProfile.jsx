@@ -40,12 +40,13 @@ const TurfProfile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({});
   const [isLoading, setIsLoading] = useState(true);
-  const { handleLogout } = useContext(BookContext);
+  const { handleLogout,selectedTurfId,
+        setSelectedTurfId } = useContext(BookContext);
 
   useEffect(() => {
     const fetchTurf = async () => {
       try {
-        const response = await axios.get('/owner/turfDetails');
+        const response = await axios.get(`/owner/turfDetails?turfId=${selectedTurfId}`);
         setTurf(response.data.turf);
         setOwner(response.data.owner);
         setFormData(response.data.turf);

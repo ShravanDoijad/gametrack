@@ -15,7 +15,8 @@ const BookContextProvider = ({ children }) => {
     const [loginPanel, setloginPanel] = useState(false)
     const [menuPanel, setmenuPanel] = useState(false)
     const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
-
+    const [selectedTurfId, setSelectedTurfId] = useState('');
+    
     const [bookings, setbookings] = useState([])
 
 
@@ -24,7 +25,7 @@ const BookContextProvider = ({ children }) => {
             setisLoading(true);
             const fetchBookings = async () => {
                 try {
-                    const response = await axios.get('/owner/turfAllBookings');
+                    const response = await axios.get(`/owner/turfAllBookings?turfId=${selectedTurfId}`);
                     setbookings(response.data.bookings);
                 } catch (err) {
                     console.error("Error fetching bookings:", err);
@@ -90,6 +91,20 @@ const BookContextProvider = ({ children }) => {
         }
     };
 
+     useEffect(() => {
+        const fetchTurfs = async () => {
+          try {
+            const response = await axios.get('/owner/ownedTurfs');
+            setTurfs(response.data.turfs || []);
+            if (response.data.turfs.length > 0) {
+              setSelectedTurfId(response.data.turfs[0]._id);
+            }
+          } catch (error) {
+            console.error('Failed to fetch turfs:', error);
+          } 
+        };
+        fetchTurfs();
+      }, []);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371;
@@ -127,7 +142,9 @@ const BookContextProvider = ({ children }) => {
         setuserInfo,
         calculateDistance,
         fetchToken,
-        hasCheckedAuth
+        hasCheckedAuth,
+        selectedTurfId,
+        setSelectedTurfId
     }
     return (
         <BookContext.Provider value={value}>

@@ -4,7 +4,8 @@ import moment from 'moment';
 import { CalendarDays, Wallet, Clock4, Banknote } from 'lucide-react';
 
 const Revenue = () => {
-  const { bookings } = useContext(BookContext);
+  const { bookings, selectedTurfId,
+        setSelectedTurfId } = useContext(BookContext);
   const [selectedTab, setSelectedTab] = useState('total');
 
   const [advanceRevenue, setAdvanceRevenue] = useState(0);

@@ -12,9 +12,9 @@ ownerRouter.get('/dashboardDetails', ownerMiddleware, dashboardDetails);
 ownerRouter.get('/turfDetails', ownerMiddleware, getTurfDetails)
 ownerRouter.put('/updateTurfProfile',ownerMiddleware, updateTurfProfile); 
 ownerRouter.post('/updateOwner',ownerMiddleware, updateOwner )
-ownerRouter.delete("/delete-slot/:turfId", ownerMiddleware, deleteSlot);
+
 ownerRouter.get("/:turfId/availableSlots", ownerMiddleware, getAvailableSlots)
-ownerRouter.post("/addslot/:turfId", ownerMiddleware, addSlot)
+
 ownerRouter.patch("/update-status", ownerMiddleware, updateSlotStatus)
 
 module.exports = ownerRouter

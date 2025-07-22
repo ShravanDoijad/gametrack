@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
+import { BookContext } from '../constexts/bookContext';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
@@ -8,27 +9,11 @@ import { BarChartBig, LineChart as LineChartIcon, Calendar, Clock3, TrendingUp }
 
 const Dashboard = () => {
   const [turfs, setTurfs] = useState([]);
-  const [selectedTurfId, setSelectedTurfId] = useState('');
   const [dashboardData, setDashboardData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('month');
-
-  useEffect(() => {
-    const fetchTurfs = async () => {
-      try {
-        const response = await axios.get('/owner/ownedTurfs');
-        setTurfs(response.data.turfs || []);
-        if (response.data.turfs.length > 0) {
-          setSelectedTurfId(response.data.turfs[0]._id);
-        }
-      } catch (error) {
-        console.error('Failed to fetch turfs:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTurfs();
-  }, []);
+  const {selectedTurfId, setSelectedTurfId}= useContext(BookContext)
+ 
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -103,7 +88,7 @@ const Dashboard = () => {
 
   return (
     <div className="p-4 min-h-screen bg-black text-white">
-      {/* Header Section */}
+      
       <header className="mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div className="flex items-center gap-3">

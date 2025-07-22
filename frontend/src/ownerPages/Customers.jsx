@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import { 
   User, Mail, Phone, CalendarDays, BadgeCheck, 
@@ -6,17 +6,18 @@ import {
   TrendingUp, Zap, Award, Shield, Clock
 } from "lucide-react";
 import moment from "moment";
-
+import { BookContext } from "../constexts/bookContext";
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-
+  const {selectedTurfId,
+        setSelectedTurfId} =  useContext(BookContext)
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const res = await axios.get("/owner/customers");
+        const res = await axios.get(`/owner/customers?turfId=${selectedTurfId}`);
         setCustomers(res.data.customers);
       } catch (err) {
         console.error("Error fetching customers:", err);

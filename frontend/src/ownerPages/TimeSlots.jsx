@@ -11,18 +11,19 @@ const TimeSlots = () => {
   const [slots, setSlots] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmingSlot, setConfirmingSlot] = useState(null);
- 
-    const {userInfo} = useContext(BookContext)
+  const [selectedTurf, setselectedTurf] = useState('')
+    const {userInfo, selectedTurfId,
+        setSelectedTurfId} = useContext(BookContext)
     
     const formattedDate = date.toISOString().split("T")[0];
     
     const turfId = userInfo.turfId
-    console.log("turfId", turfId)
+  
   useEffect(() => {
     const fetchSlots = async () => {
       setIsLoading(true);
       try {
-        const res = await axios.get(`/owner/${turfId}/availableSlots`, {
+        const res = await axios.get(`/owner/turfId=${selectedTurfId}/availableSlots`, {
            params: {
         
         date: formattedDate, 
@@ -46,7 +47,7 @@ const TimeSlots = () => {
 
   try {
     await axios.patch("/owner/update-status", {
-      turfId,
+      turfId:selectedTurfId,
       date: formattedDate,
       start: slot.start,
       end: slot.end,
@@ -62,7 +63,7 @@ const TimeSlots = () => {
     );
     setConfirmingSlot(null);
   } catch (err) {
-    console.error("❌ Failed to update slot status:", err);
+    console.error(" Failed to update slot status:", err);
   }
 };
 

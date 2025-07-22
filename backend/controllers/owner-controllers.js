@@ -68,8 +68,7 @@ module.exports = { ownerRegister };
 
 const turfAllBookings = async (req, res) => {
     try {
-        const { data: owner, role } = req.auth;
-        const turfId = owner.turfId;
+        const {turfId} = req.query
 
         if (!turfId) {
             return res.status(400).json({ success: false, message: "Turf ID is required" });
@@ -87,8 +86,8 @@ const turfAllBookings = async (req, res) => {
 
 const getCustomers = async (req, res) => {
     try {
-        const { data: owner, role } = req.auth;
-        const turf = await Turf.findById(owner.turfId)
+        const { turfId } = req.query;
+        const turf = await Turf.findById(turfId)
         if (!turf) {
             return res.status(404).json({ success: false, message: "Turf not found" });
         }
@@ -127,7 +126,8 @@ const getCustomers = async (req, res) => {
 const getTurfDetails = async (req, res) => {
     try {
         const { data: owner, role } = req.auth;
-        const turf = await Turf.findById(owner.turfId);
+        const {turfId} = req.query
+        const turf = await Turf.findById(turfId);
         if (!turf) {
             return res.status(404).json({ success: false, message: "Turf not found" });
         }
@@ -141,7 +141,7 @@ const getTurfDetails = async (req, res) => {
 const updateTurfProfile = async (req, res) => {
     try {
         const { data: owner, role } = req.auth;
-        const turfId = owner.turfId;
+        const {turfId} = req.query;
         const turfData = req.body;
 
         const updatedTurf = await Turf.findByIdAndUpdate(turfId, turfData, { new: true });
@@ -221,54 +221,6 @@ const updateOwner = async (req, res) => {
 
 
 
-const addSlot = async (req, res) => {
-    const { turfId } = req.params;
-    const { date, start, end } = req.body;
-
-    try {
-        const turf = await Turf.findById(turfId);
-        if (!turf) return res.status(404).json({ error: "Turf not found" });
-
-        let daySlot = turf.availableSlots.find((slot) => slot.date === date);
-
-        if (!daySlot) {
-            turf.availableSlots.push({ date, slots: [{ start, end }] });
-        } else {
-            daySlot.slots.push({ start, end });
-        }
-
-        await turf.save();
-        res.status(200).json({ message: "Slot added successfully", turf });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error" });
-    }
-};
-
-const deleteSlot = async (req, res) => {
-    const { turfId } = req.params;
-    const { date, start, end } = req.body;
-
-    try {
-        const turf = await Turf.findById(turfId);
-        if (!turf) return res.status(404).json({ error: "Turf not found" });
-
-        turf.availableSlots = turf.availableSlots.map((slotDay) => {
-            if (slotDay.date === date) {
-                slotDay.slots = slotDay.slots.filter(
-                    (s) => s.start !== start || s.end !== end
-                );
-            }
-            return slotDay;
-        }).filter(slotDay => slotDay.slots.length > 0);
-
-        await turf.save();
-        res.status(200).json({ message: "Slot deleted successfully", turf });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error" });
-    }
-};
 
 const getSlots = async (req, res) => {
     const { turfId, date } = req.query;
@@ -284,7 +236,8 @@ const getSlots = async (req, res) => {
 };
 
 const updateSlotStatus = async (req, res) => {
-    const { turfId, date, start, end, newStatus } = req.body;
+    
+    const { date, turfId, start, end, newStatus } = req.body;
 
     try {
         const turf = await Turf.findById(turfId);
@@ -330,8 +283,8 @@ const updateSlotStatus = async (req, res) => {
 
 const getAvailableSlots = async (req, res) => {
     try {
-        const { turfId } = req.params;
-        const { date } = req.query;
+        const { turfId , date } = req.query;
+       
 
         if (!date) return res.status(400).json({ error: "Date is required." });
 
@@ -398,9 +351,9 @@ module.exports = {
     ownerRegister,
     dashboardDetails,
     updateOwner,
-    deleteSlot,
+  
     getSlots,
-    addSlot,
+    
     updateSlotStatus,
     getAvailableSlots
 

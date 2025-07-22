@@ -11,8 +11,8 @@ import {
 import { BookContext } from "../constexts/bookContext";
 
 const Bookings = () => {
-  const { bookings, setbookings} = useContext(BookContext);
-  console.log("Bookings data:", bookings);
+  const { bookings, setbookings, selectedTurfId, setSelectedTurfId} = useContext(BookContext);
+
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
