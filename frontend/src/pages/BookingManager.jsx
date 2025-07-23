@@ -1,14 +1,15 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, time } from "framer-motion";
 import { CalendarDays, Calendar, Clock3 } from "lucide-react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { useContext } from "react";
+import { useEffect } from "react";
 import { BookContext } from "../constexts/bookContext";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import useSWR from "swr";
-
 const getNext7Days = () => {
   const days = [];
   const options = { weekday: "short", month: "short", day: "numeric" };
@@ -20,52 +21,27 @@ const getNext7Days = () => {
       date,
     });
   }
+
   return days;
 };
-
-const fetcher = (url) => axios.get(url).then(res => res.data);
-
 const BookingManager = () => {
-  const { selectedSport, userInfo } = useContext(BookContext);
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [turfInfo, setTurfInfo] = useState(location.state);
+  const { selectedSport, userInfo, getSingleTurf, setGetSingleTurf } = useContext(BookContext)
+  const location = useLocation()
+  const navigate = useNavigate()
+  const [turfInfo, setturfInfo] = useState(location.state)
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedCheckIn, setSelectedCheckIn] = useState(null);
-  const [availableCheckoutSlots, setAvailableCheckoutSlots] = useState([]);
+  const [availableCheckoutSlots, setavailableCheckoutSlots] = useState([])
   const [selectedCheckOut, setSelectedCheckOut] = useState(null);
+  const [customDate, setCustomDate] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [showSlotPopup, setShowSlotPopup] = useState(false);
   const [showFormPopup, setShowFormPopup] = useState(false);
   const [availableTimes, setAvailableTimes] = useState([]);
   const [paymentOption, setPaymentOption] = useState(null);
-  const [allSlots, setAllSlots] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [allSlots, setallSlots] = useState([])
+  const [loading, setloading] = useState(false)
 
-  // Fetch booked slots with automatic revalidation
-  const { data: bookedSlotsData, mutate: mutateBookedSlots } = useSWR(
-    selectedDate && turfInfo?._id 
-      ? `/api/turf/getBookedSlots?turfId=${turfInfo._id}&date=${selectedDate.toISOString().split('T')[0]}`
-      : null,
-    fetcher,
-    {
-      revalidateOnFocus: false,
-      errorRetryInterval: 5000,
-    }
-  );
-
-  // Update turfInfo with fresh booked slots
-  useEffect(() => {
-    if (bookedSlotsData && turfInfo) {
-      setTurfInfo(prev => {
-        const existingSlots = prev.bookedSlots.filter(s => s.date !== bookedSlotsData.date);
-        return {
-          ...prev,
-          bookedSlots: [...existingSlots, bookedSlotsData]
-        };
-      });
-    }
-  }, [bookedSlotsData]);
 
   const handleDateSelect = (date) => {
     const timezoneAdjustedDate = new Date(
@@ -83,93 +59,7 @@ const BookingManager = () => {
     setShowFormPopup(false);
     setShowCalendar(false);
     setShowSlotPopup(true);
-    mutateBookedSlots();
   };
-
-  const generateAllTimeSlots = useCallback(() => {
-    if (!turfInfo) return [];
-    
-    const all = [];
-    const [openHour, openMinute] = turfInfo.openingTime.split(':').map(Number);
-    const [closeHour, closeMinute] = turfInfo.closingTime.split(':').map(Number);
-
-    let currentMinutes = openHour * 60 + openMinute;
-    const closingMinutes = closeHour * 60 + closeMinute;
-
-    while (currentMinutes <= closingMinutes) {
-      const hour = Math.floor(currentMinutes / 60);
-      const minute = currentMinutes % 60;
-
-      const period = hour >= 12 ? 'PM' : 'AM';
-      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-      const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
-      const militaryTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-
-      all.push({
-        display: timeString,
-        military: militaryTime,
-        hour: hour,
-        minute: minute
-      });
-
-      currentMinutes += 60;
-    }
-
-    return all;
-  }, [turfInfo]);
-
-  const generateAvailableTimeSlots = useCallback(() => {
-    if (!selectedDate || !turfInfo) return [];
-
-    const all = generateAllTimeSlots();
-    setAllSlots(all);
-
-    const today = new Date();
-    const isToday = selectedDate.getDate() === today.getDate() &&
-                   selectedDate.getMonth() === today.getMonth() &&
-                   selectedDate.getFullYear() === today.getFullYear();
-
-    let filteredSlots = [...all];
-
-    if (isToday) {
-      const currentHour = today.getHours();
-      const currentMinute = today.getMinutes();
-      filteredSlots = all.filter(slot => {
-        return slot.hour > currentHour || 
-               (slot.hour === currentHour && slot.minute > currentMinute);
-      });
-    }
-
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const bookedForDate = turfInfo.bookedSlots?.find(slot => slot.date === dateStr);
-
-    if (!bookedForDate) {
-      setAvailableCheckoutSlots(filteredSlots);
-      return filteredSlots.map(slot => slot.display);
-    }
-
-    const availableSlots = filteredSlots.filter(slot => {
-      return !bookedForDate.slots.some(bookedSlot => {
-        const slotTime = slot.military;
-        return slotTime >= bookedSlot.start && slotTime < bookedSlot.end;
-      });
-    });
-
-    setAvailableCheckoutSlots(filteredSlots.filter(slot => {
-      return !bookedForDate.slots.some(bookedSlot =>
-        slot.military > bookedSlot.start && slot.military < bookedSlot.end
-      );
-    }));
-
-    return availableSlots.map(slot => slot.display);
-  }, [selectedDate, turfInfo, generateAllTimeSlots]);
-
-  useEffect(() => {
-    if (selectedDate && turfInfo) {
-      const slots = generateAvailableTimeSlots();
-      setAvailableTimes(slots);
-    }
-  }, [selectedDate, turfInfo, bookedSlotsData, generateAvailableTimeSlots]);
 
   const handleCheckIn = (time) => {
     setSelectedCheckIn(time);
@@ -199,53 +89,16 @@ const BookingManager = () => {
     return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
   };
 
-  const getFilteredCheckoutTimes = () => {
-    const checkInIndex = allSlots.findIndex(slot => slot.display === selectedCheckIn);
-    let nextBookingIndex = allSlots.length;
-
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const bookedForDate = turfInfo.bookedSlots?.find(slot => slot.date === dateStr);
-
-    if (bookedForDate) {
-      for (let slot of bookedForDate.slots) {
-        const index = allSlots.findIndex(s => s.military === slot.start);
-        if (index > checkInIndex) {
-          nextBookingIndex = Math.min(nextBookingIndex, index);
-        }
-      }
-    }
-
-    return allSlots
-      .slice(checkInIndex + 1, nextBookingIndex + 1)
-      .filter(slot =>
-        availableCheckoutSlots.find((time) => time.display === slot.display)
-      )
-      .map(slot => slot.display);
-  };
-
-  const getPriceForSlot = (checkInTime) => {
-    const timeParts = checkInTime.split(/:| /);
-    let hour = parseInt(timeParts[0]);
-    const period = timeParts[2];
-
-    if (period === 'PM' && hour !== 12) hour += 12;
-    else if (period === 'AM' && hour === 12) hour = 0;
-
-    return hour >= 19 ? turfInfo.nightPrice : turfInfo.dayPrice;
-  };
-
-  const calculateFee = () => {
-    const pricePerHour = getPriceForSlot(selectedCheckIn);
-    return calculateDuration() * pricePerHour;
-  };
-
-  const filteredCheckinTimes = allSlots.filter(slot =>
-    slot.military !== turfInfo.closingTime
-  );
-
+  const next7Days = getNext7Days();
+  useEffect(() => {
+  if (getSingleTurf) {
+    getSingleTurf(); // now you can use it
+  }
+}, [availableTimes]);
   const handlePayment = async () => {
     try {
-      const amount = paymentOption === "advance" ? 250 : calculateFee();
+      const amount = 250;
+
 
       const bookingDetails = {
         turfId: turfInfo._id,
@@ -265,13 +118,15 @@ const BookingManager = () => {
         policies: turfInfo.onSitePolicies
       };
 
-      setLoading(true);
+      setloading(true)
 
       const res = await axios.post("/api/users/createOrder", {
         amount: amount,
         currency: "INR",
         receipt: `booking_${Date.now()}`,
+
         bookingDetails: bookingDetails
+
       });
 
       const { order } = res.data;
@@ -291,21 +146,21 @@ const BookingManager = () => {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               bookingDetails: bookingDetails,
+
             });
-            
             if (verifyRes.data.success) {
               toast.success("Booking Confirmed!");
-              mutateBookedSlots(); // Refresh slots after successful booking
-              setShowFormPopup(false);
-              navigate("/");
+              setShowFormPopup(false)
+              navigate("/")
             } else {
               toast.error("Payment Failed");
             }
           } catch (err) {
             console.error(err);
             toast.warning("Payment verification error");
-          } finally {
-            setLoading(false);
+          }
+          finally {
+            setloading(false)
           }
         },
         prefill: {
@@ -322,11 +177,189 @@ const BookingManager = () => {
     } catch (err) {
       console.log(err);
       toast.error("Payment Error");
-      setLoading(false);
+    }
+    finally {
+      setloading(false)
     }
   };
 
-  const next7Days = getNext7Days();
+
+
+
+  const generateAvailableTimeSlots = (selectedDate, turfInfo) => {
+    const all = []
+    const [openHour, openMinute] = turfInfo.openingTime.split(':').map(Number);
+    const [closeHour, closeMinute] = turfInfo.closingTime.split(':').map(Number);
+
+
+    let currentMinutes = openHour * 60 + openMinute;
+    const closingMinutes = closeHour * 60 + closeMinute;
+
+
+    while (currentMinutes <= closingMinutes) {
+      const hour = Math.floor(currentMinutes / 60);
+      const minute = currentMinutes % 60;
+
+
+      const period = hour >= 12 ? 'PM' : 'AM';
+      const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+      const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+
+
+      const militaryTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+
+      all.push({
+        display: timeString,
+        military: militaryTime,
+        hour: hour,
+        minute: minute
+      });
+
+      currentMinutes += 60;
+    }
+
+    setallSlots(all)
+
+    const today = new Date();
+    const isToday = selectedDate &&
+      selectedDate.getDate() === today.getDate() &&
+      selectedDate.getMonth() === today.getMonth() &&
+      selectedDate.getFullYear() === today.getFullYear();
+
+    let filteredSlots = [...all];
+
+
+    if (isToday) {
+      const currentHour = today.getHours();
+      const currentMinute = today.getMinutes();
+
+      filteredSlots = all.filter(slot => {
+
+
+
+        return slot.hour > currentHour ||
+          (slot.hour === currentHour && slot.minute > currentMinute);
+      });
+    }
+
+
+    if (!selectedDate) {
+      return filteredSlots.map(slot => slot.display);
+    }
+
+
+    const dateStr = selectedDate.toISOString().split('T')[0];
+
+
+    const bookedForDate = turfInfo.bookedSlots.find(slot => slot.date === dateStr);
+
+
+
+    if (!bookedForDate) {
+      setavailableCheckoutSlots(filteredSlots);
+      return filteredSlots.map(slot => slot.display);
+    }
+
+    const timeStringToMinutes = time => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
+
+    const availableSlots = filteredSlots.filter(slot => {
+      const slotTime = timeStringToMinutes(slot.military);
+
+      return !bookedForDate.slots.some(bookedSlot => {
+        const start = timeStringToMinutes(bookedSlot.start);
+        const end = timeStringToMinutes(bookedSlot.end);
+        return slotTime >= start && slotTime < end;
+      });
+    });
+
+    console.log("✅ Available slots after filter:", availableSlots);
+
+    setavailableCheckoutSlots(filteredSlots.filter(slot => {
+      return !bookedForDate.slots.some(bookedSlot =>
+        slot.military > bookedSlot.start && slot.military < bookedSlot.end
+      );
+    }))
+    console.log("chcekout", filteredSlots.filter(slot => {
+      return !bookedForDate.slots.some(bookedSlot =>
+
+        slot.military > bookedSlot.start && slot.military < bookedSlot.end
+      );
+    }))
+
+    return availableSlots.map(slot => slot.display);
+  };
+
+  useEffect(() => {
+    if (selectedDate && turfInfo) {
+      const slots = generateAvailableTimeSlots(selectedDate, turfInfo);
+      setAvailableTimes(slots);
+    }
+  }, [selectedDate, turfInfo]);
+
+
+
+
+  const getFilteredCheckoutTimes = () => {
+    const checkInIndex = allSlots.findIndex(slot => slot.display === selectedCheckIn);
+    let nextBookingIndex = allSlots.length;
+
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const bookedForDate = turfInfo.bookedSlots.find(slot => slot.date === dateStr);
+
+    console.log("booked for date", bookedForDate);
+
+
+    if (bookedForDate) {
+      for (let slot of bookedForDate.slots) {
+
+        const index = allSlots.findIndex(s => s.military === slot.start);
+
+        if (index > checkInIndex) {
+          nextBookingIndex = Math.min(nextBookingIndex, index);
+        }
+      }
+    }
+    console.log("next", nextBookingIndex);
+
+    return allSlots
+      .slice(checkInIndex + 1, nextBookingIndex + 1)
+      .filter(slot =>
+        availableCheckoutSlots.find((time) => time.display === slot.display)
+      )
+      .map(slot => slot.display);
+  };
+
+  const getPriceForSlot = (turfInfo, checkInTime) => {
+
+    const timeParts = checkInTime.split(/:| /);
+    let hour = parseInt(timeParts[0]);
+    const period = timeParts[2];
+
+    // Convert to 24-hour format
+    if (period === 'PM' && hour !== 12) {
+      hour += 12;
+    } else if (period === 'AM' && hour === 12) {
+      hour = 0;
+    }
+
+
+    return hour >= 19 ? turfInfo.nightPrice : turfInfo.dayPrice;
+  };
+
+  // Then use it in your calculateFee:
+  const calculateFee = () => {
+    const pricePerHour = getPriceForSlot(turfInfo, selectedCheckIn);
+    return calculateDuration() * pricePerHour;
+  };
+
+  const filteredCheckinTimes = allSlots.filter(slot =>
+    slot.military !== turfInfo.closingTime
+
+  )
+
 
   return (
     <div className="px-6 pb-24 text-white font-sans">
@@ -343,11 +376,10 @@ const BookingManager = () => {
             key={idx}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleDateSelect(day.date)}
-            className={`min-w-[90px] p-3 rounded-xl text-center cursor-pointer border transition-all duration-200 ${
-              selectedDate?.toDateString() === day.date.toDateString()
-                ? "bg-lime-500 text-black border-lime-500"
-                : "bg-[#1a1a1a] border-[#2a2a2a] text-white"
-            }`}
+            className={`min-w-[90px] p-3 rounded-xl text-center cursor-pointer border transition-all duration-200 ${selectedDate?.toDateString() === day.date.toDateString()
+              ? "bg-lime-500 text-black border-lime-500"
+              : "bg-[#1a1a1a] border-[#2a2a2a] text-white"
+              }`}
           >
             <p className="text-sm font-semibold">{day.label.split(",")[0]}</p>
             <p className="text-lg font-bold sora">{day.label.split(",")[1]}</p>
@@ -367,7 +399,7 @@ const BookingManager = () => {
       {showCalendar && (
         <div className="my-4 bg-[#1a1a1a] p-4 rounded-xl border border-gray-700">
           <DatePicker
-            selected={selectedDate}
+            selected={customDate}
             onChange={(date) => handleDateSelect(date)}
             inline
             minDate={new Date()}
@@ -398,15 +430,14 @@ const BookingManager = () => {
                 <div
                   key={idx}
                   onClick={() => isAvailable && handleCheckIn(slot.display)}
-                  className={`px-4 py-3 rounded-lg text-center border transition ${
-                    selectedCheckIn === slot.display
-                      ? "bg-green-500 text-black border-green-500"
-                      : isBooked
-                        ? "bg-red-600 text-white border-red-700"
-                        : isAvailable
-                          ? "bg-[#1a1a1a] text-white border-[#2a2a2a] hover:border-lime-400"
-                          : "bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed"
-                  }`}
+                  className={`px-4 py-3 rounded-lg text-center border transition ${selectedCheckIn === slot.display
+                    ? "bg-green-500 text-black border-green-500"
+                    : isBooked
+                      ? "bg-red-600 text-white border-red-700"
+                      : isAvailable
+                        ? "bg-[#1a1a1a] text-white border-[#2a2a2a]"
+                        : "bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed"
+                    }`}
                 >
                   {slot.display}
                 </div>
@@ -427,19 +458,19 @@ const BookingManager = () => {
             Select Check-out Time
           </h3>
           <div className="grid grid-cols-2 gap-3">
-            {getFilteredCheckoutTimes().map((time, idx) => (
-              <div
-                key={idx}
-                onClick={() => handleCheckOut(time)}
-                className={`px-4 py-3 rounded-lg cursor-pointer text-center border transition ${
-                  selectedCheckOut === time
+            {getFilteredCheckoutTimes()
+              .map((time, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => handleCheckOut(time)}
+                  className={`px-4 py-3 rounded-lg cursor-pointer text-center border transition ${selectedCheckOut === time
                     ? "bg-yellow-500 text-black border-yellow-500"
-                    : "bg-[#1a1a1a] text-white border-[#2a2a2a] hover:border-yellow-400"
-                }`}
-              >
-                {time}
-              </div>
-            ))}
+                    : "bg-[#1a1a1a] text-white border-[#2a2a2a]"
+                    }`}
+                >
+                  {time}
+                </div>
+              ))}
           </div>
         </motion.div>
       )}
@@ -452,6 +483,7 @@ const BookingManager = () => {
           className="fixed inset-0 z-50 flex justify-center items-center bg-black/70 backdrop-blur-sm px-4"
         >
           <div className="w-full max-w-md bg-gradient-to-br from-gray-900 to-gray-800 p-6 rounded-2xl border border-gray-700 shadow-2xl font-sora relative overflow-hidden">
+
             <div className="absolute top-0 right-0 w-32 h-32 bg-green-500/10 rounded-full -mr-16 -mt-16"></div>
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-yellow-500/10 rounded-full -ml-12 -mb-12"></div>
 
@@ -518,9 +550,11 @@ const BookingManager = () => {
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-gray-400">Price per hour</p>
-                  <p className="font-medium text-white">
-                    ₹{getPriceForSlot(selectedCheckIn)}
-                  </p>
+                  {
+                    <p className="font-medium text-white">
+                      ₹{getPriceForSlot(turfInfo, selectedCheckIn)}
+                    </p>
+                  }
                 </div>
               </div>
             </div>
@@ -535,29 +569,17 @@ const BookingManager = () => {
                     whileHover={{ scale: 1.03 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setPaymentOption("advance")}
-                    className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${
-                      paymentOption === "advance"
-                        ? "bg-gradient-to-r from-green-500 to-lime-500 text-black border-transparent shadow-lg"
-                        : "bg-gray-800 text-white border-gray-600 hover:border-lime-400"
-                    }`}
+                    className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${paymentOption === "advance"
+                      ? "bg-gradient-to-r from-green-500 to-lime-500 text-black border-transparent shadow-lg"
+                      : "bg-gray-800 text-white border-gray-600 hover:border-lime-400"
+                      }`}
                   >
                     <div className="font-bold">Advance</div>
                     <div className="text-xs">₹ 250</div>
                   </motion.button>
                 )}
-                <motion.button
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setPaymentOption("full")}
-                  className={`flex-1 min-w-[120px] px-4 py-3 rounded-xl text-sm font-semibold border-2 transition-all ${
-                    paymentOption === "full"
-                      ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-black border-transparent shadow-lg"
-                      : "bg-gray-800 text-white border-gray-600 hover:border-blue-400"
-                  }`}
-                >
-                  <div className="font-bold">Full Payment</div>
-                  <div className="text-xs">₹ {calculateFee()}</div>
-                </motion.button>
+
+
               </div>
 
               {turfInfo.allowAdvancePayment && (
@@ -567,7 +589,8 @@ const BookingManager = () => {
               )}
             </div>
 
-            {turfInfo.onSitePolicies?.length > 0 && (
+            {/* Important turf policies */}
+            {turfInfo.onSitePolicies.length > 0 && (
               <div className="bg-gray-800/30 p-3 rounded-lg border border-gray-700 mb-6 relative z-10">
                 <p className="text-xs text-gray-400 mb-1">Turf Policies:</p>
                 <ul className="text-xs text-gray-300 space-y-1">
@@ -580,23 +603,22 @@ const BookingManager = () => {
               </div>
             )}
 
+            \
             <motion.button
               whileHover={paymentOption ? { scale: 1.02 } : {}}
               whileTap={paymentOption ? { scale: 0.98 } : {}}
               disabled={!paymentOption}
               onClick={handlePayment}
-              className={`relative z-10 w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 ${
-                paymentOption
-                  ? "bg-gradient-to-r from-lime-500 to-green-500 text-black hover:shadow-lg hover:shadow-lime-500/20"
-                  : "bg-gray-700 text-gray-400 cursor-not-allowed"
-              }`}
+              className={`relative z-10 w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 ${paymentOption
+                ? "bg-gradient-to-r from-lime-500 to-green-500 text-black hover:shadow-lg hover:shadow-lime-500/20"
+                : "bg-gray-700 text-gray-400 cursor-not-allowed"
+                }`}
             >
-              {paymentOption === "advance" 
-                ? `Pay Advance (₹ 250)` 
-                : paymentOption === "full" 
-                  ? `Pay Full (₹${calculateFee()})` 
-                  : "Select Payment Option"}
+              {paymentOption === "advance" ? `Pay Advance (₹ 250})` :
+                paymentOption === "full" ? `Pay Full (₹${calculateFee()})` :
+                  "Select Payment Option"}
             </motion.button>
+
 
             <div className="absolute top-4 right-4 bg-gray-800/80 px-3 py-1 rounded-full text-xs font-medium border border-gray-600 text-lime-300 z-10">
               {selectedSport || turfInfo.sportsAvailable[0]}
@@ -606,6 +628,9 @@ const BookingManager = () => {
       )}
     </div>
   );
-};
 
-export default BookingManager;
+
+
+}
+
+export default BookingManager

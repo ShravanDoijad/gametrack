@@ -128,11 +128,17 @@ const TimeSlots = () => {
                   onChange={(date) => setSelectedDate(date)}
                   minDate={new Date()}
                   maxDate={addDays(new Date(), 30)}
-                  className= "text-white p-3 pl-12 rounded-lg border border-neutral-700 w-full focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all"
-                  calendarClassName="!bg-neutral-900 !text-white !border !border-neutral-700 !shadow-xl"
+                  className="text-black p-3 pl-12 rounded-lg border border-gray-300 w-full focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all bg-white"
+                  calendarClassName="!bg-white !text-black !border !border-gray-300 !shadow-xl"
                   wrapperClassName="w-full"
                   popperPlacement="bottom-start"
-                  dayClassName={() => "hover:bg-neutral-800"}
+                  dayClassName={(date) => {
+                    const isWithinRange =
+                      date >= new Date() && date <= addDays(new Date(), 30);
+                    return isWithinRange
+                      ? "text-black hover:bg-blue-100 transition-colors"
+                      : "text-gray-400 bg-white cursor-not-allowed";
+                  }}
                   renderCustomHeader={({
                     date,
                     decreaseMonth,
@@ -144,33 +150,35 @@ const TimeSlots = () => {
                       <button
                         onClick={decreaseMonth}
                         disabled={prevMonthButtonDisabled}
-                        className="p-1 rounded hover:bg-neutral-800 disabled:opacity-50"
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
                       >
-                        <svg className="w-5 h-5 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                         </svg>
                       </button>
-                      <span className="text-neutral-100 font-medium">
+                      <span className="text-gray-900 font-medium">
                         {format(date, "MMMM yyyy")}
                       </span>
                       <button
                         onClick={increaseMonth}
                         disabled={nextMonthButtonDisabled}
-                        className="p-1 rounded hover:bg-neutral-800 disabled:opacity-50"
+                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
                       >
-                        <svg className="w-5 h-5 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                       </button>
                     </div>
                   )}
                 />
+
                 <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <Calendar className="text-blue-400" size={20} />
+                  <Calendar className="text-blue-600" size={20} />
                 </div>
+
               </div>
             </div>
-            
+
             <div className="flex-1">
               <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 h-full">
                 <p className="text-sm text-neutral-400 mb-1">Selected Date</p>
@@ -225,7 +233,7 @@ const TimeSlots = () => {
                 <div className="flex-grow">
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <span className="text-2xl font-bold text-white font-sora">
+                      <span className="text-2xl font-bold text-white sora">
                         {slot.start} - {slot.end}
                       </span>
                       <p className="text-sm text-neutral-400 mt-1">Time Slot</p>
@@ -305,34 +313,39 @@ const TimeSlots = () => {
                   <label className="block text-sm text-neutral-300 mb-2 font-medium uppercase tracking-wider">
                     Time Slot
                   </label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2 text-neutral-400">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-xs">START TIME</span>
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-2xl shadow-md">
+                    {/* Start Time */}
+                    <div className="flex flex-col space-y-2">
+                      <label className="flex items-center gap-2 text-gray-700 font-medium text-sm">
+                        <Clock className="w-5 h-5 text-blue-500" />
+                        Start Time
+                      </label>
                       <TimePicker
                         value={manualStart}
                         onChange={setManualStart}
                         disableClock={true}
-                        className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-lg p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                         clearIcon={null}
+                        className="w-fit border border-gray-300 rounded-xl px-4 py-3 text-xl font-medium  text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2 mb-2 text-neutral-400">
-                        <Clock className="w-4 h-4" />
-                        <span className="text-xs">END TIME</span>
-                      </div>
+
+                    {/* End Time */}
+                    <div className="flex flex-col space-y-2">
+                      <label className="flex items-center gap-2 text-gray-700 font-medium text-sm">
+                        <Clock className="w-5 h-5 text-blue-500" />
+                        End Time
+                      </label>
                       <TimePicker
                         value={manualEnd}
                         onChange={setManualEnd}
                         disableClock={true}
-                        className="w-full bg-neutral-800 text-white border border-neutral-700 rounded-lg p-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
                         clearIcon={null}
+                        className="w-fit border border-gray-300 rounded-xl px-4 py-3 text-xl font-medium  text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
                       />
                     </div>
                   </div>
+
+
                 </div>
               </div>
 

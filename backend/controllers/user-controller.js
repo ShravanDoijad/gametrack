@@ -533,7 +533,7 @@ const addFavorite = async (req, res) => {
 
 const getBookedSlots= async ()=>{
   try {
-    const {turfId, date}= req.body
+    const {turfId, date}= req.query
     if(!turfId){
       res.status(400).json({message: "turfId not found"})
     }
@@ -542,8 +542,7 @@ const getBookedSlots= async ()=>{
       res.status(400).json({message:"Turf not found"})
 
     }
-    const dateStr = date.toISOString().split('T')[0];
-    const bookedDay= turf.bookedSlots.find((s)=>s.date === dateStr)
+    const bookedDay= turf.bookedSlots.find((s)=>s.date === date)
     const bookedslots= bookedDay.slots
     res.status(200).json({bookedSlots:bookedslots})
   } catch (error) {

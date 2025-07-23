@@ -8,7 +8,7 @@ const AddOwner = () => {
     email: "",
     phone: "",
     // ← Added this
-    turfId: "",
+    turfIds: "",
     turfname: ""
   });
 
@@ -34,11 +34,11 @@ const AddOwner = () => {
         fullname: "",
         email: "",
         phone: "",
-        turfId: "",
+        turfIds: "",
         turfname: ""
       });
     } catch (error) {
-      setMessage("Error adding owner ❌");
+      setMessage("Error adding owner ❌",error);
       console.log(error.response)
     } finally {
       setLoading(false);
@@ -54,7 +54,7 @@ const AddOwner = () => {
         </h2>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {["fullname", "email", "phone", "turfId", "turfname"].map((field, idx) => (
+          {["fullname", "email", "phone", "turfIds", "turfname"].map((field, idx) => (
             <div key={idx}>
               <label className="block text-sm text-gray-300 capitalize mb-1">
                 {field.replace("Id", " ID")}
