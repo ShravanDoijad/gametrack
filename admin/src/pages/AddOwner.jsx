@@ -7,8 +7,7 @@ const AddOwner = () => {
     fullname: "",
     email: "",
     phone: "",
-    // ← Added this
-    turfIds: "",
+    turfIds: "",  // comma-separated string input
     turfname: ""
   });
 
@@ -28,7 +27,16 @@ const AddOwner = () => {
     setMessage("");
 
     try {
-      const response = await axios.post("/owner/register", formData);
+      // Convert comma-separated turfIds string into array
+      const payload = {
+        ...formData,
+        turfIds: formData.turfIds
+          .split(",")
+          .map(id => id.trim())
+          .filter(Boolean),
+      };
+
+      const response = await axios.post("/owner/register", payload);
       setMessage("Owner added successfully ✅");
       setFormData({
         fullname: "",
@@ -38,8 +46,8 @@ const AddOwner = () => {
         turfname: ""
       });
     } catch (error) {
-      setMessage("Error adding owner ❌",error);
-      console.log(error.response)
+      console.error(error.response);
+      setMessage("Error adding owner ❌");
     } finally {
       setLoading(false);
     }
@@ -57,7 +65,7 @@ const AddOwner = () => {
           {["fullname", "email", "phone", "turfIds", "turfname"].map((field, idx) => (
             <div key={idx}>
               <label className="block text-sm text-gray-300 capitalize mb-1">
-                {field.replace("Id", " ID")}
+                {field === "turfIds" ? "Turf IDs (comma separated)" : field.replace("Id", " ID")}
               </label>
               <input
                 type="text"
@@ -65,13 +73,12 @@ const AddOwner = () => {
                 value={formData[field]}
                 onChange={handleChange}
                 className="w-full p-3 bg-gray-800 rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-lime-400 text-sm placeholder-gray-500"
-                placeholder={`Enter ${field.replace("Id", " ID")}`}
+                placeholder={`Enter ${field === "turfIds" ? "Turf IDs (e.g. 64a...,65b...)" : field.replace("Id", " ID")}`}
                 required
               />
             </div>
           ))}
 
-          
           <button
             type="submit"
             disabled={loading}
@@ -88,14 +95,14 @@ const AddOwner = () => {
 
           {message && (
             <p
-              className={`mt-3 text-sm font-medium ${message.includes("✅") ? "text-lime-400" : "text-rose-400"
-                }`}
+              className={`mt-3 text-sm font-medium ${
+                message.includes("✅") ? "text-lime-400" : "text-rose-400"
+              }`}
             >
               {message}
             </p>
           )}
         </form>
-
       </div>
     </div>
   );

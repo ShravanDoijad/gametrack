@@ -12,7 +12,7 @@ const OwnerSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-turfId: [
+turfIds: [
   {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Turf',

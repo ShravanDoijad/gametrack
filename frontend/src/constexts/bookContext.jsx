@@ -15,14 +15,14 @@ const BookContextProvider = ({ children }) => {
     const [loginPanel, setloginPanel] = useState(false)
     const [menuPanel, setmenuPanel] = useState(false)
     const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
-    const [selectedTurfId, setSelectedTurfId] = useState('');
-      const [turfs, setTurfs] = useState([]);
+    const [turfs, setTurfs] = useState([]);
+    const [selectedTurfId, setSelectedTurfId] = useState(turfs._id);
     const [bookings, setbookings] = useState([])
      const [sidebarOpen, setSidebarOpen] = useState(false);
     
       const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
       const closeSidebar = () => setSidebarOpen(false);
-
+    console.log("turfs", turfs)
    useEffect(() => {
   if (token && userInfo?.role === 'owner' && selectedTurfId) {
     setisLoading(true);

@@ -8,60 +8,61 @@ const bcrypt = require('bcryptjs');
 
 
 const ownerRegister = async (req, res) => {
-    try {
-        const { fullname, email, phone, turfIds, turfname } = req.body;
+  try {
+    const { fullname, email, phone, turfIds, turfname } = req.body;
 
-        // Basic validation
-        if (!fullname || !email || !phone || !turfIds || !turfname) {
-            return res.status(400).json({
-                success: false,
-                message: "All fields are required",
-            });
-        }
-
-        // Check if owner already exists
-        const existingOwner = await Owner.findOne({ $or: [{ email }, { phone }] });
-        if (existingOwner) {
-            return res.status(409).json({
-                success: false,
-                message: "Owner already exists with this email or phone",
-            });
-        }
-
-
-
-        // Create owner
-        const newOwner = new Owner({
-            fullname,
-            email,
-            phone,
-
-            turfIds,
-            turfname,
-        });
-
-        await newOwner.save();
-
-        return res.status(201).json({
-            success: true,
-            message: "Owner registered successfully",
-            owner: {
-                id: newOwner._id,
-                fullname: newOwner.fullname,
-                email: newOwner.email,
-                phone: newOwner.phone,
-                turfId: newOwner.turfId,
-                turfname: newOwner.turfname,
-            },
-        });
-    } catch (error) {
-        console.error("Owner registration error:", error);
-        return res.status(500).json({
-            success: false,
-            message: "Server error",
-        });
+    // Basic validation
+    if (!fullname?.trim() || !email?.trim() || !phone?.trim() || !Array.isArray(turfIds) || turfIds.length === 0 || !turfname?.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required and turfIds must be a non-empty array",
+      });
     }
+
+    // Check if owner already exists
+    const existingOwner = await Owner.findOne({
+      $or: [{ email: email.trim() }, { phone: phone.trim() }],
+    });
+
+    if (existingOwner) {
+      return res.status(409).json({
+        success: false,
+        message: "Owner already exists with this email or phone",
+      });
+    }
+
+    // Create owner
+    const newOwner = new Owner({
+      fullname: fullname.trim(),
+      email: email.trim(),
+      phone: phone.trim(),
+      turfIds,
+      turfname: turfname.trim(),
+    });
+
+    await newOwner.save();
+
+    return res.status(201).json({
+      success: true,
+      message: "Owner registered successfully",
+      owner: {
+        id: newOwner._id,
+        fullname: newOwner.fullname,
+        email: newOwner.email,
+        phone: newOwner.phone,
+        turfIds: newOwner.turfIds,
+        turfname: newOwner.turfname,
+      },
+    });
+  } catch (error) {
+    console.error("Owner registration error:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+    });
+  }
 };
+
 
 
 
@@ -159,7 +160,7 @@ const updateTurfProfile = async (req, res) => {
 const getOwnedTurfs = async (req, res) => {
     try {
         const { data: owner, role } = req.auth;
-        if (!owner || !owner.turfId) {
+        if (!owner || !owner.turfIds.length>0) {
             return res.status(400).json({ success: false, message: "Owner or Turf ID not found" });
         }
         const turfs = await Turf.find({ owner: owner._id });

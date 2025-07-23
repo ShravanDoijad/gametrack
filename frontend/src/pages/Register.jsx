@@ -213,7 +213,7 @@ const Register = () => {
 
       <div className="flex gap-3">
         <button
-          onClick={() => setActiveTab('otp')}
+          onClick={() => setActiveTab('credentials')}
           className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition-all"
         >
           <ArrowLeft size={16} /> Back
