@@ -2,7 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const userRouter = express.Router();
 
-const { userRegister, userLogout, createOrder, verifyOrder, getAllBookings, updateUser, deleteUser, addFavorite, getFavoriteTurfs, login, removeFavoriteTurf, getAllNotifications } = require('../controllers/user-controller');
+const { userRegister, userLogout, createOrder, verifyOrder, getAllBookings, updateUser, deleteUser, addFavorite, getFavoriteTurfs, login, removeFavoriteTurf, getAllNotifications, getBookedSlots } = require('../controllers/user-controller');
 const {authMiddleware} = require("../middleware/authMiddleware")
 
 
@@ -64,6 +64,7 @@ userRouter.get("/getFavoriteTurfs", authMiddleware, getFavoriteTurfs);
 userRouter.post("/deleteUser", authMiddleware, deleteUser);
 userRouter.post("/removeFavoriteTurf", authMiddleware, removeFavoriteTurf);
 userRouter.get("/getNotfications", authMiddleware, getAllNotifications);
+userRouter.get("/getBookedSlots", authMiddleware, getBookedSlots);
 
 
 

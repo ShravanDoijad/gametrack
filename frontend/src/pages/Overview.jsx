@@ -99,7 +99,7 @@ export const Overview = () => {
   const [loading, setloading] = useState(false)
   const [turfDistance, setTurfDistance] = useState(null);
   const { turfId } = useParams()
-  const { setfavorite, favorite, selectedSport, setloginPanel, userInfo, setSelectedSport, calculateDistance, token,  setGetSingleTurf } = useContext(BookContext);
+  const { setfavorite, favorite, selectedSport, setloginPanel, userInfo, setSelectedSport, calculateDistance, token } = useContext(BookContext);
 
   const lastTapRef = useRef(0);
   const navigate = useNavigate();
@@ -227,7 +227,6 @@ const sports = SPORTS.filter((sport) =>
   )
 );
 
-setGetSingleTurf(() => getSingleTurf);
 
 
   return (
@@ -324,9 +323,9 @@ setGetSingleTurf(() => getSingleTurf);
             <button
               onClick={() => navigate("/booking",
                 {
-                  state: {turfInfo,
-                    getSingleTurf
-                  }
+                  state: turfInfo
+                    
+                  
 
                 }
               )}

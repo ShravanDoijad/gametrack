@@ -11,7 +11,7 @@ import { Notifications } from './pages/Notifications';
 import { Turfs } from './pages/Turfs';
 import { BookContext } from './constexts/bookContext';
 import { Overview } from './pages/Overview';
-import Booking from './pages/Booking';
+
 import Favorite from './pages/Favorite';
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
@@ -22,6 +22,9 @@ import OwnerPrivateRoute from './OwnerPrivateRoute';
 import { Error404 } from './components/Error404';
 import { Error403 } from './components/Error403';
 import TurfSwitcher from './components/TurfSwitcher';
+
+import BookingManager from './pages/BookingManager';
+
 
 function App() {
   const { loginPanel, token, userInfo, isLoading, hasCheckedAuth  } = useContext(BookContext);
@@ -67,7 +70,7 @@ function App() {
 
 
           <Route element={<PrivateRoute />}>
-            <Route path="/booking" element={<Booking />} />
+            <Route path="/booking" element={<BookingManager />} />
             <Route path="/notification" element={<Notifications />} />
             <Route path="/favorite" element={<Favorite />} />
             <Route path="/userBookings" element={<UserBookings />} />
@@ -92,3 +95,6 @@ function App() {
 
 
 export default App;
+
+
+ 

@@ -531,6 +531,27 @@ const addFavorite = async (req, res) => {
   }
 };
 
+const getBookedSlots= async ()=>{
+  try {
+    const {turfId, date}= req.body
+    if(!turfId){
+      res.status(400).json({message: "turfId not found"})
+    }
+    const turf = await turfModel.findById(turfId);
+    if(!turf){
+      res.status(400).json({message:"Turf not found"})
+
+    }
+    const dateStr = date.toISOString().split('T')[0];
+    const bookedDay= turf.bookedSlots.find((s)=>s.date === dateStr)
+    const bookedslots= bookedDay.slots
+    res.status(200).json({bookedSlots:bookedslots})
+  } catch (error) {
+    console.log("unable to fetch the booked slots", error)
+    res.status(500).json({message: "Unable to fetch Booked Slots"})
+  }
+}
+
 const getFavoriteTurfs = async (req, res) => {
   try {
     const { data: user, role } = req.auth;
@@ -644,4 +665,5 @@ module.exports = {
   login,
   getAllNotifications,
   removeFavoriteTurf,
+  getBookedSlots
 };
