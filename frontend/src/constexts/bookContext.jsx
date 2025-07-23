@@ -18,25 +18,29 @@ const BookContextProvider = ({ children }) => {
     const [selectedTurfId, setSelectedTurfId] = useState('');
       const [turfs, setTurfs] = useState([]);
     const [bookings, setbookings] = useState([])
+     const [sidebarOpen, setSidebarOpen] = useState(false);
+    
+      const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+      const closeSidebar = () => setSidebarOpen(false);
 
+   useEffect(() => {
+  if (token && userInfo?.role === 'owner' && selectedTurfId) {
+    setisLoading(true);
+    const fetchBookings = async () => {
+      try {
+        const response = await axios.get(`/owner/turfAllBookings?turfId=${selectedTurfId}`);
+        setbookings(response.data.bookings);
+      } catch (err) {
+        console.error("Error fetching bookings:", err);
+        toast.error("Failed to fetch bookings");
+      } finally {
+        setisLoading(false);
+      }
+    };
+    fetchBookings();
+  }
+}, [token, userInfo, selectedTurfId]);
 
-    useEffect(() => {
-        if (token && userInfo && userInfo.role === 'owner') {
-            setisLoading(true);
-            const fetchBookings = async () => {
-                try {
-                    const response = await axios.get(`/owner/turfAllBookings?turfId=${selectedTurfId}`);
-                    setbookings(response.data.bookings);
-                } catch (err) {
-                    console.error("Error fetching bookings:", err);
-                    toast.error("Failed to fetch bookings");
-                } finally {
-                    setisLoading(false);
-                }
-            };
-            fetchBookings();
-        }
-    }, [token, userInfo]);
 
 
     const fetchToken = async () => {
@@ -91,10 +95,15 @@ const BookContextProvider = ({ children }) => {
         }
     };
 
+
+    
      useEffect(() => {
+       
         const fetchTurfs = async () => {
           try {
             const response = await axios.get('/owner/ownedTurfs');
+            console.log("response", response);
+            
             setTurfs(response.data.turfs || []);
             if (response.data.turfs.length > 0) {
               setSelectedTurfId(response.data.turfs[0]._id);
@@ -103,8 +112,10 @@ const BookContextProvider = ({ children }) => {
             console.error('Failed to fetch turfs:', error);
           } 
         };
+         if(token && userInfo.role === "owner"){
         fetchTurfs();
-      }, []);
+         }
+      }, [token, userInfo]);
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371;
@@ -146,7 +157,11 @@ const BookContextProvider = ({ children }) => {
         selectedTurfId,
         setSelectedTurfId,
         setTurfs,
-        turfs
+        turfs,
+        toggleSidebar, 
+        sidebarOpen,
+        closeSidebar
+
     }
     return (
         <BookContext.Provider value={value}>

@@ -3,14 +3,16 @@ import { Home, CalendarDays, Heart, User, Plus, CalendarClock  } from "lucide-re
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { BookContext } from "../constexts/bookContext";
+import TurfSwitcher from "../components/TurfSwitcher";
 
 const MobileNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { token, userInfo } = useContext(BookContext);
+  const { token, userInfo, turfs } = useContext(BookContext);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  console.log("userInfo", userInfo)
 
+
+  
 const commonTabs = [
   { 
     id: 'home',
@@ -19,13 +21,7 @@ const commonTabs = [
     path: '/',
     active: location.pathname === '/'
   },
-  { 
-    id: 'bookings',
-    icon: <CalendarDays size={22} />,
-    label: 'Bookings',
-    path: '/userBookings',
-    active: location.pathname.includes('bookings')
-  },
+  
   { 
     id: 'profile',
     icon: <User size={22} />,
@@ -44,6 +40,13 @@ if (userInfo?.role === 'owner') {
     path: '/owner/time-slots',
     active: location.pathname.includes('owner/time-slots')
   });
+  commonTabs.splice(1, 0 ,{
+    id: 'bookings',
+    icon: <CalendarDays size={22} />,
+    label: 'Bookings',
+    path: '/owner/turfTodaysbookings',
+    active: location.pathname.includes('owner/turfTodaysbookings')
+  }  )
 } else {
   commonTabs.splice(2, 0, {
     id: 'favorites',
@@ -52,6 +55,14 @@ if (userInfo?.role === 'owner') {
     path: '/favorite',
     active: location.pathname.includes('favorites')
   });
+  commonTabs.splice(1, 0 ,{
+    id: 'bookings',
+    icon: <CalendarDays size={22} />,
+    label: 'Bookings',
+    path: '/booking',
+    active: location.pathname.includes('booking')
+  }  )
+
 }
 
 
@@ -66,15 +77,7 @@ if (userInfo?.role === 'owner') {
         <div className="flex items-center justify-around h-16 px-2">
           {commonTabs.map((tab) => (
             <React.Fragment key={tab.id}>
-              {tab.special ? (
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={handleQuickBook}
-                  className="relative -top-6 bg-gradient-to-r from-lime-400 to-emerald-500 w-14 h-14 rounded-full flex items-center justify-center shadow-lg"
-                >
-                  <Plus className="text-gray-900" size={24} />
-                </motion.button>
-              ) : (
+              
                 <button
                   onClick={() => navigate(tab.path)}
                   className={`flex flex-col items-center justify-center w-full h-full ${tab.active ? 'text-lime-400' : 'text-gray-400'}`}
@@ -89,9 +92,11 @@ if (userInfo?.role === 'owner') {
                   </div>
                   <span className="text-xs mt-1">{tab.label}</span>
                 </button>
-              )}
+                
+            
             </React.Fragment>
           ))}
+          {token && userInfo.role ==="owner" && turfs.length> 1&& <TurfSwitcher/>}
         </div>
       </nav>
 

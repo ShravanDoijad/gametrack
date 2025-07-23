@@ -13,7 +13,7 @@ ownerRouter.get('/turfDetails', ownerMiddleware, getTurfDetails)
 ownerRouter.put('/updateTurfProfile',ownerMiddleware, updateTurfProfile); 
 ownerRouter.post('/updateOwner',ownerMiddleware, updateOwner )
 
-ownerRouter.get("/:turfId/availableSlots", ownerMiddleware, getAvailableSlots)
+ownerRouter.get("/availableSlots", ownerMiddleware, getAvailableSlots)
 
 ownerRouter.patch("/update-status", ownerMiddleware, updateSlotStatus)
 

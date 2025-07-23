@@ -1,27 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { parse, format, isToday, parseISO } from 'date-fns';
-
+import { useContext } from 'react';
+import { BookContext } from '../constexts/bookContext';
 const TodaysBookings = () => {
-  const [bookings, setBookings] = useState([]);
+  const {bookings, setbookings} = useContext(BookContext)
   const [loading, setLoading] = useState(true);
   const [expandedCard, setExpandedCard] = useState(null);
+  const [todayBookings, setTodayBookings] = useState([]);
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const response = await axios.get('/owner/turfAllBookings');
-        const todayBookings = response.data.bookings.filter(booking => isToday(parseISO(booking.date)));
-        setBookings(todayBookings);
-      } catch (err) {
-        console.error('Error fetching bookings:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchBookings();
-  }, []);
-
+    if (bookings.length > 0) {
+      const filtered = bookings.filter((booking) => isToday(parseISO(booking.date)));
+      setTodayBookings(filtered); 
+    }
+    setLoading(false); 
+  }, [bookings]);
   const formatTime = (timeString) => {
     if (!timeString) return "Invalid time";
     try {
@@ -34,14 +28,14 @@ const TodaysBookings = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-black">
+      <div className="flex justify-center items-center h-screen">
         <p className="text-white text-lg">Loading today's bookings...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white py-10 px-4">
+    <div className="min-h-screen  text-white py-10 px-4">
       <h1 className="text-3xl font-bold text-center mb-8">📅 Today's Bookings</h1>
 
       {bookings.length === 0 ? (

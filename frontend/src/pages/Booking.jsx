@@ -94,7 +94,7 @@ const Booking = () => {
   const handlePayment = async () => {
     try {
       const amount = 250;
-        
+
 
       const bookingDetails = {
         turfId: turfInfo._id,
@@ -256,14 +256,22 @@ const Booking = () => {
       return filteredSlots.map(slot => slot.display);
     }
 
+    const timeStringToMinutes = time => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
 
     const availableSlots = filteredSlots.filter(slot => {
+      const slotTime = timeStringToMinutes(slot.military);
+
       return !bookedForDate.slots.some(bookedSlot => {
-        return slot.military === bookedSlot.start ||
-          (slot.military > bookedSlot.start && slot.military < bookedSlot.end)
+        const start = timeStringToMinutes(bookedSlot.start);
+        const end = timeStringToMinutes(bookedSlot.end);
+        return slotTime >= start && slotTime < end;
       });
     });
 
+    console.log("✅ Available slots after filter:", availableSlots);
 
     setavailableCheckoutSlots(filteredSlots.filter(slot => {
       return !bookedForDate.slots.some(bookedSlot =>
@@ -347,7 +355,6 @@ const Booking = () => {
     slot.military !== turfInfo.closingTime
 
   )
-
 
 
   return (
@@ -568,7 +575,7 @@ const Booking = () => {
                   </motion.button>
                 )}
 
-                
+
               </div>
 
               {turfInfo.allowAdvancePayment && (

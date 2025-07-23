@@ -21,6 +21,7 @@ import Owner from './Owner';
 import OwnerPrivateRoute from './OwnerPrivateRoute';
 import { Error404 } from './components/Error404';
 import { Error403 } from './components/Error403';
+import TurfSwitcher from './components/TurfSwitcher';
 
 function App() {
   const { loginPanel, token, userInfo, isLoading, hasCheckedAuth  } = useContext(BookContext);
@@ -32,6 +33,7 @@ function App() {
     }, 3000);
     return () => clearTimeout(timer);
   }, []);
+
 
   if (showSplash || isLoading || !hasCheckedAuth) {
     return (
@@ -45,8 +47,6 @@ function App() {
       </div>
     );
   }
-
-  // ✅ App content after splash + loading
   return (
     <div className="max-w-screen min-h-[92vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
       {loginPanel && <Register />}
@@ -55,7 +55,10 @@ function App() {
 
       <Navbar />
 
-      <div className="flex-grow mt-6">
+
+      <div className="flex-grow ">
+        
+    
         <Routes>
           <Route path="/" element={<Turfs />} />
           <Route path="/register" element={<Register />} />

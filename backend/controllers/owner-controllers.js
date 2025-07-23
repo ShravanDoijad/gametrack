@@ -9,10 +9,10 @@ const bcrypt = require('bcryptjs');
 
 const ownerRegister = async (req, res) => {
     try {
-        const { fullname, email, phone, turfId, turfname } = req.body;
+        const { fullname, email, phone, turfIds, turfname } = req.body;
 
         // Basic validation
-        if (!fullname || !email || !phone || !turfId || !turfname) {
+        if (!fullname || !email || !phone || !turfIds || !turfname) {
             return res.status(400).json({
                 success: false,
                 message: "All fields are required",
@@ -36,7 +36,7 @@ const ownerRegister = async (req, res) => {
             email,
             phone,
 
-            turfId,
+            turfIds,
             turfname,
         });
 
@@ -63,12 +63,12 @@ const ownerRegister = async (req, res) => {
     }
 };
 
-module.exports = { ownerRegister };
+
 
 
 const turfAllBookings = async (req, res) => {
     try {
-        const {turfId} = req.query
+        const { turfId } = req.query
 
         if (!turfId) {
             return res.status(400).json({ success: false, message: "Turf ID is required" });
@@ -222,98 +222,112 @@ const updateOwner = async (req, res) => {
 
 
 
-const getSlots = async (req, res) => {
-    const { turfId, date } = req.query;
-    try {
-        const turf = await Turf.findById(turfId);
-        if (!turf) return res.status(404).json({ error: "Turf not found" });
-
-        res.status(200).json({ availableSlots: turf.availableSlots });
-    } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: "Server error" });
-    }
-};
 
 const updateSlotStatus = async (req, res) => {
-    
-    const { date, turfId, start, end, newStatus } = req.body;
+  const { date, turfId, start, end, newStatus } = req.body;
 
-    try {
-        const turf = await Turf.findById(turfId);
-        if (!turf) return res.status(404).json({ message: "Turf not found" });
+  try {
+    const turf = await Turf.findById(turfId);
+    if (!turf) return res.status(404).json({ message: "Turf not found" });
 
-        let day = turf.bookedSlots.find((d) => d.date === date);
+    let day = turf.bookedSlots.find((d) => d.date === date);
 
-        if (newStatus === "booked") {
-            // If no record exists for the day, create it
-            if (!day) {
-                turf.bookedSlots.push({
-                    date,
-                    slots: [{ start, end }],
-                });
-            } else {
-                const exists = day.slots.some(
-                    (s) => s.start === start && s.end === end
-                );
-                if (!exists) day.slots.push({ start, end });
-            }
-        } else if (newStatus === "available") {
-            if (!day) return res.status(404).json({ message: "No booked slot for this date" });
-
-            day.slots = day.slots.filter(
-                (s) => !(s.start === start && s.end === end)
-            );
-
-            // If slots array becomes empty, remove the date entry
-            if (day.slots.length === 0) {
-                turf.bookedSlots = turf.bookedSlots.filter((d) => d.date !== date);
-            }
+    if (newStatus === "booked") {
+      // 1. Check if any existing slot overlaps
+      if (day) {
+        const hasOverlap = day.slots.some(
+          (slot) =>
+            (start >= slot.start && start < slot.end) ||
+            (end > slot.start && end <= slot.end) ||
+            (start <= slot.start && end >= slot.end) // complete overlap
+        );
+        if (hasOverlap) {
+          return res.status(409).json({ message: "This slot overlaps with an already booked slot." });
         }
 
-        await turf.save();
-        return res.status(200).json({ message: "Slot status updated successfully" });
-    } catch (err) {
-        console.error("Error updating slot status:", err);
-        res.status(500).json({ message: "Server error" });
+        // Safe to add
+        day.slots.push({ start, end });
+      } else {
+        // Create new day entry
+        turf.bookedSlots.push({
+          date,
+          slots: [{ start, end }],
+        });
+      }
+    } else if (newStatus === "available") {
+      // Make available: remove from turf.bookedSlots and update booking collection status
+      if (!day) return res.status(404).json({ message: "No booked slots for this date" });
+
+      const index = day.slots.findIndex((s) => s.start === start && s.end === end);
+      if (index === -1) return res.status(404).json({ message: "Slot not found" });
+
+      // Remove from turf's booked slots
+      day.slots.splice(index, 1);
+      if (day.slots.length === 0) {
+        turf.bookedSlots = turf.bookedSlots.filter((d) => d.date !== date);
+      }
+
+      // Also update booking document status to "cancelled"
+      await Booking.updateOne(
+        {
+          turfId,
+          date,
+          "slots.start": start,
+          "slots.end": end,
+          status: "confirmed"
+        },
+        { $set: { status: "cancelled" } }
+      );
     }
+
+    await turf.save();
+    return res.status(200).json({ message: "Slot status updated successfully" });
+
+  } catch (err) {
+    console.error("Error updating slot status:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 };
+
 
 
 
 const getAvailableSlots = async (req, res) => {
-    try {
-        const { turfId , date } = req.query;
-       
+  try {
+    const { turfId, date } = req.query;
 
-        if (!date) return res.status(400).json({ error: "Date is required." });
+    if (!date) return res.status(400).json({ error: "Date is required." });
 
-        const turf = await Turf.findById(turfId);
-        if (!turf) return res.status(404).json({ error: "Turf not found." });
+    const turf = await Turf.findById(turfId);
+    if (!turf) return res.status(404).json({ error: "Turf not found." });
 
-        const { openingTime, closingTime, bookedSlots } = turf;
+    const { openingTime, closingTime, bookedSlots } = turf;
 
-        const allSlots = generateSlots(openingTime, closingTime); // [{ start, end }]
-        const bookedDay = bookedSlots.find((s) => s.date === date);
-        const bookedTime = bookedDay?.slots || [];
+    const allSlots = generateSlots(openingTime, closingTime);
+    const bookedDay = bookedSlots.find((s) => s.date === date);
+    const bookedTime = bookedDay?.slots || [];
 
-        const slotsWithStatus = allSlots.map((slot) => {
-            const isBooked = bookedTime.some(
-                (b) => b.start === slot.start && b.end === slot.end
-            );
+    const slotsWithStatus = allSlots.map((slot) => {
+      const isBooked = bookedTime.some(
+        (b) =>
+          (slot.start >= b.start && slot.start < b.end) ||
+          (slot.end > b.start && slot.end <= b.end) ||
+          (slot.start <= b.start && slot.end >= b.end)
+      );
 
-            return {
-                ...slot,
-                status: isBooked ? "booked" : "available"
-            };
-        });
+      return {
+        ...slot,
+        status: isBooked ? "booked" : "available",
+      };
+    });
 
-        res.json({ slots: slotsWithStatus });
-    } catch (err) {
-        console.error("Error getting slots:", err);
-        res.status(500).json({ error: "Server error" });
-    }
+    res.json({ slots: slotsWithStatus });
+  } catch (err) {
+    console.error("Error getting slots:", err);
+    res.status(500).json({ error: "Server error" });
+  }
 };
+
 
 
 function generateSlots(openingTime, closingTime) {
@@ -351,9 +365,7 @@ module.exports = {
     ownerRegister,
     dashboardDetails,
     updateOwner,
-  
-    getSlots,
-    
+ 
     updateSlotStatus,
     getAvailableSlots
 

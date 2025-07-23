@@ -26,7 +26,9 @@ const bookingSchema = new mongoose.Schema({
     }
   ],
   amountPaid: Number,
+
   razorpay_payment_id: String,
+  
   razorpay_order_id: String,
   paymentType:{
     type:String,

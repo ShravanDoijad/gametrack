@@ -46,7 +46,7 @@ const SPORTS = [
     icon: footballIcon,
     color: "bg-orange-500",
   },
-  { id: "cricket", name: "Cricket", icon: cricketIcon, color: "bg-blue-500" },
+  { id: "cricket", name: "cricket", icon: cricketIcon, color: "bg-blue-500" },
   {
     id: "badminton",
     name: "Badminton",
@@ -221,13 +221,15 @@ const handleFavorite = async () => {
     );
   }
 
-  const sports = []
-  sports.push(SPORTS.find((sport) =>
-    turfInfo.sportsAvailable.map((sportsAvailable) => sportsAvailable.toLowerCase() === sport.name)
-  ))
+const sports = SPORTS.filter((sport) =>
+  turfInfo.sportsAvailable.some((available) =>
+    available.toLowerCase() === sport.name.toLowerCase()
+  )
+);
 
 
-
+console.log("turfInfo",turfInfo)
+  console.log("sports", sports)
 
 
   return (

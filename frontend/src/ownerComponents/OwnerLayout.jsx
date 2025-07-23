@@ -1,13 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Outlet, NavLink } from "react-router-dom";
 import { Menu, X, Home, Calendar, DollarSign, Users, Settings } from "lucide-react";
-
+import { BookContext } from "../constexts/bookContext";
 const OwnerLayout = () => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
-  const closeSidebar = () => setSidebarOpen(false);
-
+ 
+  const {sidebarOpen, closeSidebar}=  useContext(BookContext)
   const navItems = [
     { path: "/owner/dashboard", icon: <Home size={20} />, label: "Dashboard" },
     { path: "/owner/bookings", icon: <Calendar size={20} />, label: "Bookings" },
@@ -19,18 +16,10 @@ const OwnerLayout = () => {
 
   return (
     <div className="flex">
-      {/* Mobile Menu Button */}
-      <button
-        onClick={toggleSidebar}
-        className="fixed z-50 top-4 left-4 p-2 rounded-md bg-gray-800 text-white lg:hidden"
-      >
-        <Menu size={24} />
-      </button>
-
-      {/* Sidebar */}
+      
       <aside
-        className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-          fixed md:static md:translate-x-0 z-40 w-64 bg-gray-800 text-white min-h-screen p-4 
+        className={`${sidebarOpen ? "-translate-x-0" : "translate-x-full"} 
+          fixed right-0 md:static md:translate-x-0 z-40 w-64 bg-gray-800 text-white min-h-screen p-4 
           transition-transform duration-300 ease-in-out`}
       >
         <button

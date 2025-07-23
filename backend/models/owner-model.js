@@ -12,11 +12,14 @@ const OwnerSchema = new mongoose.Schema({
     required: true,
     trim: true,
   },
-  turfId: {
+turfId: [
+  {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
     ref: 'Turf',
-  },
+    required: true,
+  }
+],
+
   phone: {
     type: String,
     required: true,

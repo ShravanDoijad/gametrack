@@ -1,12 +1,13 @@
 import React, { useState, useContext } from 'react';
-import { Bell, LogOut, User, ChevronDown, Sun, Moon, Settings } from 'lucide-react';
+import { Bell, LogOut, User, ChevronDown, Sun, Moon, Settings, Menu } from 'lucide-react';
 import { BookContext } from '../constexts/bookContext';
+import TurfSwitcher from './TurfSwitcher';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { setmenuPanel, token, handleLogout, setloginPanel, userInfo, setShowPanel } = useContext(BookContext);
+  const { setmenuPanel, token, handleLogout, setloginPanel, userInfo, setShowPanel, toggleSidebar } = useContext(BookContext);
   const [showDropdown, setShowDropdown] = useState(false);
 
   return (
@@ -14,7 +15,7 @@ const Navbar = () => {
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="sora px-6 py-4 text-white flex justify-between items-center border-b border-gray-800 bg-gradient-to-r from-gray-900/80 to-gray-950/80 backdrop-blur-lg z-50"
+      className="sora px-6 py-4 relative text-white flex justify-between items-center border-b border-gray-800 bg-gradient-to-r from-gray-900/80 to-gray-950/80 backdrop-blur-lg z-50"
     >
       <motion.div
         whileHover={{ scale: 1.05 }}
@@ -22,7 +23,7 @@ const Navbar = () => {
         onClick={() => navigate('/')}
         className="cursor-pointer"
       >
-        <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
+        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
           Game<span className="text-white">Track</span>
         </h1>
       </motion.div>
@@ -30,7 +31,8 @@ const Navbar = () => {
 
       <div className="flex items-center gap-4 md:gap-6">
 
-        <div className="relative">
+
+        <div className="">
           <button
             onClick={() => token ? navigate('/notification') : navigate('/register')}
             className="p-2 rounded-full hover:bg-gray-800 transition-colors relative"
@@ -48,10 +50,10 @@ const Navbar = () => {
           </button>
         </div>
 
-        <div className="relative">
+        <div className="">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-2 hover:bg-gray-800 rounded-full p-1 pr-3 transition-colors"
+            className="flex items-center gap-2  hover:bg-gray-800 rounded-full p-1  transition-colors"
           >
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
               {token ? (
@@ -70,15 +72,15 @@ const Navbar = () => {
               />
             )}
           </button>
-
-          {/* Dropdown menu */}
+          
+          
           <AnimatePresence>
             {showDropdown && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
-                className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-100"
+                className="absolute right-2 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-100"
               >
                 {token ? (
                   <>
@@ -117,7 +119,7 @@ const Navbar = () => {
                 ) : (
                   <button
                     onClick={() => {
-                      
+
                       navigate('/register');
                       setShowDropdown(false);
                     }}
@@ -130,6 +132,15 @@ const Navbar = () => {
             )}
           </AnimatePresence>
         </div>
+        {
+            token && userInfo.role==="owner"&&
+            <button
+              onClick={toggleSidebar}
+              className=" z-20  rounded-md  text-white lg:hidden"
+            >
+              <Menu size={24} />
+            </button>
+           }
       </div>
     </motion.nav>
   );

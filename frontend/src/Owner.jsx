@@ -18,7 +18,7 @@ const Owner = () => {
   const {userInfo, token} = useContext(BookContext)
   
   return (
-    <div className="min-h-screen w-full  bg-black/60 text-white ">
+    <div className="min-h-screen w-full text-white ">
       
       <Routes>
         <Route path="/" element={<OwnerLayout />}>
