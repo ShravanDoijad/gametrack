@@ -99,7 +99,7 @@ export const Overview = () => {
   const [loading, setloading] = useState(false)
   const [turfDistance, setTurfDistance] = useState(null);
   const { turfId } = useParams()
-  const { setfavorite, favorite, selectedSport, setloginPanel, userInfo, setSelectedSport, calculateDistance, token } = useContext(BookContext);
+  const { setfavorite, favorite, selectedSport, setloginPanel, userInfo, setSelectedSport, calculateDistance, token,  setGetSingleTurf } = useContext(BookContext);
 
   const lastTapRef = useRef(0);
   const navigate = useNavigate();
@@ -177,7 +177,7 @@ export const Overview = () => {
 
     getSingleTurf()
 
-  }, [turfId])
+  }, [turfId ])
 
   
   
@@ -227,9 +227,7 @@ const sports = SPORTS.filter((sport) =>
   )
 );
 
-
-console.log("turfInfo",turfInfo)
-  console.log("sports", sports)
+setGetSingleTurf(() => getSingleTurf);
 
 
   return (
@@ -326,7 +324,10 @@ console.log("turfInfo",turfInfo)
             <button
               onClick={() => navigate("/booking",
                 {
-                  state: turfInfo
+                  state: {turfInfo,
+                    getSingleTurf
+                  }
+
                 }
               )}
               className="bg-lime-500 hover:bg-lime-400 text-gray-900 font-semibold px-5 py-2 rounded-lg transition-colors flex items-center gap-1"

@@ -26,7 +26,7 @@ const getNext7Days = () => {
 };
 
 const Booking = () => {
-  const { selectedSport, userInfo } = useContext(BookContext)
+  const { selectedSport, userInfo, getSingleTurf, setGetSingleTurf } = useContext(BookContext)
   const location = useLocation()
   const navigate = useNavigate()
   const [turfInfo, setturfInfo] = useState(location.state)
@@ -42,6 +42,7 @@ const Booking = () => {
   const [paymentOption, setPaymentOption] = useState(null);
   const [allSlots, setallSlots] = useState([])
   const [loading, setloading] = useState(false)
+
 
   const handleDateSelect = (date) => {
     const timezoneAdjustedDate = new Date(
@@ -90,7 +91,11 @@ const Booking = () => {
   };
 
   const next7Days = getNext7Days();
-
+  useEffect(() => {
+  if (getSingleTurf) {
+    getSingleTurf(); // now you can use it
+  }
+}, [availableTimes]);
   const handlePayment = async () => {
     try {
       const amount = 250;

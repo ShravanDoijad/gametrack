@@ -17,6 +17,7 @@ const BookContextProvider = ({ children }) => {
     const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
     const [selectedTurfId, setSelectedTurfId] = useState('');
       const [turfs, setTurfs] = useState([]);
+      const [getSingleTurf, setGetSingleTurf] = useState(null);
     const [bookings, setbookings] = useState([])
      const [sidebarOpen, setSidebarOpen] = useState(false);
     
@@ -160,7 +161,9 @@ const BookContextProvider = ({ children }) => {
         turfs,
         toggleSidebar, 
         sidebarOpen,
-        closeSidebar
+        closeSidebar,
+        getSingleTurf,
+        setGetSingleTurf
 
     }
     return (
