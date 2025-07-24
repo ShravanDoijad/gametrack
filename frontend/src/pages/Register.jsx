@@ -242,10 +242,10 @@ const Register = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br fixed  from-gray-50 to-gray-100 flex flex-col">
-      <div className="container mx-auto px-4 py-8 flex-1 flex flex-col">
+      <div className="container mx-auto px-4 py-6 flex-1 flex flex-col">
         <button
           onClick={() => setloginPanel(false) || navigate('/')}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 self-start transition-colors"
+          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 self-start transition-colors"
         >
           <ArrowLeft size={18} /> Back to home
         </button>

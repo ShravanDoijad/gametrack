@@ -583,7 +583,9 @@ const BookingManager = () => {
               </div>
 
               {turfInfo.allowAdvancePayment && (
+                
                 <p className="text-xs text-gray-400 mt-2">
+                  <span className=" font-bold text-md text-red-300 sora">Advance Non Refundable</span><br />
                   * Remaining amount to be paid at the venue
                 </p>
               )}
@@ -603,7 +605,7 @@ const BookingManager = () => {
               </div>
             )}
 
-            \
+            
             <motion.button
               whileHover={paymentOption ? { scale: 1.02 } : {}}
               whileTap={paymentOption ? { scale: 0.98 } : {}}
@@ -614,7 +616,7 @@ const BookingManager = () => {
                 : "bg-gray-700 text-gray-400 cursor-not-allowed"
                 }`}
             >
-              {paymentOption === "advance" ? `Pay Advance (₹ 250})` :
+              {paymentOption === "advance" ? `Pay Advance (₹ 250)` :
                 paymentOption === "full" ? `Pay Full (₹${calculateFee()})` :
                   "Select Payment Option"}
             </motion.button>
