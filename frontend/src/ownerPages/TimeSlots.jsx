@@ -1,98 +1,288 @@
 import React, { useState, useEffect, useContext } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { AlertTriangle, PlusCircle, Loader2, Calendar, Clock } from "lucide-react";
+import { AlertTriangle, PlusCircle, Loader2, CalendarDays, Calendar, Clock3 } from "lucide-react";
 import TimePicker from "react-time-picker";
 import "react-time-picker/dist/TimePicker.css";
 import { addDays, format } from "date-fns";
+import { motion } from "framer-motion";
 import axios from "axios";
 import { BookContext } from "../constexts/bookContext";
 import { toast } from "react-toastify";
+import SelectCheckOut from "../components/SelectCheckOut";
+import SelectCheckIn from "../components/SelectCheckIn";
+
+const getNext7Days = () => {
+  const days = [];
+  const options = { weekday: "short", month: "short", day: "numeric" };
+  for (let i = 0; i < 7; i++) {
+    const today = new Date();
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+    days.push({
+      label: date.toLocaleDateString("en-US", options),
+      date,
+    });
+  }
+
+  return days;
+};
 
 const TimeSlots = () => {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+
   const [slots, setSlots] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [confirmingSlot, setConfirmingSlot] = useState(null);
-  const [manualSlotModal, setManualSlotModal] = useState(false);
-  const [manualStart, setManualStart] = useState("06:00");
-  const [manualEnd, setManualEnd] = useState("07:00");
+  const [showCalendar, setShowCalendar] = useState(false);
 
-  const { selectedTurfId } = useContext(BookContext);
-  const formattedDate = selectedDate.toISOString().split("T")[0];
+  const [manualSlotModal, setManualSlotModal] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedCheckIn, setSelectedCheckIn] = useState(null);
 
-  useEffect(() => {
-    const fetchSlots = async () => {
-      setIsLoading(true);
-      try {
-        const res = await axios.get(`/owner/availableSlots`, {
-          params: { turfId: selectedTurfId, date: formattedDate },
-        });
-        const bookedOnly = res.data.slots?.filter((s) => s.status === "booked") || [];
-        setSlots(bookedOnly);
-      } catch (err) {
-        console.error("Failed to fetch slots:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
 
-    fetchSlots();
-  }, [selectedDate, selectedTurfId]);
+  const [showSlotPopup, setShowSlotPopup] = useState(false);
 
-  const toggleSlotStatus = async (slot) => {
-    const newStatus = slot.status === "booked" ? "available" : "booked";
-    try {
-      await axios.patch(`/owner/update-status`, {
-        turfId: selectedTurfId,
-        date: formattedDate,
-        start: slot.start,
-        end: slot.end,
-        newStatus,
-      });
+  const { selectedTurfId, turfs } = useContext(BookContext);
+  
 
-      setSlots((prev) =>
-        prev.filter((s) => !(s.start === slot.start && s.end === slot.end))
-      );
-      setConfirmingSlot(null);
-    } catch (err) {
-      console.error("Failed to update slot status:", err);
-    }
+    const [availableCheckoutSlots, setavailableCheckoutSlots] = useState([])
+    const [selectedCheckOut, setSelectedCheckOut] = useState(null);
+    const [customDate, setCustomDate] = useState(null);
+    const [availableTimes, setAvailableTimes] = useState([]);
+    const [allSlots, setallSlots] = useState([])
+   
+
+  const next7Days = getNext7Days();
+
+
+ 
+
+  const handleDateSelect = (date) => {
+    const timezoneAdjustedDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate(),
+      12,
+      0,
+      0
+    );
+
+    setSelectedDate(timezoneAdjustedDate);
+    setSelectedCheckIn(null);
+    setSelectedCheckOut(null);
+   
+    setShowCalendar(false);
+    setShowSlotPopup(true);
   };
 
+  const handleCheckIn = (time) => {
+    setSelectedCheckIn(time);
+    setSelectedCheckOut(null);
+    setShowSlotPopup(true);
+  };
+
+    const handleConfirming =(time) => {
+    setConfirmingSlot({start:selectedCheckIn, end:time});
+    
+  }
+  const handleCheckOut = (time) => {
+    setSelectedCheckOut(time);
+    setShowSlotPopup(false);
+    handleConfirming(time)
+  };
+
+
+  
+  let turfInfo;
+    if(turfs.length>0){
+      turfInfo=  turfs.find((turf)=>turf._id === selectedTurfId)
+    }
+
+  const calculateDuration = () => {
+    const indexIn = allSlots.findIndex(s => s.display === selectedCheckIn);
+    const indexOut = allSlots.findIndex(s => s.display === selectedCheckOut);
+    return indexOut - indexIn;
+  };
+
+  const convertToMilitary = (timeStr) => {
+    const [time, period] = timeStr.split(" ");
+    let [hour, minute] = time.split(":").map(Number);
+
+    if (period === "PM" && hour !== 12) hour += 12;
+    if (period === "AM" && hour === 12) hour = 0;
+
+    return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+  };
+  const formattedDate = selectedDate?.toISOString().split('T')[0];
+  
   const handleManualBooking = async () => {
     try {
       await axios.patch(`/owner/update-status`, {
         turfId: selectedTurfId,
         date: formattedDate,
-        start: manualStart,
-        end: manualEnd,
+        start: selectedCheckIn,
+        end: selectedCheckOut,
         newStatus: "booked",
       });
-
-      setSlots((prev) => [
-        ...prev,
-        {
-          start: manualStart,
-          end: manualEnd,
-          status: "booked",
-          _id: `${manualStart}-${manualEnd}`,
-        },
-      ]);
+      setConfirmingSlot(null)
       setManualSlotModal(false);
+      toast.success(`${selectedCheckIn}-${selectedCheckOut} slot is Booked`)
     } catch (err) {
       console.error("Failed to manually book slot:", err);
       toast.error(err.response.message || "Unable To update Slot")
     }
   };
 
-  const formatDateDisplay = (date) => {
-    return format(date, "EEEE, MMMM d, yyyy");
-  };
+   const generateAvailableTimeSlots = (selectedDate, turfInfo) => {
+      const all = []
+      const [openHour, openMinute] = turfInfo.openingTime.split(':').map(Number);
+      const [closeHour, closeMinute] = turfInfo.closingTime.split(':').map(Number);
+  
+  
+      let currentMinutes = openHour * 60 + openMinute;
+      const closingMinutes = closeHour * 60 + closeMinute;
+  
+  
+      while (currentMinutes <= closingMinutes) {
+        const hour = Math.floor(currentMinutes / 60);
+        const minute = currentMinutes % 60;
+  
+  
+        const period = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+        const timeString = `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
+  
+  
+        const militaryTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  
+        all.push({
+          display: timeString,
+          military: militaryTime,
+          hour: hour,
+          minute: minute
+        });
+  
+        currentMinutes += 60;
+      }
+  
+      setallSlots(all)
+  
+      const today = new Date();
+      const isToday = selectedDate &&
+        selectedDate.getDate() === today.getDate() &&
+        selectedDate.getMonth() === today.getMonth() &&
+        selectedDate.getFullYear() === today.getFullYear();
+  
+      let filteredSlots = [...all];
+  
+  
+      if (isToday) {
+        const currentHour = today.getHours();
+        const currentMinute = today.getMinutes();
+  
+        filteredSlots = all.filter(slot => {
+  
+  
+  
+          return slot.hour > currentHour ||
+            (slot.hour === currentHour && slot.minute > currentMinute);
+        });
+      }
+  
+  
+      if (!selectedDate) {
+        return filteredSlots.map(slot => slot.display);
+      }
+  
+  
+      const dateStr = selectedDate.toISOString().split('T')[0];
+    
+  
+  
+      const bookedForDate = turfInfo.bookedSlots.find(slot => slot.date === dateStr);
+  
+  
+  
+      if (!bookedForDate) {
+        setavailableCheckoutSlots(filteredSlots);
+        return filteredSlots.map(slot => slot.display);
+      }
+  
+      const timeStringToMinutes = time => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+      };
+  
+      const availableSlots = filteredSlots.filter(slot => {
+        const slotTime = timeStringToMinutes(slot.military);
+  
+        return !bookedForDate.slots.some(bookedSlot => {
+          const start = timeStringToMinutes(bookedSlot.start);
+          const end = timeStringToMinutes(bookedSlot.end);
+          return slotTime >= start && slotTime < end;
+        });
+      });
+  
+      console.log("✅ Available slots after filter:", availableSlots);
+  
+      setavailableCheckoutSlots(filteredSlots.filter(slot => {
+        return !bookedForDate.slots.some(bookedSlot =>
+          slot.military > bookedSlot.start && slot.military < bookedSlot.end
+        );
+      }))
+      console.log("chcekout", filteredSlots.filter(slot => {
+        return !bookedForDate.slots.some(bookedSlot =>
+  
+          slot.military > bookedSlot.start && slot.military < bookedSlot.end
+        );
+      }))
+  
+      return availableSlots.map(slot => slot.display);
+    };
+  
+    useEffect(() => {
+      if (selectedDate && turfInfo) {
+        const slots = generateAvailableTimeSlots(selectedDate, turfInfo);
+        setAvailableTimes(slots);
+      }
+    }, [selectedDate, selectedTurfId]);
+  
+  
+  
+  
+    const getFilteredCheckoutTimes = () => {
+      const checkInIndex = allSlots.findIndex(slot => slot.display === selectedCheckIn);
+      let nextBookingIndex = allSlots.length;
+  
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      const bookedForDate = turfInfo.bookedSlots.find(slot => slot.date === dateStr);
+  
+      
+  
+  
+      if (bookedForDate) {
+        for (let slot of bookedForDate.slots) {
+  
+          const index = allSlots.findIndex(s => s.military === slot.start);
+  
+          if (index > checkInIndex) {
+            nextBookingIndex = Math.min(nextBookingIndex, index);
+          }
+        }
+      }
+     
+      return allSlots
+        .slice(checkInIndex + 1, nextBookingIndex + 1)
+        .filter(slot =>
+          availableCheckoutSlots.find((time) => time.display === slot.display)
+        )
+        .map(slot => slot.display);
+    };
+    
+     const filteredCheckinTimes = allSlots.filter(slot =>
+    slot.military !== turfInfo.closingTime
 
-  const formatShortDate = (date) => {
-    return format(date, "MMM d");
-  };
+  )
+  
 
   return (
     <div className="p-6 min-h-screen text-white font-sans">
@@ -115,150 +305,9 @@ const TimeSlots = () => {
           </button>
         </div>
 
-        {/* Date Selection */}
-        <div className="mb-8 bg-neutral-800/50 p-5 rounded-xl border border-neutral-700">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
-            <div className="flex-1">
-              <label className="block text-sm text-neutral-300 mb-2 font-medium">
-                SELECT DATE
-              </label>
-              <div className="relative">
-                <DatePicker
-                  selected={selectedDate}
-                  onChange={(date) => setSelectedDate(date)}
-                  minDate={new Date()}
-                  maxDate={addDays(new Date(), 30)}
-                  className="text-black p-3 pl-12 rounded-lg border border-gray-300 w-full focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all bg-white"
-                  calendarClassName="!bg-white !text-black !border !border-gray-300 !shadow-xl"
-                  wrapperClassName="w-full"
-                  popperPlacement="bottom-start"
-                  dayClassName={(date) => {
-                    const isWithinRange =
-                      date >= new Date() && date <= addDays(new Date(), 30);
-                    return isWithinRange
-                      ? "text-black hover:bg-blue-100 transition-colors"
-                      : "text-gray-400 bg-white cursor-not-allowed";
-                  }}
-                  renderCustomHeader={({
-                    date,
-                    decreaseMonth,
-                    increaseMonth,
-                    prevMonthButtonDisabled,
-                    nextMonthButtonDisabled,
-                  }) => (
-                    <div className="flex items-center justify-between px-2 py-2">
-                      <button
-                        onClick={decreaseMonth}
-                        disabled={prevMonthButtonDisabled}
-                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-                      >
-                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                      </button>
-                      <span className="text-gray-900 font-medium">
-                        {format(date, "MMMM yyyy")}
-                      </span>
-                      <button
-                        onClick={increaseMonth}
-                        disabled={nextMonthButtonDisabled}
-                        className="p-1 rounded hover:bg-gray-200 disabled:opacity-50"
-                      >
-                        <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </div>
-                  )}
-                />
 
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                  <Calendar className="text-blue-600" size={20} />
-                </div>
 
-              </div>
-            </div>
 
-            <div className="flex-1">
-              <div className="bg-neutral-900/50 border border-neutral-700 rounded-lg p-4 h-full">
-                <p className="text-sm text-neutral-400 mb-1">Selected Date</p>
-                <p className="text-xl font-semibold text-white">
-                  {formatDateDisplay(selectedDate)}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Bookings Section */}
-        <div className="mb-4">
-          <h3 className="text-xl font-semibold text-white font-sora mb-2">
-            Booked Slots
-          </h3>
-          <p className="text-neutral-400">
-            {slots.length} booking{slots.length !== 1 ? "s" : ""} for {formatShortDate(selectedDate)}
-          </p>
-        </div>
-
-        {/* Loading State */}
-        {isLoading ? (
-          <div className="flex justify-center mt-10">
-            <Loader2 className="animate-spin h-10 w-10 text-blue-400" />
-          </div>
-        ) : slots.length === 0 ? (
-          <div className="bg-neutral-900/50 border border-dashed border-neutral-700 rounded-xl p-8 text-center">
-            <div className="max-w-md mx-auto">
-              <Clock className="mx-auto h-12 w-12 text-neutral-600 mb-4" />
-              <h4 className="text-lg font-medium text-neutral-300 mb-2">
-                No bookings yet for this date
-              </h4>
-              <p className="text-neutral-500 mb-4">
-                You can add manual bookings or wait for online reservations
-              </p>
-              <button
-                onClick={() => setManualSlotModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-lg font-medium inline-flex items-center gap-2"
-              >
-                <PlusCircle size={18} /> Create Booking
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {slots.map((slot) => (
-              <div
-                key={slot._id}
-                className="bg-gradient-to-br from-neutral-900 to-neutral-800 border border-neutral-700 rounded-xl p-5 flex flex-col shadow-lg hover:shadow-blue-500/10 transition-all group"
-              >
-                <div className="flex-grow">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <span className="text-2xl font-bold text-white sora">
-                        {slot.start} - {slot.end}
-                      </span>
-                      <p className="text-sm text-neutral-400 mt-1">Time Slot</p>
-                    </div>
-                    <span className="px-2.5 py-1 bg-green-900/30 text-green-400 text-xs rounded-full font-medium inline-flex items-center">
-                      <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
-                      Booked
-                    </span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setConfirmingSlot(slot)}
-                  className="mt-4 w-full bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-300 font-medium px-4 py-2.5 rounded-lg hover:text-white transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                  Release Slot
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Confirmation Modal */}
         {confirmingSlot && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4 backdrop-blur-sm">
             <div className="bg-neutral-900 p-6 rounded-xl border border-neutral-700 w-full max-w-md shadow-2xl">
@@ -267,13 +316,13 @@ const TimeSlots = () => {
                   <AlertTriangle className="text-amber-400" size={40} />
                 </div>
                 <h3 className="text-xl font-bold text-white mb-3 font-sora">
-                  Confirm Slot Release
+                  Confirm Slot Booking
                 </h3>
                 <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
-                  You're about to mark <span className="font-semibold text-white">{confirmingSlot.start} - {confirmingSlot.end}</span> as available.
+                  You're about to mark <span className="font-semibold text-white">{confirmingSlot.start} - {confirmingSlot.end}</span> as Booked.
                   <br />
-                  <span className="text-amber-400 mt-2 inline-block font-medium">
-                    This action cannot be undone
+                  <span className="text-green-400 mt-2 inline-block sora font-medium">
+                    This action can be shown to All Users
                   </span>
                 </p>
                 <div className="flex gap-4 w-full">
@@ -284,88 +333,68 @@ const TimeSlots = () => {
                     Cancel
                   </button>
                   <button
-                    onClick={() => toggleSlotStatus(confirmingSlot)}
-                    className="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 text-black font-semibold px-4 py-3 rounded-lg hover:from-amber-400 hover:to-amber-500 transition-colors font-sora"
+                    onClick={() => handleManualBooking()}
+                    className="flex-1 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold px-4 py-3 rounded-lg hover:from-lime-400 hover:to-lime-500 transition-colors font-sora"
                   >
-                    Confirm Release
+                    Confirm Booking
                   </button>
                 </div>
               </div>
             </div>
           </div>
         )}
-
-        {/* Manual Booking Modal */}
-        {manualSlotModal && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4 backdrop-blur-sm">
-            <div className="bg-neutral-900 p-6 rounded-xl border border-neutral-700 w-full max-w-md shadow-2xl">
-              <div className="mb-6">
-                <h3 className="text-2xl font-bold text-white mb-1 text-center font-sora">
-                  Create New Booking
-                </h3>
-                <p className="text-center text-blue-400 font-medium">
-                  {formatDateDisplay(selectedDate)}
-                </p>
-              </div>
-
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-sm text-neutral-300 mb-2 font-medium uppercase tracking-wider">
-                    Time Slot
-                  </label>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-white rounded-2xl shadow-md">
-                    {/* Start Time */}
-                    <div className="flex flex-col space-y-2">
-                      <label className="flex items-center gap-2 text-gray-700 font-medium text-sm">
-                        <Clock className="w-5 h-5 text-blue-500" />
-                        Start Time
-                      </label>
-                      <TimePicker
-                        value={manualStart}
-                        onChange={setManualStart}
-                        disableClock={true}
-                        clearIcon={null}
-                        className="w-fit border border-gray-300 rounded-xl px-4 py-3 text-xl font-medium  text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                      />
-                    </div>
-
-                    {/* End Time */}
-                    <div className="flex flex-col space-y-2">
-                      <label className="flex items-center gap-2 text-gray-700 font-medium text-sm">
-                        <Clock className="w-5 h-5 text-blue-500" />
-                        End Time
-                      </label>
-                      <TimePicker
-                        value={manualEnd}
-                        onChange={setManualEnd}
-                        disableClock={true}
-                        clearIcon={null}
-                        className="w-fit border border-gray-300 rounded-xl px-4 py-3 text-xl font-medium  text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
-                      />
-                    </div>
-                  </div>
-
-
+        {manualSlotModal &&
+           <div className="flex gap-3 flex-wrap pb-2">
+                  {next7Days.map((day, idx) => (
+                    <motion.div
+                      key={idx}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleDateSelect(day.date)}
+                      className={`min-w-[90px] p-3 rounded-xl text-center cursor-pointer border transition-all duration-200 ${selectedDate?.toDateString() === day.date.toDateString()
+                        ? "bg-lime-500 text-black border-lime-500"
+                        : "bg-[#1a1a1a] border-[#2a2a2a] text-white"
+                        }`}
+                    >
+                      <p className="text-sm font-semibold">{day.label.split(",")[0]}</p>
+                      <p className="text-lg font-bold sora">{day.label.split(",")[1]}</p>
+                    </motion.div>
+                  ))}
+          
+                  <motion.div
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setShowCalendar(true)}
+                    className="min-w-[90px] p-3 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-center cursor-pointer"
+                  >
+                    <CalendarDays className="mx-auto mb-1" />
+                    <p className="text-xs">Pick Date</p>
+                  </motion.div>
                 </div>
-              </div>
+        }
 
-              <div className="flex justify-end gap-4 mt-8">
-                <button
-                  onClick={() => setManualSlotModal(false)}
-                  className="border border-neutral-700 px-5 py-2.5 text-neutral-300 rounded-lg hover:bg-neutral-800 transition-colors font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleManualBooking}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-5 py-2.5 rounded-lg font-medium inline-flex items-center gap-2 font-sora"
-                >
-                  <PlusCircle size={18} /> Confirm Booking
-                </button>
-              </div>
+
+        {
+          showCalendar && (
+            <div className="my-4 bg-[#1a1a1a] p-4 rounded-xl border border-gray-700">
+              <DatePicker
+                selected={customDate}
+                onChange={(date) => handleDateSelect(date)}
+                inline
+                minDate={new Date()}
+                maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
+              />
             </div>
-          </div>
+          )}
+
+        {selectedDate && showSlotPopup && !selectedCheckIn && (
+          <SelectCheckIn filteredCheckinTimes={filteredCheckinTimes}selectedCheckIn={selectedCheckIn}  selectedDate={selectedDate}  handleCheckIn={handleCheckIn} turfInfo={turfInfo} availableTimes={availableTimes}  />
         )}
+
+        {selectedCheckIn && showSlotPopup && !selectedCheckOut && (
+          <SelectCheckOut getFilteredCheckoutTimes={getFilteredCheckoutTimes} selectedCheckOut={selectedCheckOut} handleCheckOut={handleCheckOut}  />
+        )}
+
+
+
       </div>
     </div>
   );

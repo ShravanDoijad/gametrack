@@ -54,7 +54,7 @@ const TurfSchema = new mongoose.Schema({
        status: {
           type: String,
           enum: ["available", "booked", "unavailable"],
-          default: "available",
+          default: "booked",
         },
     },
   ],

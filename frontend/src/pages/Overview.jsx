@@ -162,7 +162,9 @@ export const Overview = () => {
       const res = await axios.get("/api/turfs/getSingleTurf", {
         params: { id: turfId }
       });
+       
       setturfInfo(res.data.turf)
+
     } catch (error) {
       toast.error(res.data.message || "Internal server Error")
     }
@@ -179,6 +181,11 @@ export const Overview = () => {
 
   }, [turfId ])
 
+  useEffect(() => {
+  if (turfInfo) {
+    localStorage.setItem("selectedTurf", JSON.stringify(turfInfo._id));
+  }
+}, [turfInfo]);
   
   
 const handleFavorite = async () => {
@@ -323,7 +330,7 @@ const sports = SPORTS.filter((sport) =>
             <button
               onClick={() => navigate("/booking",
                 {
-                  state: turfInfo
+                  state: turfInfo._id
                     
                   
 

@@ -24,6 +24,7 @@ import { Error403 } from './components/Error403';
 import TurfSwitcher from './components/TurfSwitcher';
 
 import BookingManager from './pages/BookingManager';
+import ContactUs from './pages/ContactUs';
 
 
 function App() {
@@ -67,6 +68,7 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
+          <Route path='/contactUs' element={<ContactUs/>} />
 
 
           <Route element={<PrivateRoute />}>
@@ -83,7 +85,7 @@ function App() {
             <Route path="/owner/*" element={<Owner />} />
           </Route>
 
-          {/* Catch-all route */}
+          
           <Route path="*" element={<Error404/>} />
         </Routes>
       </div>
@@ -95,6 +97,3 @@ function App() {
 
 
 export default App;
-
-
- 

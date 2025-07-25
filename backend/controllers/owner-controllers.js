@@ -220,13 +220,30 @@ const updateOwner = async (req, res) => {
     }
 };
 
+const convertToMilitaryTime = (timeStr) => {
+  const [time, modifier] = timeStr.split(" ");
+  let [hours, minutes] = time.split(":").map(Number);
 
+  if (modifier === "PM" && hours !== 12) hours += 12;
+  if (modifier === "AM" && hours === 12) hours = 0;
+  let slot
+  if(hours<10){
+   slot = "0"+hours+":"+"00"
+  }
+  else{
+    slot = hours+":"+"00"
+  }
+  return slot; // 1:30 PM -> 1330
+};
 
 
 
 const updateSlotStatus = async (req, res) => {
-  const { date, turfId, start, end, newStatus } = req.body;
-
+  let { date, turfId, start, end, newStatus } = req.body;
+  start = convertToMilitaryTime(start);
+  end = convertToMilitaryTime(end);
+  console.log("start", start)
+    
   try {
     const turf = await Turf.findById(turfId);
     if (!turf) return res.status(404).json({ message: "Turf not found" });
@@ -246,10 +263,10 @@ const updateSlotStatus = async (req, res) => {
           return res.status(409).json({ message: "This slot overlaps with an already booked slot." });
         }
 
-        // Safe to add
+        
         day.slots.push({ start, end });
       } else {
-        // Create new day entry
+       
         turf.bookedSlots.push({
           date,
           slots: [{ start, end }],

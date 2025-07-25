@@ -10,6 +10,8 @@ import { useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
+import SelectCheckIn from "../components/SelectCheckIn";
+import SelectCheckOut from "../components/SelectCheckOut";
 const getNext7Days = () => {
   const days = [];
   const options = { weekday: "short", month: "short", day: "numeric" };
@@ -25,10 +27,10 @@ const getNext7Days = () => {
   return days;
 };
 const BookingManager = () => {
-  const { selectedSport, userInfo, getSingleTurf, setGetSingleTurf } = useContext(BookContext)
+  const { selectedSport, userInfo, } = useContext(BookContext)
   const location = useLocation()
   const navigate = useNavigate()
-  const [turfInfo, setturfInfo] = useState(location.state)
+  const [turfInfo, setturfInfo] = useState()
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedCheckIn, setSelectedCheckIn] = useState(null);
   const [availableCheckoutSlots, setavailableCheckoutSlots] = useState([])
@@ -90,11 +92,8 @@ const BookingManager = () => {
   };
 
   const next7Days = getNext7Days();
-  useEffect(() => {
-  if (getSingleTurf) {
-    getSingleTurf(); // now you can use it
-  }
-}, [availableTimes]);
+
+
   const handlePayment = async () => {
     try {
       const amount = 250;
@@ -299,6 +298,37 @@ const BookingManager = () => {
     }
   }, [selectedDate, turfInfo]);
 
+  const getSingleTurf = async (turfId) => {
+
+    try {
+      setloading(true)
+      const res = await axios.get("/api/turfs/getSingleTurf", {
+        params: { id: turfId }
+      });
+      setturfInfo(res.data.turf)
+    } catch (error) {
+      toast.error(res.data.message || "Internal server Error")
+    }
+    finally {
+      setloading(false)
+
+
+    }
+  }
+
+  useEffect(() => {
+
+    const savedTurf = JSON.parse(localStorage.getItem("selectedTurf"));
+
+    if (savedTurf) {
+      getSingleTurf(savedTurf);
+    }
+
+
+
+  }, [])
+
+
 
 
 
@@ -322,7 +352,6 @@ const BookingManager = () => {
         }
       }
     }
-    console.log("next", nextBookingIndex);
 
     return allSlots
       .slice(checkInIndex + 1, nextBookingIndex + 1)
@@ -359,6 +388,8 @@ const BookingManager = () => {
     slot.military !== turfInfo.closingTime
 
   )
+
+
 
 
   return (
@@ -409,70 +440,11 @@ const BookingManager = () => {
       )}
 
       {selectedDate && showSlotPopup && !selectedCheckIn && (
-        <motion.div
-          className="mt-6"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
-          <h3 className="text-lg sora font-semibold mb-3">
-            Select Check-in Time
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {filteredCheckinTimes?.map((slot, idx) => {
-              const isBooked = turfInfo?.bookedSlots
-                ?.find(s => s.date === selectedDate.toISOString().split('T')[0])
-                ?.slots?.some(b => b.start === slot.military);
-
-              const isAvailable = availableTimes.includes(slot.display);
-
-              return (
-                <div
-                  key={idx}
-                  onClick={() => isAvailable && handleCheckIn(slot.display)}
-                  className={`px-4 py-3 rounded-lg text-center border transition ${selectedCheckIn === slot.display
-                    ? "bg-green-500 text-black border-green-500"
-                    : isBooked
-                      ? "bg-red-600 text-white border-red-700"
-                      : isAvailable
-                        ? "bg-[#1a1a1a] text-white border-[#2a2a2a]"
-                        : "bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed"
-                    }`}
-                >
-                  {slot.display}
-                </div>
-              );
-            })}
-          </div>
-        </motion.div>
+        <SelectCheckIn filteredCheckinTimes={filteredCheckinTimes} selectedCheckIn={selectedCheckIn} selectedDate={selectedDate} handleCheckIn={handleCheckIn} turfInfo={turfInfo._id} availableTimes={availableTimes} getSingleTurf={getSingleTurf} />
       )}
 
       {selectedCheckIn && showSlotPopup && !selectedCheckOut && (
-        <motion.div
-          className="mt-6"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-        >
-          <h3 className="text-lg sora font-semibold mb-3">
-            Select Check-out Time
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {getFilteredCheckoutTimes()
-              .map((time, idx) => (
-                <div
-                  key={idx}
-                  onClick={() => handleCheckOut(time)}
-                  className={`px-4 py-3 rounded-lg cursor-pointer text-center border transition ${selectedCheckOut === time
-                    ? "bg-yellow-500 text-black border-yellow-500"
-                    : "bg-[#1a1a1a] text-white border-[#2a2a2a]"
-                    }`}
-                >
-                  {time}
-                </div>
-              ))}
-          </div>
-        </motion.div>
+        <SelectCheckOut getFilteredCheckoutTimes={getFilteredCheckoutTimes} selectedCheckOut={selectedCheckOut} handleCheckOut={handleCheckOut} />
       )}
 
       {showFormPopup && (
@@ -583,7 +555,7 @@ const BookingManager = () => {
               </div>
 
               {turfInfo.allowAdvancePayment && (
-                
+
                 <p className="text-xs text-gray-400 mt-2">
                   <span className=" font-bold text-md text-red-300 sora">Advance Non Refundable</span><br />
                   * Remaining amount to be paid at the venue
@@ -605,7 +577,7 @@ const BookingManager = () => {
               </div>
             )}
 
-            
+
             <motion.button
               whileHover={paymentOption ? { scale: 1.02 } : {}}
               whileTap={paymentOption ? { scale: 0.98 } : {}}
