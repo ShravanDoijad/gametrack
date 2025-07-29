@@ -183,7 +183,7 @@ export const Overview = () => {
 
   useEffect(() => {
   if (turfInfo) {
-    localStorage.setItem("selectedTurf", JSON.stringify(turfInfo._id));
+    localStorage.setItem("selectedTurf",turfInfo._id);
   }
 }, [turfInfo]);
   

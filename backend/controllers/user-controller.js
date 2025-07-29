@@ -10,6 +10,8 @@ const Owner = require("../models/owner-model");
 const admin = require("../firebase/firebase-admin");
 const Notification = require('../models/notification-model');
 const cron = require("node-cron");
+const { sendMessage, OwnerUpdate } = require("../twilio/sendMessage");
+const bookingModel = require("../models/booking-model");
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
@@ -279,60 +281,47 @@ const verifyOrder = async (req, res) => {
 
     const turf = await turfModel
       .findById(bookingDetails.turfId)
-      .populate("owner", "fcmTokens turfname");
+      .populate("owner", "fcmTokens turfname phone");
 
     const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
     const turfName = turf?.owner?.turfname || "your turf";
-    console.log("user and owner", user, turf.owner)
 
-   // USER PUSH NOTIFICATION
-if (user?.fcmToken) {
-  try {
-    console.log("📲 Sending push to USER", user.fcmToken);
-    await admin.messaging().send({
-      token: user.fcmToken,
-      notification: {
-        title: `✅ Booking Confirmed | ${slotTimeText} | ${bookingDetails.date}`,
-        body: `Your booking at ${turfName} has been confirmed. Get ready to play!`,
-      },
-    });
-  } catch (err) {
-    console.error("❌ Failed to send user push:", err.code, err.message);
-  }
-} else {
-  console.warn("⚠️ No user FCM token found");
-}
 
-// OWNER PUSH NOTIFICATION
-if (turf.owner.fcmTokens && turf.owner.fcmTokens.length > 0) {
-  const sent = new Set();
 
-  for (const token of turf.owner.fcmTokens) {
-    if (sent.has(token)) continue;
-
-    try {
-      console.log("📲 Sending push to OWNER", token);
-      await admin.messaging().send({
-        token,
-        notification: {
-          title: `📥 New Booking | ${slotTimeText} | ${bookingDetails.date}`,
-          body: `${user?.fullname || "A user"} booked your turf: ${turfName}.`,
-        },
-      });
-      sent.add(token);
-    } catch (err) {
-      console.error("❌ Failed to send owner push:", err.code, err.message);
-
-      if (err.code === "messaging/registration-token-not-registered") {
-        await Owner.findByIdAndUpdate(turf.owner._id, {
-          $pull: { fcmTokens: token },
-        });
+    await sendMessage({
+      phoneNumber: user.phone,
+      notification_data: {
+        name: user.fullname.split(" ")[0],               // {{1}}
+        turfName: turfName,                              // {{2}}
+        date: bookingDetails.date,                       // {{3}}
+        time: slotTimeText,                              // {{4}}
+        location: turf.location.city,                          // {{5}} - You need to add this value
+        amount: bookingDetails.slotFees,                 // {{6}}
+        sport: newBooking.sport,                         // {{7}}
+        advance: newBooking.amountPaid,                  // {{8}}
+        remaining: bookingDetails.slotFees - newBooking.amountPaid // {{9}}
       }
-    }
-  }
-} else {
-  console.warn("⚠️ No owner FCM tokens found");
-}
+    });
+
+    await OwnerUpdate({
+      phoneNumber: turf.owner.phone,
+
+      notification_data: {
+        status: newBooking.status,
+        name: turf.owner.fullname.split(" ")[0],
+        turfName: turfName,
+        date: bookingDetails.date,
+        time: slotTimeText,
+        sport: newBooking.sport,
+        user: user.fullname,
+        phone: user.phone,
+        advance: newBooking.amountPaid,
+        remained: newBooking.status === "cancelled" ? 0 : (newBooking.slotFees - newBooking.amountPaid)
+      }
+    });
+
+
+
 
     await Promise.all([
       Notification.create({
@@ -385,7 +374,7 @@ const getAllBookings = async (req, res) => {
         .json({ success: false, message: "Unauthorised, Login First" });
     }
     const allBookings = await Booking.find({ userId: userId }).populate("turfId", "name");
-    console.log("all bookings",allBookings)
+    console.log("all bookings", allBookings)
     res.status(200).json({ success: true, allBookings: allBookings });
   } catch (error) {
     console.log("Error to Fetch Bookings", error);
@@ -531,23 +520,23 @@ const addFavorite = async (req, res) => {
   }
 };
 
-const getBookedSlots= async ()=>{
+const getBookedSlots = async () => {
   try {
-    const {turfId, date}= req.query
-    if(!turfId){
-      res.status(400).json({message: "turfId not found"})
+    const { turfId, date } = req.query
+    if (!turfId) {
+      res.status(400).json({ message: "turfId not found" })
     }
     const turf = await turfModel.findById(turfId);
-    if(!turf){
-      res.status(400).json({message:"Turf not found"})
+    if (!turf) {
+      res.status(400).json({ message: "Turf not found" })
 
     }
-    const bookedDay= turf.bookedSlots.find((s)=>s.date === date)
-    const bookedslots= bookedDay.slots
-    res.status(200).json({bookedSlots:bookedslots})
+    const bookedDay = turf.bookedSlots.find((s) => s.date === date)
+    const bookedslots = bookedDay.slots
+    res.status(200).json({ bookedSlots: bookedslots })
   } catch (error) {
     console.log("unable to fetch the booked slots", error)
-    res.status(500).json({message: "Unable to fetch Booked Slots"})
+    res.status(500).json({ message: "Unable to fetch Booked Slots" })
   }
 }
 
@@ -651,6 +640,110 @@ const getAllNotifications = async (req, res) => {
   }
 };
 
+
+const getPendingReviews = async (req, res) => {
+  try {
+    const { data: user, role } = req.auth;
+    const currentTime = new Date();
+
+    // Step 1: Get all bookings of the user
+    const bookings = await bookingModel.find({ userId: user._id }).populate("turfId");
+
+    // Step 2: Filter past bookings that don't already have a review
+    const pendingReviews = [];
+
+    for (let booking of bookings) {
+      const bookingDate = new Date(booking.date);
+      const [endHour, endMinute] = booking.slots.end.split(":").map(Number);
+      bookingDate.setHours(endHour, endMinute);
+
+      const turf = booking.turfId;
+
+      // Check if the slot has ended AND the user hasn't reviewed this turf
+      const alreadyReviewed = turf.reviews.some(
+        (rev) => rev.user.toString() === user._id.toString()
+      );
+
+      if (bookingDate < currentTime && !alreadyReviewed) {
+        pendingReviews.push({
+          turfId: turf._id,
+          turfName: turf.name,
+          bookingId: booking._id,
+          bookingDate: booking.date,
+          startTime: booking.slots.start,
+          endTime: booking.slots.end,
+        });
+      }
+    }
+
+    return res.status(200).json({ success: true, pendingReviews });
+
+  } catch (error) {
+    console.error("Error in getPendingReviews:", error);
+    return res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+const submitReview = async (req, res) => {
+  try {
+    const { data: user } = req.auth;
+    const { bookingId, turfId, rating, comment } = req.body;
+
+    const userBooking = await bookingModel.findById(bookingId);
+    if (!userBooking) {
+      return res.status(400).json({ message: 'User booking not found' });
+    }
+
+    if (userBooking.userId.toString() !== user._id.toString()) {
+      return res.status(403).json({ message: 'Unauthorized action' });
+    }
+
+    // Optional: Check if booking has ended
+    const currentTime = new Date();
+    const bookingDateTime = new Date(`${userBooking.date}T${userBooking.endTime}`);
+    if (currentTime < bookingDateTime) {
+      return res.status(400).json({ message: 'You can review only after the slot ends' });
+    }
+
+    // Optional: Check if already reviewed
+    if (userBooking.isReviewed) {
+      return res.status(400).json({ message: 'You already submitted a review for this booking' });
+    }
+
+    const turf = await turfModel.findById(turfId);
+    if (!turf) {
+      return res.status(400).json({ message: 'Turf not found' });
+    }
+    const alreadyReviewed = turf.reviews.find(
+      (rev) => rev.user.toString() === user._id.toString()
+    );
+
+    if (alreadyReviewed) {
+      return res.status(400).json({ message: "You've already reviewed this turf." });
+    }
+
+
+    turf.reviews.push({
+      user: user._id,
+      name: user.fullname?.split(" ")[0] || user.fullname,
+      rating,
+      comment
+    });
+
+    userBooking.isReviewed = true; 
+
+    await turf.save();
+    await userBooking.save();
+
+    return res.status(200).json({ message: 'Review submitted successfully' });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ message: 'Something went wrong while submitting review' });
+  }
+};
+
+
+
 module.exports = {
   userRegister,
   userLogout,
@@ -664,5 +757,8 @@ module.exports = {
   login,
   getAllNotifications,
   removeFavoriteTurf,
-  getBookedSlots
+  getBookedSlots,
+  getPendingReviews,
+  submitReview
 };
+

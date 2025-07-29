@@ -11,7 +11,7 @@ import { Notifications } from './pages/Notifications';
 import { Turfs } from './pages/Turfs';
 import { BookContext } from './constexts/bookContext';
 import { Overview } from './pages/Overview';
-
+import axios from 'axios'
 import Favorite from './pages/Favorite';
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
@@ -22,14 +22,16 @@ import OwnerPrivateRoute from './OwnerPrivateRoute';
 import { Error404 } from './components/Error404';
 import { Error403 } from './components/Error403';
 import TurfSwitcher from './components/TurfSwitcher';
+import { toast } from "react-toastify"
 
 import BookingManager from './pages/BookingManager';
 import ContactUs from './pages/ContactUs';
 
 
 function App() {
-  const { loginPanel, token, userInfo, isLoading, hasCheckedAuth  } = useContext(BookContext);
+  const { loginPanel, token, userInfo, isLoading, hasCheckedAuth } = useContext(BookContext);
   const [showSplash, setShowSplash] = useState(true);
+  const [pendingReviews, setpendingReviews] = useState([])
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -37,6 +39,38 @@ function App() {
     }, 3000);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (token && userInfo?.role === "user") {
+      getPendingReviews();
+    }
+  }, [token, userInfo]);
+
+
+
+
+  useEffect(() => {
+    if (pendingReviews.length > 0) {
+      const { bookingId, turfId } = pendingReviews[0];
+      navigate(`/review?turfId=${turfId}&bookingId=${bookingId}`);
+    }
+  }, [pendingReviews]);
+
+
+  const getPendingReviews = async () => {
+    try {
+      const response = await axios.get("/api/users/pendingReview");
+      if (response.data.success) {
+        await setpendingReviews(response.data.pendingReviews)
+      }
+    }
+    catch (error) {
+      console.log("error", error)
+      toast.error(error.response?.data?.message || "Internal server error")
+    }
+  }
+
+
 
 
   if (showSplash || isLoading || !hasCheckedAuth) {
@@ -51,6 +85,10 @@ function App() {
       </div>
     );
   }
+
+
+
+
   return (
     <div className="max-w-screen min-h-[92vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
       {loginPanel && <Register />}
@@ -61,14 +99,14 @@ function App() {
 
 
       <div className="flex-grow ">
-        
-    
+
+
         <Routes>
           <Route path="/" element={<Turfs />} />
           <Route path="/register" element={<Register />} />
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
-          <Route path='/contactUs' element={<ContactUs/>} />
+          <Route path='/contactUs' element={<ContactUs />} />
 
 
           <Route element={<PrivateRoute />}>
@@ -78,15 +116,15 @@ function App() {
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
           </Route>
-          <Route path="/forbidden" element={<Error403/>} />
+          <Route path="/forbidden" element={<Error403 />} />
 
           {/* Protected Owner Routes */}
           <Route element={<OwnerPrivateRoute />}>
             <Route path="/owner/*" element={<Owner />} />
           </Route>
 
-          
-          <Route path="*" element={<Error404/>} />
+
+          <Route path="*" element={<Error404 />} />
         </Routes>
       </div>
 

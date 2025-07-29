@@ -251,7 +251,7 @@ const updateSlotStatus = async (req, res) => {
     let day = turf.bookedSlots.find((d) => d.date === date);
 
     if (newStatus === "booked") {
-      // 1. Check if any existing slot overlaps
+      
       if (day) {
         const hasOverlap = day.slots.some(
           (slot) =>

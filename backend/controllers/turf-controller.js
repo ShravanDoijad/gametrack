@@ -17,7 +17,8 @@ const getSingleTurf = async (req, res)=>{
          res.status(200).json({turf:turf})
         
     } catch (error) {
-        res.status(500).json({message:"Internal Server error", error:error})
+        console.log("can't get turf",error )
+        res.status(500).json({message:"Internal Server error", error: error})
         
     }
 }

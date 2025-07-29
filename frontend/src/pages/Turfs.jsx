@@ -91,6 +91,8 @@ export const Turfs = () => {
     fetchTurfs();
   }, []);
 
+  
+
   const timeSlots = generateTimeSlots();
 
 
@@ -100,12 +102,18 @@ export const Turfs = () => {
     let allSlots = [];
     let results = [...turfs];
 
-  // First filter by sport if selected
-  if (selectedSport) {
+   
+  if (selectedSport && results.length>0) {
     results = results.filter((turf) =>
-      turf.sportsAvailable?.includes(selectedSport)
+      turf.sportsAvailable?.some(sport=>
+        sport.toLowerCase()===selectedSport.toLowerCase()
+      )
+     
+    
     );
+
   }
+  
   
 
   if(location){
@@ -131,6 +139,7 @@ if (nearestSwitch) {
         let totalHours = hours;
         if (period === "PM" && hours < 12) totalHours += 12;
         if (period === "AM" && hours === 12) totalHours = 0;
+        
         return totalHours * 60 + (minutes || 0);
       };
 
@@ -242,7 +251,7 @@ if (nearestSwitch) {
   const handleSportFilter = (id) => {
     setSelectedSport(selectedSport === id ? "" : id);
   };
-
+  console.log("selectedSport", selectedSport)
 
   {!location && error && (
     <div className="text-red-400 text-sm">

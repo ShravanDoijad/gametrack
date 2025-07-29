@@ -44,6 +44,11 @@ const BookingManager = () => {
   const [allSlots, setallSlots] = useState([])
   const [loading, setloading] = useState(false)
 
+    const timeStringToMinutes = time => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
+
 
   const handleDateSelect = (date) => {
     const timezoneAdjustedDate = new Date(
@@ -76,9 +81,8 @@ const BookingManager = () => {
   };
 
   const calculateDuration = () => {
-    const indexIn = allSlots.findIndex(s => s.display === selectedCheckIn);
-    const indexOut = allSlots.findIndex(s => s.display === selectedCheckOut);
-    return indexOut - indexIn;
+    const duration = ((timeStringToMinutes(convertToMilitary(selectedCheckOut))-timeStringToMinutes(convertToMilitary(selectedCheckIn)))/60).toFixed(1)
+    return duration;
   };
 
   const convertToMilitary = (timeStr) => {
@@ -96,7 +100,7 @@ const BookingManager = () => {
 
   const handlePayment = async () => {
     try {
-      const amount = 250;
+      const amount = 5;
 
 
       const bookingDetails = {
@@ -149,8 +153,10 @@ const BookingManager = () => {
             });
             if (verifyRes.data.success) {
               toast.success("Booking Confirmed!");
+            
               setShowFormPopup(false)
               navigate("/")
+
             } else {
               toast.error("Payment Failed");
             }
@@ -214,7 +220,7 @@ const BookingManager = () => {
         minute: minute
       });
 
-      currentMinutes += 60;
+      currentMinutes += 30;
     }
 
     setallSlots(all)
@@ -259,11 +265,7 @@ const BookingManager = () => {
       return filteredSlots.map(slot => slot.display);
     }
 
-    const timeStringToMinutes = time => {
-      const [h, m] = time.split(':').map(Number);
-      return h * 60 + m;
-    };
-
+  
     const availableSlots = filteredSlots.filter(slot => {
       const slotTime = timeStringToMinutes(slot.military);
 
@@ -306,8 +308,9 @@ const BookingManager = () => {
         params: { id: turfId }
       });
       setturfInfo(res.data.turf)
+      return res.data.turf ;
     } catch (error) {
-      toast.error(res.data.message || "Internal server Error")
+      toast.error(error.response?.data?.message || "Internal server Error")
     }
     finally {
       setloading(false)
@@ -318,7 +321,8 @@ const BookingManager = () => {
 
   useEffect(() => {
 
-    const savedTurf = JSON.parse(localStorage.getItem("selectedTurf"));
+    const savedTurf = localStorage.getItem("selectedTurf");
+    console.log("saved Turf", savedTurf)
 
     if (savedTurf) {
       getSingleTurf(savedTurf);
@@ -332,34 +336,7 @@ const BookingManager = () => {
 
 
 
-  const getFilteredCheckoutTimes = () => {
-    const checkInIndex = allSlots.findIndex(slot => slot.display === selectedCheckIn);
-    let nextBookingIndex = allSlots.length;
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const bookedForDate = turfInfo.bookedSlots.find(slot => slot.date === dateStr);
-
-    console.log("booked for date", bookedForDate);
-
-
-    if (bookedForDate) {
-      for (let slot of bookedForDate.slots) {
-
-        const index = allSlots.findIndex(s => s.military === slot.start);
-
-        if (index > checkInIndex) {
-          nextBookingIndex = Math.min(nextBookingIndex, index);
-        }
-      }
-    }
-
-    return allSlots
-      .slice(checkInIndex + 1, nextBookingIndex + 1)
-      .filter(slot =>
-        availableCheckoutSlots.find((time) => time.display === slot.display)
-      )
-      .map(slot => slot.display);
-  };
 
   const getPriceForSlot = (turfInfo, checkInTime) => {
 
@@ -378,7 +355,6 @@ const BookingManager = () => {
     return hour >= 19 ? turfInfo.nightPrice : turfInfo.dayPrice;
   };
 
-  // Then use it in your calculateFee:
   const calculateFee = () => {
     const pricePerHour = getPriceForSlot(turfInfo, selectedCheckIn);
     return calculateDuration() * pricePerHour;
@@ -444,7 +420,7 @@ const BookingManager = () => {
       )}
 
       {selectedCheckIn && showSlotPopup && !selectedCheckOut && (
-        <SelectCheckOut getFilteredCheckoutTimes={getFilteredCheckoutTimes} selectedCheckOut={selectedCheckOut} handleCheckOut={handleCheckOut} />
+        <SelectCheckOut selectedCheckIn={convertToMilitary(selectedCheckIn)} selectedCheckOut={selectedCheckOut} allSlots={allSlots} selectedDate={selectedDate} handleCheckOut={handleCheckOut} getSingleTurf={getSingleTurf} />
       )}
 
       {showFormPopup && (

@@ -14,7 +14,7 @@ const OwnerPrivateRoute = () => {
     return <Navigate to="/forbidden" />;
   }
 
-  return token && userInfo.role === "owner" ? <Outlet /> : <Navigate to="/register" replace />;
+  return token && userInfo.role === "owner"  ? <Outlet /> : <Navigate to="/register" replace />;
 
 
 }

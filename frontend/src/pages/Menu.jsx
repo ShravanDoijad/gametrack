@@ -59,16 +59,13 @@ if (userInfo?.role === 'owner') {
     id: 'bookings',
     icon: <CalendarDays size={22} />,
     label: 'Bookings',
-    path: '/booking',
-    active: location.pathname.includes('booking')
+    path: '/userbookings',
+    active: location.pathname.includes('userbookings')
   }  )
 
 }
 
 
-  const handleQuickBook = () => {
-    navigate("/turfs")
-  };
 
   return (
     <>

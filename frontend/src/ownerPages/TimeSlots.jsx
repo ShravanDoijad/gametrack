@@ -49,6 +49,9 @@ const TimeSlots = () => {
     const [customDate, setCustomDate] = useState(null);
     const [availableTimes, setAvailableTimes] = useState([]);
     const [allSlots, setallSlots] = useState([])
+    const [phone, setPhone] = useState("");
+    const [advanceAmount, setAdvanceAmount] = useState("");
+
    
 
   const next7Days = getNext7Days();
@@ -309,40 +312,61 @@ const TimeSlots = () => {
 
 
         {confirmingSlot && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4 backdrop-blur-sm">
-            <div className="bg-neutral-900 p-6 rounded-xl border border-neutral-700 w-full max-w-md shadow-2xl">
-              <div className="flex flex-col items-center text-center">
-                <div className="mb-4 p-3 bg-amber-400/10 rounded-full">
-                  <AlertTriangle className="text-amber-400" size={40} />
-                </div>
-                <h3 className="text-xl font-bold text-white mb-3 font-sora">
-                  Confirm Slot Booking
-                </h3>
-                <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
-                  You're about to mark <span className="font-semibold text-white">{confirmingSlot.start} - {confirmingSlot.end}</span> as Booked.
-                  <br />
-                  <span className="text-green-400 mt-2 inline-block sora font-medium">
-                    This action can be shown to All Users
-                  </span>
-                </p>
-                <div className="flex gap-4 w-full">
-                  <button
-                    onClick={() => setConfirmingSlot(null)}
-                    className="flex-1 border border-neutral-700 px-4 py-3 text-neutral-300 rounded-lg hover:bg-neutral-800 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleManualBooking()}
-                    className="flex-1 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold px-4 py-3 rounded-lg hover:from-lime-400 hover:to-lime-500 transition-colors font-sora"
-                  >
-                    Confirm Booking
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+  <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4 backdrop-blur-sm">
+    <div className="bg-neutral-900 p-6 rounded-xl border border-neutral-700 w-full max-w-md shadow-2xl">
+      <div className="flex flex-col items-center text-center">
+        <div className="mb-4 p-3 bg-amber-400/10 rounded-full">
+          <AlertTriangle className="text-amber-400" size={40} />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-3 sora">
+          Confirm Slot Booking
+        </h3>
+        <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
+          You're about to mark <span className="font-semibold text-white">{confirmingSlot.start} - {confirmingSlot.end}</span> as Booked.
+          <br />
+          <span className="text-green-400 mt-2 inline-block sora font-medium">
+            This action can be shown to All Users
+          </span>
+        </p>
+
+        {/* Inputs for phone and advance */}
+        <div className="w-full mb-4 space-y-3">
+          <input
+            type="tel"
+            placeholder="Phone Number"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
+          />
+          <input
+            type="number"
+            placeholder="Advance Amount (₹)"
+            value={advanceAmount}
+            onChange={(e) => setAdvanceAmount(e.target.value)}
+            className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
+          />
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-4 w-full">
+          <button
+            onClick={() => setConfirmingSlot(null)}
+            className="flex-1 border border-neutral-700 px-4 py-3 text-neutral-300 rounded-lg hover:bg-neutral-800 transition-colors font-medium"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => handleManualBooking()}
+            className="flex-1 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold px-4 py-3 rounded-lg hover:from-lime-400 hover:to-lime-500 transition-colors font-sora"
+          >
+            Confirm Booking
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
         {manualSlotModal &&
            <div className="flex gap-3 flex-wrap pb-2">
                   {next7Days.map((day, idx) => (

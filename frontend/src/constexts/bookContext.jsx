@@ -22,7 +22,7 @@ const BookContextProvider = ({ children }) => {
     
       const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
       const closeSidebar = () => setSidebarOpen(false);
-    console.log("turfs", turfs)
+    
    useEffect(() => {
   if (token && userInfo?.role === 'owner' && selectedTurfId) {
     setisLoading(true);
