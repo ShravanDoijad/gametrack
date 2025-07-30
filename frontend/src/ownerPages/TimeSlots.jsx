@@ -116,7 +116,7 @@ const TimeSlots = () => {
     return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
   };
   const formattedDate = selectedDate?.toISOString().split('T')[0];
-  console.log("cheOut", selectedCheckOut)
+  console.log("cheInOut", selectedCheckIn,selectedCheckOut)
   const handleManualBooking = async () => {
     try {
       await axios.patch(`/owner/update-status`, {

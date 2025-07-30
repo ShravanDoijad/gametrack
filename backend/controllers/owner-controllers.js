@@ -223,26 +223,21 @@ const updateOwner = async (req, res) => {
 const convertToMilitaryTime = (timeStr) => {
   const [time, modifier] = timeStr.split(" ");
   let [hours, minutes] = time.split(":").map(Number);
-
+  
   if (modifier === "PM" && hours !== 12) hours += 12;
   if (modifier === "AM" && hours === 12) hours = 0;
-  let slot
-  if(hours<10){
-   slot = "0"+hours+":"+"00"
-  }
-  else{
-    slot = hours+":"+"00"
-  }
-  return slot; // 1:30 PM -> 1330
+
+ return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}` 
 };
 
 
 
 const updateSlotStatus = async (req, res) => {
   let { date, turfId, start, end, newStatus } = req.body;
+  console.log("start", start, end)
+  
   start = convertToMilitaryTime(start);
   end = convertToMilitaryTime(end);
-  console.log("start", start, end)
     
   try {
     const turf = await Turf.findById(turfId);
