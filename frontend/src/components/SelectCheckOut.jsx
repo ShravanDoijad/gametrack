@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { motion } from "framer-motion";
 import { Clock3 } from "lucide-react";
-
+import { BookContext } from "../constexts/bookContext";
 const SelectCheckOut = ({
   selectedCheckOut,
   selectedCheckIn,
@@ -11,8 +11,10 @@ const SelectCheckOut = ({
   getSingleTurf
 }) => {
   const [turfInfo, setTurfInfo] = useState(null);
-
+  const {turfs, selectedTurfId} = useContext(BookContext)
+  const turfData = turfs.find((turf)=>turf._id===selectedTurfId)
   useEffect(() => {
+   
     const fetchTurfInfo = async () => {
       const turfId = localStorage.getItem("selectedTurf");
       if (turfId) {
@@ -20,8 +22,12 @@ const SelectCheckOut = ({
         setTurfInfo(data);
       }
     };
-    fetchTurfInfo();
+    !turfData?
+    fetchTurfInfo():setTurfInfo(turfData);
+    
   }, []);
+
+  console.log("allSlots", selectedCheckIn)
 
   const timeStringToMinutes = time => {
     const [h, m] = time.split(':').map(Number);
@@ -55,10 +61,10 @@ const SelectCheckOut = ({
     }
     return allSlots.slice(checkInIndex + 2, nextBookingIndex + 1).map((slot, idx) => ({
       display: slot.display,
-      duration: parseFloat((timeStringToMinutes(slot.military) - timeStringToMinutes(selectedCheckIn)) / 60).toFixed(1),
+      duration: ((timeStringToMinutes(slot.military) - timeStringToMinutes(selectedCheckIn)) / 60).toFixed(1),
     }));
   };
-
+  console.log("slots", allSlots.map(slot=>slot))
   return (
     <motion.div
       className="mt-8"

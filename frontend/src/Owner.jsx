@@ -17,6 +17,7 @@ import TimeSlots from "./ownerPages/TimeSlots";
 const Owner = () => {
   const {userInfo, token} = useContext(BookContext)
   
+  
   return (
     <div className="min-h-screen w-full text-white ">
       

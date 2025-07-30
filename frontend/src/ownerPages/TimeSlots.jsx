@@ -116,7 +116,7 @@ const TimeSlots = () => {
     return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
   };
   const formattedDate = selectedDate?.toISOString().split('T')[0];
-  
+  console.log("cheOut", selectedCheckOut)
   const handleManualBooking = async () => {
     try {
       await axios.patch(`/owner/update-status`, {
@@ -164,7 +164,7 @@ const TimeSlots = () => {
           minute: minute
         });
   
-        currentMinutes += 60;
+        currentMinutes += 30;
       }
   
       setallSlots(all)
@@ -285,7 +285,7 @@ const TimeSlots = () => {
     slot.military !== turfInfo.closingTime
 
   )
-  
+ 
 
   return (
     <div className="p-6 min-h-screen text-white font-sans">
@@ -410,11 +410,13 @@ const TimeSlots = () => {
           )}
 
         {selectedDate && showSlotPopup && !selectedCheckIn && (
-          <SelectCheckIn filteredCheckinTimes={filteredCheckinTimes}selectedCheckIn={selectedCheckIn}  selectedDate={selectedDate}  handleCheckIn={handleCheckIn} turfInfo={turfInfo} availableTimes={availableTimes}  />
+          <SelectCheckIn filteredCheckinTimes={filteredCheckinTimes} selectedCheckIn={selectedCheckIn}  selectedDate={selectedDate}  handleCheckIn={handleCheckIn} turfInfo={turfInfo} availableTimes={availableTimes}  />
         )}
 
+        
+
         {selectedCheckIn && showSlotPopup && !selectedCheckOut && (
-          <SelectCheckOut getFilteredCheckoutTimes={getFilteredCheckoutTimes} selectedCheckOut={selectedCheckOut} handleCheckOut={handleCheckOut}  />
+          <SelectCheckOut getFilteredCheckoutTimes={getFilteredCheckoutTimes}s selectedCheckIn={convertToMilitary(selectedCheckIn)} allSlots={allSlots} selectedDate={selectedDate} selectedCheckOut={selectedCheckOut} handleCheckOut={handleCheckOut}  />
         )}
 
 

@@ -16,8 +16,6 @@ const SelectCheckIn = ({
 
 
 
-
-
   const getSingleTurf = async (turfId) => {
     try {
       setloading(true);
@@ -55,7 +53,8 @@ const SelectCheckIn = ({
 
   return filteredCheckinTimes.filter((slot) => {
     const minutes = slot.hour * 60 + slot.minute;
-    if (minutes < openingMinutes || minutes >= closingMinutes) return false;
+    if (minutes < openingMinutes || minutes >= closingMinutes) return ;
+    ;
 
     if (zone === "morning") return slot.hour < 12;
     if (zone === "afternoon") return slot.hour >= 12 && slot.hour < 17;
@@ -65,9 +64,7 @@ const SelectCheckIn = ({
   });
 };
 
-if(loading){
-  
-}
+console.log("turfInfo", turfInfo)
 
 const visibleSlots = turfInfo ? getSlotsByTimeZone(activeZone) : [];
 
@@ -88,7 +85,8 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
       </div>
     </motion.button>
   );
-
+  
+  console.log("visibleSlot", visibleSlots)
   return (
     <motion.div
       className="mt-6"
@@ -124,7 +122,9 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      
+
+      <div className="grid grid-cols-2 gap-3 z-50">
         {visibleSlots?.map((slot, idx) => {
           const isBooked = turfInfo?.bookedSlots
             ?.find((s) => s.date === selectedDate.toISOString().split("T")[0])

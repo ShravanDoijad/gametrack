@@ -107,6 +107,7 @@ const BookContextProvider = ({ children }) => {
             setTurfs(response.data.turfs || []);
             if (response.data.turfs.length > 0) {
               setSelectedTurfId(response.data.turfs[0]._id);
+             
             }
           } catch (error) {
             console.error('Failed to fetch turfs:', error);
@@ -116,6 +117,10 @@ const BookContextProvider = ({ children }) => {
         fetchTurfs();
          }
       }, [token, userInfo]);
+
+      useEffect(()=>{
+         selectedTurfId && localStorage.setItem("selectedTurf", selectedTurfId)
+      }, [selectedTurfId])
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371;

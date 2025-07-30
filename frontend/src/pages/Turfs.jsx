@@ -99,9 +99,10 @@ export const Turfs = () => {
   
   
   const filteredTurfs = useMemo(() => {
-    let allSlots = [];
+    let allSlots = []; 
     let results = [...turfs];
 
+    results = results.filter((turf)=>turf.owner !== "6888b4240c7965c5e42f9e10" )
    
   if (selectedSport && results.length>0) {
     results = results.filter((turf) =>
@@ -251,7 +252,7 @@ if (nearestSwitch) {
   const handleSportFilter = (id) => {
     setSelectedSport(selectedSport === id ? "" : id);
   };
-  console.log("selectedSport", selectedSport)
+ 
 
   {!location && error && (
     <div className="text-red-400 text-sm">

@@ -242,7 +242,7 @@ const updateSlotStatus = async (req, res) => {
   let { date, turfId, start, end, newStatus } = req.body;
   start = convertToMilitaryTime(start);
   end = convertToMilitaryTime(end);
-  console.log("start", start)
+  console.log("start", start, end)
     
   try {
     const turf = await Turf.findById(turfId);
