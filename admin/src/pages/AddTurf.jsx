@@ -40,42 +40,17 @@ const AddTurf = () => {
     nightPrice: "",
     openingTime: "",
     closingTime: "",
+    nightPriceStart: "",
     allowAdvancePayment: true,
     allowFullPaymentOnly: false,
     allowTournaments: false,
     amenities: [],
     sportsAvailable: [],
     bookedSlots: [],
-    subscription: "Free",
+    subscription: [],
     onSitePolicies: [],
   });
 
-  const tempBookedSlots = [
-    {
-      date: "2025-06-24",
-      slots: [
-        { start: "08:00", end: "09:00" },
-        { start: "10:00", end: "11:00" },
-        { start: "16:00", end: "17:00" }
-      ]
-    },
-    {
-      date: "2025-06-25",
-      slots: [
-        { start: "09:00", end: "10:00" },
-        { start: "12:00", end: "13:00" },
-        { start: "18:00", end: "19:00" }
-      ]
-    },
-    {
-      date: "2025-06-26",
-      slots: [
-        { start: "07:00", end: "08:00" },
-        { start: "11:00", end: "12:00" },
-        { start: "17:00", end: "18:00" }
-      ]
-    }
-  ];
 
   const [amenityInput, setAmenityInput] = useState("");
   const [policyInput, setPolicyInput] = useState("");
@@ -84,6 +59,13 @@ const AddTurf = () => {
   const [activeTab, setActiveTab] = useState("basic");
   const [sportInput, setSportInput] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [subscriptionInput, setsubscriptionInput] = useState(
+    {
+      days: "",
+      amount: "",
+      description: ""
+    }
+  )
 
   const handleAddSport = () => {
     if (sportInput.trim() && !form.sportsAvailable.includes(sportInput.trim())) {
@@ -95,10 +77,25 @@ const AddTurf = () => {
     }
   };
 
+  const handleAddSubscription = () => {
+    if (subscriptionInput.days && subscriptionInput.amount && subscriptionInput.description) {
+      setForm((prev) => ({
+        ...prev,
+        subscription: [...prev.subscription, subscriptionInput]
+      }))
+    }
+  }
+
   const handleRemoveSport = (index) => {
     setForm((prev) => ({
       ...prev,
       sportsAvailable: prev.sportsAvailable.filter((_, i) => i !== index),
+    }));
+  };
+  const handleRemoveSubscription = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      subscription: prev.subscription.filter((_, i) => i !== index),
     }));
   };
 
@@ -121,7 +118,7 @@ const AddTurf = () => {
   const handleFileUpload = (e) => {
     const files = Array.from(e.target.files);
     if (!files) return;
-    
+
     const validFiles = files.filter(file => {
       if (!file.type.match('image.*')) {
         setError("Only image files (JPEG, PNG, etc.) are allowed");
@@ -201,7 +198,7 @@ const AddTurf = () => {
           ...form.location,
           coordinates: form.location.coordinates.map(Number),
         },
-        bookedSlots: tempBookedSlots
+
       };
 
       const formData = new FormData();
@@ -224,13 +221,14 @@ const AddTurf = () => {
           nightPrice: "",
           openingTime: "",
           closingTime: "",
+          nightPriceStart:"",
           allowAdvancePayment: true,
           allowFullPaymentOnly: false,
           allowTournaments: false,
           amenities: [],
           sportsAvailable: [],
           bookedSlots: [],
-          subscription: "Free",
+          subscription: [],
           onSitePolicies: [],
         });
         setSuccess("Turf added successfully!");
@@ -238,6 +236,7 @@ const AddTurf = () => {
         setError(response.data.message || "Failed to add turf");
       }
     } catch (err) {
+      console.log("error", err)
       setError(err.response?.data?.message || "Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -279,41 +278,37 @@ const AddTurf = () => {
         <nav className="flex -mb-px">
           <button
             onClick={() => setActiveTab("basic")}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-              activeTab === "basic"
-                ? "border-green-500 text-green-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === "basic"
+              ? "border-green-500 text-green-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Basic Information
           </button>
           <button
             onClick={() => setActiveTab("location")}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-              activeTab === "location"
-                ? "border-green-500 text-green-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === "location"
+              ? "border-green-500 text-green-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Location Details
           </button>
           <button
             onClick={() => setActiveTab("pricing")}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-              activeTab === "pricing"
-                ? "border-green-500 text-green-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === "pricing"
+              ? "border-green-500 text-green-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Pricing & Timings
           </button>
           <button
             onClick={() => setActiveTab("media")}
-            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${
-              activeTab === "media"
-                ? "border-green-500 text-green-600"
-                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-            }`}
+            className={`py-4 px-6 text-center border-b-2 font-medium text-sm ${activeTab === "media"
+              ? "border-green-500 text-green-600"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
           >
             Media & Features
           </button>
@@ -385,22 +380,47 @@ const AddTurf = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Subscription Plan
                 </label>
-                <select
-                  name="subscription"
-                  value={form.subscription}
-                  onChange={handleChange}
-                  className="block w-full pl-3 pr-10 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+
+                <div className="flex w-full gap-x-2 mb-1" >
+                  <input type="Number" className=" outline p-2 rounded-xl  h-15 " value={subscriptionInput.days} onChange={(e) => setsubscriptionInput((prev) => ({ ...prev, days: e.target.value }))} placeholder="Ex. 15, 30, 45 Days" />
+                  <input type="Number" className=" outline px-2 rounded-xl  h-15" value={subscriptionInput.amount} onChange={(e) => setsubscriptionInput((prev) => ({ ...prev, amount: e.target.value }))}
+                    placeholder="Enter the amount" />
+                </div>
+                <input type="text" className=" p-2 rounded-xl w-full h-20" value={subscriptionInput.description} onChange={(e) => setsubscriptionInput((prev) => ({ ...prev, description: e.target.value }))}
+                  placeholder="Enter the Descrption ..." />
+                <button
+                  type="button"
+                  onClick={handleAddSubscription}
+                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
                 >
-                  {subscriptionOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                  Add Subscription
+                </button>
+
+
               </div>
+              {form.subscription.length > 0 && (
+                <div className="mt-4">
+                  {form.subscription.map((sub, i) => (
+                    <div key={i} className="flex items-center justify-between bg-gray-100 p-3 rounded mb-2">
+                      <div>
+                        <p className="text-sm font-semibold">{sub.days} Days - ₹{sub.amount}</p>
+                        <p className="text-xs text-gray-600">{sub.description}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveSubscription(i)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
             </div>
 
             <div className="pt-4 border-t border-gray-200">
@@ -572,6 +592,8 @@ const AddTurf = () => {
               </div>
             </div>
 
+
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -589,6 +611,27 @@ const AddTurf = () => {
                     className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Night Price Start Time <span className="text-red-500">*</span>
+                </label>
+                <div className="relative rounded-md shadow-sm">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                    <Clock size={16} />
+                  </div>
+                  <input
+                    type="time"
+                    name="nightPriceStart"
+                    value={form.nightPriceStart}
+                    onChange={handleChange}
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500">
+                  Time when night pricing begins (usually 6PM or 7PM)
+                </p>
               </div>
 
               <div>
@@ -868,9 +911,8 @@ const AddTurf = () => {
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`ml-auto inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
-                isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
+              className={`ml-auto inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSubmitting ? "opacity-50 cursor-not-allowed" : ""
+                }`}
             >
               {isSubmitting ? (
                 <>

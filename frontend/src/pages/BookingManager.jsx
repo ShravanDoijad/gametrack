@@ -350,9 +350,9 @@ const BookingManager = () => {
     } else if (period === 'AM' && hour === 12) {
       hour = 0;
     }
+    const switchTime = parseInt(turfInfo.nightPriceStart?.split(":")[0])
 
-
-    return hour >= 19 ? turfInfo.nightPrice : turfInfo.dayPrice;
+    return hour >=  switchTime? turfInfo.nightPrice : turfInfo.dayPrice;
   };
 
   const calculateFee = () => {

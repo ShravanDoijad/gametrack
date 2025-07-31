@@ -61,6 +61,9 @@ const TurfSchema = new mongoose.Schema({
 
   openingTime: String,
   closingTime: String,
+  nightPriceStart: String,
+  
+ 
 
   allowAdvancePayment: {
     type: Boolean,
@@ -77,7 +80,7 @@ const TurfSchema = new mongoose.Schema({
 
   amenities: [String],
 
- 
+
   reviews: [
     {
       user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
@@ -101,11 +104,20 @@ const TurfSchema = new mongoose.Schema({
   ],
 
  
-  subscription: {
-    type: String,
-    enum: ["Free", "Basic", "Pro", "Enterprise"],
-    default: "Free",
-  },
+  subscription: [
+    {
+      days:{
+        type: Number,
+      },
+      description:{
+        type: String
+      },
+      amount:{
+        type: Number
+      }
+
+    }
+  ],
 
   onSitePolicies: {
     type: [String], 

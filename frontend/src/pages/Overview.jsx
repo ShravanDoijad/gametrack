@@ -162,7 +162,7 @@ export const Overview = () => {
       const res = await axios.get("/api/turfs/getSingleTurf", {
         params: { id: turfId }
       });
-       
+
       setturfInfo(res.data.turf)
 
     } catch (error) {
@@ -179,38 +179,38 @@ export const Overview = () => {
 
     getSingleTurf()
 
-  }, [turfId ])
+  }, [turfId])
 
   useEffect(() => {
-  if (turfInfo) {
-    localStorage.setItem("selectedTurf",turfInfo._id);
-  }
-}, [turfInfo]);
-  
-  
-const handleFavorite = async () => {
-  if (!token ) {
-    toast.warn("Login to add Favorite");
-    return setloginPanel(true);
-  }
-
-  try {
-    const response = await axios.post("/api/users/addFavorite", {
-      userId: userInfo._id,
-      turfId: turfInfo._id,
-    });
-
-    toast.success(response.data.message);
-    setfavorite(true); 
-  } catch (error) {
-    if (error.response?.status === 409) {
-      toast.info("Already added to favorites.");
-    } else {
-      console.log(error);
-      toast.error(error.response?.data?.message || "Something went wrong");
+    if (turfInfo) {
+      localStorage.setItem("selectedTurf", turfInfo._id);
     }
-  }
-};
+  }, [turfInfo]);
+
+
+  const handleFavorite = async () => {
+    if (!token) {
+      toast.warn("Login to add Favorite");
+      return setloginPanel(true);
+    }
+
+    try {
+      const response = await axios.post("/api/users/addFavorite", {
+        userId: userInfo._id,
+        turfId: turfInfo._id,
+      });
+
+      toast.success(response.data.message);
+      setfavorite(true);
+    } catch (error) {
+      if (error.response?.status === 409) {
+        toast.info("Already added to favorites.");
+      } else {
+        console.log(error);
+        toast.error(error.response?.data?.message || "Something went wrong");
+      }
+    }
+  };
 
   if (loading) {
     return <SkeletonLoader />;
@@ -228,12 +228,13 @@ const handleFavorite = async () => {
     );
   }
 
-const sports = SPORTS.filter((sport) =>
-  turfInfo.sportsAvailable.some((available) =>
-    available.toLowerCase() === sport.name.toLowerCase()
-  )
-);
+  const sports = SPORTS.filter((sport) =>
+    turfInfo.sportsAvailable.some((available) =>
+      available.toLowerCase() === sport.name.toLowerCase()
+    )
+  );
 
+  console.log("turfINfo", turfInfo)
 
 
   return (
@@ -331,8 +332,8 @@ const sports = SPORTS.filter((sport) =>
               onClick={() => navigate("/booking",
                 {
                   state: turfInfo._id
-                    
-                  
+
+
 
                 }
               )}
@@ -343,33 +344,49 @@ const sports = SPORTS.filter((sport) =>
           </div>
 
           <div className="flex flex-col md:flex-row gap-4">
-
-            <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 relative overflow-hidden">
-              <div className="absolute -right-10 -top-10 w-24 h-24 bg-blue-600 rounded-full opacity-20"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sun size={18} className="text-amber-300" />
-                  <span className="text-blue-200 font-medium">Day Rate</span>
-                  <span className="text-xs text-blue-300 ml-auto">7AM - 6PM</span>
+            {turfInfo.dayPrice === turfInfo.nightPrice ? (
+              <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 relative overflow-hidden">
+                <div className="absolute -right-10 -top-10 w-24 h-24 bg-blue-600 rounded-full opacity-20"></div>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Sun size={18} className="text-amber-300" />
+                    <Moon size={18} className="text-indigo-300" />
+                    <span className="text-blue-200 font-medium">Standard Rate</span>
+                    <span className="text-xs text-blue-300 ml-auto">All Day</span>
+                  </div>
+                  <p className="font-bold text-3xl text-white">₹{turfInfo.dayPrice}<span className="text-blue-300 text-lg">/hour</span></p>
+                  <p className="text-blue-200 text-sm mt-1">Same rate for day and night</p>
                 </div>
-                <p className="font-bold text-3xl text-white">₹{turfInfo.dayPrice}<span className="text-blue-300 text-lg">/hour</span></p>
-                <p className="text-blue-200 text-sm mt-1">Perfect for morning matches and practice</p>
               </div>
-            </div>
-
-
-            <div className="flex-1 bg-gradient-to-br from-indigo-900 to-purple-800 border border-purple-700 rounded-lg p-4 relative overflow-hidden">
-              <div className="absolute -right-10 -top-10 w-24 h-24 bg-purple-600 rounded-full opacity-20"></div>
-              <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-1">
-                  <Moon size={18} className="text-indigo-300" />
-                  <span className="text-purple-200 font-medium">Night Rate</span>
-                  <span className="text-xs text-purple-300 ml-auto">6PM - 11PM</span>
+            ) : (
+              <>
+                <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 relative overflow-hidden">
+                  <div className="absolute -right-10 -top-10 w-24 h-24 bg-blue-600 rounded-full opacity-20"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sun size={18} className="text-amber-300" />
+                      <span className="text-blue-200 font-medium">Day Rate</span>
+                      <span className="text-xs text-blue-300 ml-auto">7AM - 6PM</span>
+                    </div>
+                    <p className="font-bold text-3xl text-white">₹{turfInfo.dayPrice}<span className="text-blue-300 text-lg">/hour</span></p>
+                    <p className="text-blue-200 text-sm mt-1">Perfect for morning matches and practice</p>
+                  </div>
                 </div>
-                <p className="font-bold text-3xl text-white">₹{turfInfo.nightPrice}<span className="text-purple-300 text-lg">/hour</span></p>
-                <p className="text-purple-200 text-sm mt-1">Floodlit turf for cooler evening games</p>
-              </div>
-            </div>
+
+                <div className="flex-1 bg-gradient-to-br from-indigo-900 to-purple-800 border border-purple-700 rounded-lg p-4 relative overflow-hidden">
+                  <div className="absolute -right-10 -top-10 w-24 h-24 bg-purple-600 rounded-full opacity-20"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Moon size={18} className="text-indigo-300" />
+                      <span className="text-purple-200 font-medium">Night Rate</span>
+                      <span className="text-xs text-purple-300 ml-auto">6PM - 11PM</span>
+                    </div>
+                    <p className="font-bold text-3xl text-white">₹{turfInfo.nightPrice}<span className="text-purple-300 text-lg">/hour</span></p>
+                    <p className="text-purple-200 text-sm mt-1">Floodlit turf for cooler evening games</p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
 
@@ -377,7 +394,39 @@ const sports = SPORTS.filter((sport) =>
             * Rates include standard equipment. Premium sports may have additional charges.
           </p>
         </div>
-
+        {
+          turfInfo.subscription && turfInfo.subscription.length > 0 ? (
+            <div className="mt-8">
+              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
+                Subscription Plans
+              </h3>
+              <div className="space-y-3">
+                {turfInfo.subscription.map((plan, index) => (
+                  <div
+                    key={plan._id}
+                    className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="text-lime-400 font-bold">
+                          {plan.days === 15 ? '15 Days Plan' :
+                            plan.days === 30 ? 'Monthly Plan' :
+                              plan.days === 45 ? '45 Days Plan' :
+                                `${plan.days} Days Plan`}
+                        </h4>
+                        <p className="text-gray-300 text-sm">{plan.description || 'Premium subscription plan'}</p>
+                      </div>
+                      <span className="bg-lime-500/10 text-lime-400 px-3 py-1 rounded-full text-sm font-medium">
+                        ₹{plan.amount}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null
+        }
         {/* Sports Section */}
         <div className="mt-8">
           <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
