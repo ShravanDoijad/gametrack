@@ -10,7 +10,7 @@ const Owner = require("../models/owner-model");
 const admin = require("../firebase/firebase-admin");
 const Notification = require('../models/notification-model');
 const cron = require("node-cron");
-const { sendMessage, OwnerUpdate } = require("../twilio/sendMessage");
+const { sendMessage, OwnerUpdate, UserSubscriptionUpdate, OwnerSubscriptionUpdate } = require("../twilio/sendMessage");
 const bookingModel = require("../models/booking-model");
 const subscriptionModel = require('../models/subscription-model')
 const razorpay = new Razorpay({
@@ -271,7 +271,6 @@ const updateSubscriptionSlots = async (turfId, subscriptionDetails) => {
       }
     };
 
-    // Add the new subscription slot to the array
     turf.subscriptionSlots.push(newSubscriptionSlot);
 
     // Save the updated turf document
@@ -315,6 +314,7 @@ const updateTurfBookedSlots = async (turfId, bookingDetails) => {
 };
 const verifyOrder = async (req, res) => {
   try {
+    const {data:user, role} = req.auth
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -324,8 +324,20 @@ const verifyOrder = async (req, res) => {
     } = req.body;
 
     console.log(subscriptionDetails)
+    const userId = user._id || details.userId;
+
 
     const details = subscriptionDetails ? subscriptionDetails : bookingDetails
+
+    const userData = await User.findById(userId);
+
+    console.log("user", userData)
+
+    const turf = await turfModel
+      .findById(details.turfId)
+      .populate("owner", "fcmTokens turfname phone");
+
+      const turfName = turf?.owner?.turfname || "your turf";
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -342,11 +354,10 @@ const verifyOrder = async (req, res) => {
 
     if (!subscriptionDetails) {
       await updateTurfBookedSlots(details.turfId, details);
-    } 
-      await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
-   
+    }
+    await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
 
-    const userId = req.auth?.data?._id || details.userId || details.userId;
+
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -364,47 +375,41 @@ const verifyOrder = async (req, res) => {
         sport: subscriptionDetails.sport,
         durationDays: subscriptionDetails.durationDays,
         amountPaid: subscriptionDetails.advanceAmount,
-        totalAmount:subscriptionDetails.totalAmount,
+        totalAmount: subscriptionDetails.totalAmount,
         razorpay_payment_id,
         razorpay_order_id,
         paymentType: subscriptionDetails.paymentType,
         status: "confirmed",
         reminderSent: false,
       });
-    }else{
+    } else {
 
-    newBooking = await Booking.create({
-      turfId: bookingDetails.turfId,
-      userId,
-      date: bookingDetails.date,
-      slots: bookingDetails.slots,
-      sport: bookingDetails.sport,
-      slotFees: bookingDetails.slotFees,
-      amountPaid: bookingDetails.amount,
-      razorpay_payment_id,
-      razorpay_order_id,
-      paymentType: bookingDetails.paymentType,
-      status: "confirmed",
-      reminderSent: false,
-    });
+      newBooking = await Booking.create({
+        turfId: bookingDetails.turfId,
+        userId,
+        date: bookingDetails.date,
+        slots: bookingDetails.slots,
+        sport: bookingDetails.sport,
+        slotFees: bookingDetails.slotFees,
+        amountPaid: bookingDetails.amount,
+        razorpay_payment_id,
+        razorpay_order_id,
+        paymentType: bookingDetails.paymentType,
+        status: "confirmed",
+        reminderSent: false,
+      });
     }
-    const user = await User.findById(userId);
-
-    const turf = await turfModel
-      .findById(details.turfId)
-      .populate("owner", "fcmTokens turfname phone");
-
+    
     if (!subscriptionDetails) {
 
       const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
-      const turfName = turf?.owner?.turfname || "your turf";
 
 
 
       await sendMessage({
-        phoneNumber: user.phone,
+        phoneNumber: userData.phone,
         notification_data: {
-          name: user.fullname.split(" ")[0],               // {{1}}
+          name: userData.fullname.split(" ")[0],               // {{1}}
           turfName: turfName,                              // {{2}}
           date: bookingDetails.date,                       // {{3}}
           time: slotTimeText,                              // {{4}}
@@ -418,20 +423,20 @@ const verifyOrder = async (req, res) => {
 
       await OwnerUpdate({
         phoneNumber: turf.owner.phone,
-
         notification_data: {
-          status: newBooking.status,
-          name: turf.owner.fullname.split(" ")[0],
-          turfName: turfName,
+          user: userData.fullname,
+          phone: userData.phone,
           date: bookingDetails.date,
-          time: slotTimeText,
+          slotStart: newBooking.slot.start,
+          slotEnd: newBooking.slot.end,
+          duration: newBooking.slot.duration, // e.g., "1" or "90"
           sport: newBooking.sport,
-          user: user.fullname,
-          phone: user.phone,
+          total: newBooking.slotFees,
           advance: newBooking.amountPaid,
           remained: newBooking.status === "cancelled" ? 0 : (newBooking.slotFees - newBooking.amountPaid)
         }
       });
+
 
 
 
@@ -457,7 +462,47 @@ const verifyOrder = async (req, res) => {
         }),
       ]);
     }
-    subscriptionDetails && await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
+    else if(subscriptionDetails){
+      
+     await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
+      await UserSubscriptionUpdate({
+  phoneNumber: userData.phone,
+  notification_data: {
+    name: userData.fullname,
+    turfName: turf.name,
+    fromDate: subscriptionDetails.fromDate,
+    toDate: subscriptionDetails.toDate,
+    totalDays:subscriptionDetails.durationDays,
+    slotStart: subscriptionDetails.slot.start,
+    slotEnd: subscriptionDetails.slot.end,
+    duration: subscriptionDetails.slot.duration,
+    sport: subscriptionDetails.sport,
+    total: subscriptionDetails.totalAmount,
+    advance: subscriptionDetails.advanceAmount,
+    remaining: subscriptionDetails.totalAmount - subscriptionDetails.advanceAmount
+  }
+});
+
+await OwnerSubscriptionUpdate({
+  phoneNumber: turf.owner.phone,
+  notification_data: {
+    user: userData.fullname,
+    userPhone: userData.phone,
+    fromDate: subscriptionDetails.fromDate,
+    toDate: subscriptionDetails.toDate,
+    totalDays:subscriptionDetails.durationDays,
+    slotStart: subscriptionDetails.slot.start,
+    slotEnd: subscriptionDetails.slot.end,
+    duration: subscriptionDetails.slot.duration,
+    total: subscriptionDetails.totalAmount,
+    advance: subscriptionDetails.advanceAmount,
+    remaining: subscriptionDetails.totalAmount - subscriptionDetails.advanceAmount
+  }
+});
+
+
+
+    }
     return res.status(200).json({
       success: true,
       message: "Payment verified and booking confirmed",

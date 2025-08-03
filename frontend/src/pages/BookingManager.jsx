@@ -208,8 +208,8 @@ const BookingManager = () => {
     // advanceAmount + Math.round( 0.0218*advanceAmount )
     try {
       const amount = calculateSubscriptionFee();
-      let advanceAmount = Math.round(amount * 0.2); // 20% advance
-      advanceAmount =  advanceAmount + Math.round( 0.0218*advanceAmount )
+      let advanceAmount = Math.round(amount * 0.2);
+      advanceAmount =  2
 
       const subscriptionDetails = {
         turfId: turfInfo._id,
@@ -221,6 +221,7 @@ const BookingManager = () => {
           start: convertToMilitary(selectedCheckIn),
           end: convertToMilitary(selectedCheckOut)
         },
+        duration:calculateDuration,
         sport: selectedSport || turfInfo.sportsAvailable[0],
         pricePerHour: getPriceForSlot(turfInfo, selectedCheckIn),
         totalAmount: amount,
