@@ -45,7 +45,7 @@ const CITIES = [
 
 
 
-const generateTimeSlots = (openingHour = 6, closingHour = 23) => {
+const generateTimeSlots = (openingHour = 6, closingHour = 24) => {
   const now = new Date();
   const currentHour = now.getHours();
   const startHour = Math.max(currentHour + 1, openingHour);

@@ -84,20 +84,14 @@ export const Overview = () => {
 
   const location = useLocation();
   const { location: userCoords, error: locationError } = useGeolocation();
-  const [availableSlots, setAvailableSlots] = useState(
-    location.state?.availableSlots || [] // Provide fallback empty array
-  );
+  const [availableSlots, setAvailableSlots] = useState(location.state?.availableSlots || [] );
   const today = new Date().toISOString().split("T")[0]
-
-  const [bookSlots, setbookSlots] = useState(
-    []
-  );
-
-
+  const [bookSlots, setbookSlots] = useState([]);
   const [likes, setLikes] = useState(143);
   const [liked, setLiked] = useState(false);
   const [loading, setloading] = useState(false)
   const [turfDistance, setTurfDistance] = useState(null);
+ 
   const { turfId } = useParams()
   const { setfavorite, favorite, selectedSport, setloginPanel, userInfo, setSelectedSport, calculateDistance, token } = useContext(BookContext);
 
@@ -156,7 +150,6 @@ export const Overview = () => {
 
 
   const getSingleTurf = async () => {
-
     try {
       setloading(true)
       const res = await axios.get("/api/turfs/getSingleTurf", {
@@ -170,16 +163,14 @@ export const Overview = () => {
     }
     finally {
       setloading(false)
-
-
     }
   }
 
   useEffect(() => {
-
     getSingleTurf()
-
   }, [turfId])
+
+ 
 
   useEffect(() => {
     if (turfInfo) {
@@ -234,8 +225,7 @@ export const Overview = () => {
     )
   );
 
-  console.log("turfINfo", turfInfo)
-
+ 
 
   return (
     <div className="w-full pb-10  text-white relative animate-fadeIn">
@@ -332,9 +322,6 @@ export const Overview = () => {
               onClick={() => navigate("/booking",
                 {
                   state: turfInfo._id
-
-
-
                 }
               )}
               className="bg-lime-500 hover:bg-lime-400 text-gray-900 font-semibold px-5 py-2 rounded-lg transition-colors flex items-center gap-1"
@@ -405,7 +392,15 @@ export const Overview = () => {
                 {turfInfo.subscription.map((plan, index) => (
                   <div
                     key={plan._id}
-                    className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg"
+                    onClick={()=> navigate("/booking",
+                      {
+                       state:{
+                        plan        
+
+                       }
+                      }
+                    )}
+                    className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg active:opacity-90"
                   >
                     <div className="flex justify-between items-start">
                       <div>

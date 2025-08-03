@@ -12,6 +12,7 @@ const Notification = require('../models/notification-model');
 const cron = require("node-cron");
 const { sendMessage, OwnerUpdate } = require("../twilio/sendMessage");
 const bookingModel = require("../models/booking-model");
+const subscriptionModel = require('../models/subscription-model')
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
@@ -137,7 +138,7 @@ const userLogout = async (req, res) => {
 };
 
 const createOrder = async (req, res) => {
-  const { amount, receipt, bookingDetails } = req.body;
+  const { amount, receipt, bookingDetails, subscriptionDetails } = req.body;
 
   const options = {
     amount: amount * 100,
@@ -145,63 +146,143 @@ const createOrder = async (req, res) => {
     receipt: receipt,
   };
 
+
   try {
-    const { turfId, userId, date, slots } = bookingDetails;
 
 
-
-
-
-    const existingUserBooking = await Booking.findOne({
-      turfId,
-      userId,
-      date,
-      slots: {
-        $elemMatch: {
-          $or: bookingDetails?.slots.map((slot) => ({
-            start: { $lt: slot.end },
-            end: { $gt: slot.start },
-          })),
+    if (subscriptionDetails) {
+      const { turfId, userId, fromDate, toDate, slot } = subscriptionDetails;
+      const existingUserBooking = await subscriptionModel.findOne({
+        turfId,
+        userId,
+        fromDate,
+        slot: {
+          $elemMatch: {
+            start: { $lt: subscriptionDetails.slot.end },
+            end: { $gt: subscriptionDetails.slot.start }
+          }
         },
-      },
 
-      status: { $ne: "cancelled" },
-    });
 
-    if (existingUserBooking) {
-      return res.status(409).json({
-        success: false,
-        message: "You've already booked one of these slots",
+        // status: { $ne: "cancelled" },
       });
-    }
-    const overlappingBooking = await Booking.findOne({
-      turfId: bookingDetails.turfId,
-      date: bookingDetails.date,
-      slots: {
-        $elemMatch: {
-          $or: bookingDetails.slots.map((slot) => ({
-            start: slot.start,
-            end: slot.end,
-          })),
+
+      if (existingUserBooking) {
+        return res.status(409).json({
+          success: false,
+          message: "You've already booked one of these slots",
+        });
+      }
+
+      const overlappingBooking = await Booking.findOne({
+        turfId: subscriptionDetails.turfId,
+        date: subscriptionDetails.date,
+        slots: {
+          $elemMatch: {
+            start: { $lt: subscriptionDetails.slot.end },
+            end: { $gt: subscriptionDetails.slot.start }
+          }
         },
-      },
-      status: { $ne: "cancelled" },
-    });
-
-    if (overlappingBooking) {
-      return res.status(409).json({
-        success: false,
-        message: "One or more slots are already booked",
+        status: { $ne: "cancelled" },
       });
+
+      if (overlappingBooking) {
+        return res.status(409).json({
+          success: false,
+          message: "One or more slots are already booked",
+        });
+      }
+
+      const order = await razorpay.orders.create(options);
+      return res.json({ order });
+
+    } else {
+      const { turfId, userId, date, slots } = bookingDetails
+
+
+
+
+      const existingUserBooking = await Booking.findOne({
+        turfId,
+        userId,
+        date,
+        slots: {
+          $elemMatch: {
+            $or: bookingDetails?.slots.map((slot) => ({
+              start: { $lt: slot.end },
+              end: { $gt: slot.start },
+            })),
+          },
+        },
+
+        status: { $ne: "cancelled" },
+      });
+
+      if (existingUserBooking) {
+        return res.status(409).json({
+          success: false,
+          message: "You've already booked one of these slots",
+        });
+      }
+      const overlappingBooking = await Booking.findOne({
+        turfId: bookingDetails.turfId,
+        date: bookingDetails.date,
+        slots: {
+          $elemMatch: {
+            $or: bookingDetails.slots.map((slot) => ({
+              start: slot.start,
+              end: slot.end,
+            })),
+          },
+        },
+        status: { $ne: "cancelled" },
+      });
+
+      if (overlappingBooking) {
+        return res.status(409).json({
+          success: false,
+          message: "One or more slots are already booked",
+        });
+      }
+
+      const order = await razorpay.orders.create(options);
+      res.json({ order });
     }
-    const order = await razorpay.orders.create(options);
-    res.json({ order });
   } catch (err) {
     console.log(err);
     res.status(500).json({ error: "Order creation failed" });
   }
 };
+const updateSubscriptionSlots = async (turfId, subscriptionDetails) => {
+  try {
+    const turf = await turfModel.findById(turfId);
+    if (!turf) {
+      throw new Error('Turf not found');
+    }
 
+    // Create new subscription slot object
+    const newSubscriptionSlot = {
+      user: subscriptionDetails.userId, // assuming userId is passed in subscriptionDetails
+      fromDate: subscriptionDetails.fromDate, // "YYYY-MM-DD"
+      toDate: subscriptionDetails.toDate,     // "YYYY-MM-DD"
+      slot: {
+        start: subscriptionDetails.slot.start, // "HH:MM" format
+        end: subscriptionDetails.slot.end     // "HH:MM" format
+      }
+    };
+
+    // Add the new subscription slot to the array
+    turf.subscriptionSlots.push(newSubscriptionSlot);
+
+    // Save the updated turf document
+    const updatedTurf = await turf.save();
+
+    return updatedTurf;
+  } catch (error) {
+    console.error('Error updating subscription slots:', error);
+    throw error;
+  }
+};
 const updateTurfBookedSlots = async (turfId, bookingDetails) => {
   const turf = await turfModel.findById(turfId);
 
@@ -239,7 +320,12 @@ const verifyOrder = async (req, res) => {
       razorpay_payment_id,
       razorpay_signature,
       bookingDetails,
+      subscriptionDetails
     } = req.body;
+
+    console.log(subscriptionDetails)
+
+    const details = subscriptionDetails ? subscriptionDetails : bookingDetails
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -253,17 +339,41 @@ const verifyOrder = async (req, res) => {
         .json({ success: false, message: "Invalid payment signature" });
     }
 
-    await updateTurfBookedSlots(bookingDetails.turfId, bookingDetails);
 
-    const userId = req.auth?.data?._id || bookingDetails.userId;
+    if (!subscriptionDetails) {
+      await updateTurfBookedSlots(details.turfId, details);
+    } 
+      await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
+   
+
+    const userId = req.auth?.data?._id || details.userId || details.userId;
     if (!userId) {
       return res.status(400).json({
         success: false,
         message: "Missing user ID for booking",
       });
     }
+    let newBooking;
+    if (subscriptionDetails) {
+      newBooking = await subscriptionModel.create({
+        turfId: subscriptionDetails.turfId,
+        userId,
+        startDate: subscriptionDetails.fromDate,
+        endDate: subscriptionDetails.toDate,
+        slot: subscriptionDetails.slot,
+        sport: subscriptionDetails.sport,
+        durationDays: subscriptionDetails.durationDays,
+        amountPaid: subscriptionDetails.advanceAmount,
+        totalAmount:subscriptionDetails.totalAmount,
+        razorpay_payment_id,
+        razorpay_order_id,
+        paymentType: subscriptionDetails.paymentType,
+        status: "confirmed",
+        reminderSent: false,
+      });
+    }else{
 
-    const newBooking = await Booking.create({
+    newBooking = await Booking.create({
       turfId: bookingDetails.turfId,
       userId,
       date: bookingDetails.date,
@@ -277,73 +387,77 @@ const verifyOrder = async (req, res) => {
       status: "confirmed",
       reminderSent: false,
     });
+    }
     const user = await User.findById(userId);
 
     const turf = await turfModel
-      .findById(bookingDetails.turfId)
+      .findById(details.turfId)
       .populate("owner", "fcmTokens turfname phone");
 
-    const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
-    const turfName = turf?.owner?.turfname || "your turf";
+    if (!subscriptionDetails) {
+
+      const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
+      const turfName = turf?.owner?.turfname || "your turf";
 
 
 
-    await sendMessage({
-      phoneNumber: user.phone,
-      notification_data: {
-        name: user.fullname.split(" ")[0],               // {{1}}
-        turfName: turfName,                              // {{2}}
-        date: bookingDetails.date,                       // {{3}}
-        time: slotTimeText,                              // {{4}}
-        location: turf.location.city,                          // {{5}} - You need to add this value
-        amount: bookingDetails.slotFees,                 // {{6}}
-        sport: newBooking.sport,                         // {{7}}
-        advance: newBooking.amountPaid,                  // {{8}}
-        remaining: bookingDetails.slotFees - newBooking.amountPaid // {{9}}
-      }
-    });
+      await sendMessage({
+        phoneNumber: user.phone,
+        notification_data: {
+          name: user.fullname.split(" ")[0],               // {{1}}
+          turfName: turfName,                              // {{2}}
+          date: bookingDetails.date,                       // {{3}}
+          time: slotTimeText,                              // {{4}}
+          location: turf.location.city,                          // {{5}} - You need to add this value
+          amount: bookingDetails.slotFees,                 // {{6}}
+          sport: newBooking.sport,                         // {{7}}
+          advance: newBooking.amountPaid,                  // {{8}}
+          remaining: bookingDetails.slotFees - newBooking.amountPaid // {{9}}
+        }
+      });
 
-    await OwnerUpdate({
-      phoneNumber: turf.owner.phone,
+      await OwnerUpdate({
+        phoneNumber: turf.owner.phone,
 
-      notification_data: {
-        status: newBooking.status,
-        name: turf.owner.fullname.split(" ")[0],
-        turfName: turfName,
-        date: bookingDetails.date,
-        time: slotTimeText,
-        sport: newBooking.sport,
-        user: user.fullname,
-        phone: user.phone,
-        advance: newBooking.amountPaid,
-        remained: newBooking.status === "cancelled" ? 0 : (newBooking.slotFees - newBooking.amountPaid)
-      }
-    });
-
-
+        notification_data: {
+          status: newBooking.status,
+          name: turf.owner.fullname.split(" ")[0],
+          turfName: turfName,
+          date: bookingDetails.date,
+          time: slotTimeText,
+          sport: newBooking.sport,
+          user: user.fullname,
+          phone: user.phone,
+          advance: newBooking.amountPaid,
+          remained: newBooking.status === "cancelled" ? 0 : (newBooking.slotFees - newBooking.amountPaid)
+        }
+      });
 
 
-    await Promise.all([
-      Notification.create({
-        user: userId,
-        owner: turf.owner._id,
-        title: "Booking Confirmed",
-        message: `Your booking on ${bookingDetails.date} at ${slotTimeText} is confirmed at ${turfName}`,
-        type: "booking",
-        role: "user",
-        date: new Date(),
-      }),
-      Notification.create({
-        user: userId,
-        owner: turf.owner._id,
-        title: "New Booking Alert",
-        message: `New booking on ${bookingDetails.date} at ${slotTimeText} at ${turfName}`,
-        type: "booking",
-        role: "owner",
-        date: new Date(),
-      }),
-    ]);
 
+
+      await Promise.all([
+        Notification.create({
+          user: userId,
+          owner: turf.owner._id,
+          title: "Booking Confirmed",
+          message: `Your booking on ${bookingDetails.date} at ${slotTimeText} is confirmed at ${turfName}`,
+          type: "booking",
+          role: "user",
+          date: new Date(),
+        }),
+        Notification.create({
+          user: userId,
+          owner: turf.owner._id,
+          title: "New Booking Alert",
+          message: `New booking on ${bookingDetails.date} at ${slotTimeText} at ${turfName}`,
+          type: "booking",
+          role: "owner",
+          date: new Date(),
+        }),
+      ]);
+    }
+    subscriptionDetails && await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
     return res.status(200).json({
       success: true,
       message: "Payment verified and booking confirmed",
@@ -730,7 +844,7 @@ const submitReview = async (req, res) => {
       comment
     });
 
-    userBooking.isReviewed = true; 
+    userBooking.isReviewed = true;
 
     await turf.save();
     await userBooking.save();
@@ -742,6 +856,25 @@ const submitReview = async (req, res) => {
   }
 };
 
+const getSubscriptionSlots = async (req, res) => {
+  try {
+    const { turfId } = req.query
+    const { data: user, role } = req.auth;
+    const turf = await turfModel.findById(turfId)
+    if (!turf) {
+      return res.status(400).json({ message: "Turf Not Found !" })
+    }
+    const subcription = turf.subscriptionSlots.find(s => s.user === user._id)
+    if (!subcription) {
+      return res.status(400).json({ message: "Subcription not Found" })
+    }
+    res.status(200).json(subcription)
+  }
+  catch {
+    res.status(500).json({ message: "Can't get Subcrption" })
+    console.log("unable get subscription", error)
+  }
+}
 
 
 module.exports = {
@@ -759,6 +892,9 @@ module.exports = {
   removeFavoriteTurf,
   getBookedSlots,
   getPendingReviews,
-  submitReview
+  submitReview,
+
+  getSubscriptionSlots
+
 };
 

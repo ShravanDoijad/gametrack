@@ -62,7 +62,19 @@ const TurfSchema = new mongoose.Schema({
   openingTime: String,
   closingTime: String,
   nightPriceStart: String,
-  
+
+  subscriptionSlots: [
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    fromDate: String, // "YYYY-MM-DD"
+    toDate: String,   // calculated based on days
+    slot: {
+      start: String,
+      end: String,
+    },
+  }
+],
+
  
 
   allowAdvancePayment: {
