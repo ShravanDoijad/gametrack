@@ -808,41 +808,41 @@ const getPendingReviews = async (req, res) => {
     // Step 1: Get all bookings of the user
     const bookings = await bookingModel.find({ userId: user._id }).populate("turfId");
 
-    // Step 2: Filter past bookings that don't already have a review
     const pendingReviews = [];
 
     for (let booking of bookings) {
-      console.log("booking", booking)
-      const bookingDate = new Date(booking.date);
-      const [endHour, endMinute] = booking.slots?.end?.split(":").map(Number);
-      bookingDate.setHours(endHour, endMinute);
-
       const turf = booking.turfId;
-
-      // Check if the slot has ended AND the user hasn't reviewed this turf
       const alreadyReviewed = turf.reviews.some(
         (rev) => rev.user.toString() === user._id.toString()
       );
 
-      if (bookingDate < currentTime && !alreadyReviewed) {
-        pendingReviews.push({
-          turfId: turf._id,
-          turfName: turf.name,
-          bookingId: booking._id,
-          bookingDate: booking.date,
-          startTime: booking.slots.start,
-          endTime: booking.slots.end,
-        });
+      // Loop through all slots in this booking
+      for (let slot of booking.slots) {
+        const bookingDateTime = new Date(booking.date);
+        const [endHour, endMinute] = slot.end.split(":").map(Number);
+        bookingDateTime.setHours(endHour, endMinute);
+
+        if (bookingDateTime < currentTime && !alreadyReviewed) {
+          pendingReviews.push({
+            turfId: turf._id,
+            turfName: turf.name,
+            bookingId: booking._id,
+            bookingDate: booking.date,
+            startTime: slot.start,
+            endTime: slot.end,
+          });
+          break; // No need to push multiple entries for the same booking
+        }
       }
     }
 
     return res.status(200).json({ success: true, pendingReviews });
-
   } catch (error) {
     console.error("Error in getPendingReviews:", error);
     return res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
 
 const submitReview = async (req, res) => {
   try {
