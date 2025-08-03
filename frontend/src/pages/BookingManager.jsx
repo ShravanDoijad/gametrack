@@ -107,7 +107,7 @@ const BookingManager = () => {
 
   const handlePayment = async () => {
     try {
-      const amount = 200 * calculateDuration();
+      const amount = 2
 
 
       const bookingDetails = {
@@ -209,8 +209,7 @@ const BookingManager = () => {
     try {
       const amount = calculateSubscriptionFee();
       let advanceAmount = Math.round(amount * 0.2);
-      advanceAmount =  advanceAmount + Math.round( 0.0218*advanceAmount )
-
+      advanceAmount = 2
       const subscriptionDetails = {
         turfId: turfInfo._id,
         userId: userInfo._id,
