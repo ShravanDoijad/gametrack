@@ -209,7 +209,7 @@ const BookingManager = () => {
     try {
       const amount = calculateSubscriptionFee();
       let advanceAmount = Math.round(amount * 0.2);
-      advanceAmount =  2
+      advanceAmount =  advanceAmount + Math.round( 0.0218*advanceAmount )
 
       const subscriptionDetails = {
         turfId: turfInfo._id,
