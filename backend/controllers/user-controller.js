@@ -812,8 +812,9 @@ const getPendingReviews = async (req, res) => {
     const pendingReviews = [];
 
     for (let booking of bookings) {
+      console.log("booking", booking)
       const bookingDate = new Date(booking.date);
-      const [endHour, endMinute] = booking.slots.end.split(":").map(Number);
+      const [endHour, endMinute] = booking.slots?.end?.split(":").map(Number);
       bookingDate.setHours(endHour, endMinute);
 
       const turf = booking.turfId;
