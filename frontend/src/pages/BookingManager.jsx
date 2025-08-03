@@ -120,6 +120,7 @@ const BookingManager = () => {
         }],
         sport: selectedSport || turfInfo.sportsAvailable[0],
         amount: amount,
+        duration: calculateDuration(),
         slotFees: calculateFee(),
         paymentType: paymentOption,
         turfName: turfInfo.name,
@@ -220,7 +221,7 @@ const BookingManager = () => {
           start: convertToMilitary(selectedCheckIn),
           end: convertToMilitary(selectedCheckOut)
         },
-        duration:calculateDuration,
+        duration: calculateDuration(),
         sport: selectedSport || turfInfo.sportsAvailable[0],
         pricePerHour: getPriceForSlot(turfInfo, selectedCheckIn),
         totalAmount: amount,

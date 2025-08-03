@@ -427,9 +427,9 @@ const verifyOrder = async (req, res) => {
           user: userData.fullname,
           phone: userData.phone,
           date: bookingDetails.date,
-          slotStart: newBooking.slot.start,
-          slotEnd: newBooking.slot.end,
-          duration: newBooking.slot.duration, // e.g., "1" or "90"
+          slotStart: newBooking.slots.start,
+          slotEnd: newBooking.slots.end,
+          duration: newBooking.duration, // e.g., "1" or "90"
           sport: newBooking.sport,
           total: newBooking.slotFees,
           advance: newBooking.amountPaid,
