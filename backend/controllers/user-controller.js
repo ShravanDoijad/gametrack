@@ -355,9 +355,8 @@ const verifyOrder = async (req, res) => {
     if (!subscriptionDetails) {
       await updateTurfBookedSlots(details.turfId, details);
     }
-    await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
-
-
+    
+    
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -366,6 +365,7 @@ const verifyOrder = async (req, res) => {
     }
     let newBooking;
     if (subscriptionDetails) {
+      await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
       newBooking = await subscriptionModel.create({
         turfId: subscriptionDetails.turfId,
         userId,
