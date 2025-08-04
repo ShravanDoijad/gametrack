@@ -102,7 +102,7 @@ export const Turfs = () => {
     let allSlots = []; 
     let results = [...turfs];
 
-    // results = results.filter((turf)=>turf.owner !== "6888b4240c7965c5e42f9e10" )
+    results = results.filter((turf)=>turf.owner !== "6888b4240c7965c5e42f9e10" )
    
   if (selectedSport && results.length>0) {
     results = results.filter((turf) =>

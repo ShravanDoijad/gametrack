@@ -107,7 +107,7 @@ const BookingManager = () => {
 
   const handlePayment = async () => {
     try {
-      const amount = 2
+      const amount= 200* Math.round(calculateDuration())
 
 
       const bookingDetails = {
@@ -206,11 +206,11 @@ const BookingManager = () => {
   };
 
   const addSubscription = async () => {
-    // advanceAmount + Math.round( 0.0218*advanceAmount )
+    
     try {
       const amount = calculateSubscriptionFee();
       let advanceAmount = Math.round(amount * 0.2);
-      advanceAmount = 2
+      advanceAmount = advanceAmount + advanceAmount * 0.0218
       const subscriptionDetails = {
         turfId: turfInfo._id,
         userId: userInfo._id,
@@ -521,6 +521,7 @@ const BookingManager = () => {
           selectedSport={selectedSport}
           calculateFee={isSubscription ? calculateSubscriptionFee : calculateFee}
           isSubscription={isSubscription}
+        
           plan={plan}
           dateRange={dateRange}
         />
