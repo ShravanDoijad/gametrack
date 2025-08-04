@@ -21,7 +21,7 @@ const BookingConfirmationForm = ({
   isSubscription,
   plan,
   addSubscription,
-    calculateDuration,
+  
   dateRange
 }) => {
 
@@ -35,7 +35,7 @@ const BookingConfirmationForm = ({
   const totalAmount = isSubscription ? calculateSubscriptionFee() : calculateFee();
   return isSubscription
     ? Math.round(totalAmount * 0.2)
-    : 200 * Math.round(calculateDuration());
+    : 200 * Math.floor(calculateDuration());
 };
 
   const calculatePlatformFees = () => {

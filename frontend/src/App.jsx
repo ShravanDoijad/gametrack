@@ -32,7 +32,7 @@ function App() {
   const { loginPanel, token, userInfo, isLoading, hasCheckedAuth } = useContext(BookContext);
   const [showSplash, setShowSplash] = useState(true);
   const [pendingReviews, setpendingReviews] = useState([])
-
+  const navigate = useNavigate()
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);

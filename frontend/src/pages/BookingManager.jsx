@@ -107,7 +107,7 @@ const BookingManager = () => {
 
   const handlePayment = async () => {
     try {
-      const amount= 200* Math.round(calculateDuration())
+      const amount= 200* Math.floor(calculateDuration())
 
 
       const bookingDetails = {
