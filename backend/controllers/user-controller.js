@@ -314,7 +314,7 @@ const updateTurfBookedSlots = async (turfId, bookingDetails) => {
 };
 const verifyOrder = async (req, res) => {
   try {
-    const {data:user, role} = req.auth
+    const { data: user, role } = req.auth
     const {
       razorpay_order_id,
       razorpay_payment_id,
@@ -323,7 +323,7 @@ const verifyOrder = async (req, res) => {
       subscriptionDetails
     } = req.body;
 
-    console.log(subscriptionDetails)
+    console.log("bookingDetails", bookingDetails)
     const userId = user._id || details.userId;
 
 
@@ -337,7 +337,7 @@ const verifyOrder = async (req, res) => {
       .findById(details.turfId)
       .populate("owner", "fcmTokens turfname phone");
 
-      const turfName = turf?.owner?.turfname || "your turf";
+    const turfName = turf?.owner?.turfname || "your turf";
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -355,8 +355,8 @@ const verifyOrder = async (req, res) => {
     if (!subscriptionDetails) {
       await updateTurfBookedSlots(details.turfId, details);
     }
-    
-    
+
+
     if (!userId) {
       return res.status(400).json({
         success: false,
@@ -399,25 +399,26 @@ const verifyOrder = async (req, res) => {
         reminderSent: false,
       });
     }
-    
+
     if (!subscriptionDetails) {
 
       const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
 
 
 
+
       await sendMessage({
         phoneNumber: userData.phone,
         notification_data: {
-          name: userData.fullname.split(" ")[0],               // {{1}}
-          turfName: turfName,                              // {{2}}
-          date: bookingDetails.date,                       // {{3}}
-          time: slotTimeText,                              // {{4}}
-          location: turf.location.city,                          // {{5}} - You need to add this value
-          amount: bookingDetails.slotFees,                 // {{6}}
-          sport: newBooking.sport,                         // {{7}}
-          advance: newBooking.amountPaid,                  // {{8}}
-          remaining: bookingDetails.slotFees - newBooking.amountPaid // {{9}}
+          name: userData.fullname.split(" ")[0],               
+          turfName: turfName,                                 
+          date: new Date(bookingDetails.date).toDateString(),                           
+          time: slotTimeText,                                  
+          location: turf.location.city,                        
+          amount:bookingDetails.slotFees,             
+          sport: bookingDetails.sport,                         
+          advance: bookingDetails.amount,              
+          remaining: bookingDetails.slotFees - bookingDetails.amount 
         }
       });
 
@@ -426,16 +427,21 @@ const verifyOrder = async (req, res) => {
         notification_data: {
           user: userData.fullname,
           phone: userData.phone,
-          date: bookingDetails.date,
-          slotStart: newBooking.slots.start,
-          slotEnd: newBooking.slots.end,
-          duration: newBooking.duration, // e.g., "1" or "90"
-          sport: newBooking.sport,
-          total: newBooking.slotFees,
-          advance: newBooking.amountPaid,
-          remained: newBooking.status === "cancelled" ? 0 : (newBooking.slotFees - newBooking.amountPaid)
+          date: new Date(bookingDetails.date).toDateString(),
+          slotStart: bookingDetails.slots[0].start,
+          slotEnd: bookingDetails.slots[0].end,
+          duration: bookingDetails.duration,
+          sport: bookingDetails.sport,
+          total: bookingDetails.slotFees,             
+          advance: bookingDetails.amount,            
+          remained:
+            bookingDetails.status === "cancelled"
+              ? 0
+              : bookingDetails.slotFees - bookingDetails.amount
+          
         }
       });
+
 
 
 
@@ -462,43 +468,44 @@ const verifyOrder = async (req, res) => {
         }),
       ]);
     }
-    else if(subscriptionDetails){
-      
-     await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
-      await UserSubscriptionUpdate({
-  phoneNumber: userData.phone,
-  notification_data: {
-    name: userData.fullname,
-    turfName: turf.name,
-    fromDate: subscriptionDetails.fromDate,
-    toDate: subscriptionDetails.toDate,
-    totalDays:subscriptionDetails.durationDays,
-    slotStart: subscriptionDetails.slot.start,
-    slotEnd: subscriptionDetails.slot.end,
-    duration: subscriptionDetails.slot.duration,
-    sport: subscriptionDetails.sport,
-    total: subscriptionDetails.totalAmount,
-    advance: subscriptionDetails.advanceAmount,
-    remaining: subscriptionDetails.totalAmount - subscriptionDetails.advanceAmount
-  }
-});
+    else if (subscriptionDetails) {
 
-await OwnerSubscriptionUpdate({
-  phoneNumber: turf.owner.phone,
-  notification_data: {
-    user: userData.fullname,
-    userPhone: userData.phone,
-    fromDate: subscriptionDetails.fromDate,
-    toDate: subscriptionDetails.toDate,
-    totalDays:subscriptionDetails.durationDays,
-    slotStart: subscriptionDetails.slot.start,
-    slotEnd: subscriptionDetails.slot.end,
-    duration: subscriptionDetails.slot.duration,
-    total: subscriptionDetails.totalAmount,
-    advance: subscriptionDetails.advanceAmount,
-    remaining: subscriptionDetails.totalAmount - subscriptionDetails.advanceAmount
-  }
-});
+      await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
+      await UserSubscriptionUpdate({
+        phoneNumber: userData.phone,
+        notification_data: {
+          name: userData.fullname,
+          turfName: turf.name,
+          fromDate: new Date(subscriptionDetails.fromDate).toDateString(),
+          toDate: new Date(subscriptionDetails.toDate).toDateString(),
+          totalDays: subscriptionDetails.durationDays,
+          slotStart: subscriptionDetails.slot.start,
+          slotEnd: subscriptionDetails.slot.end,
+          duration: subscriptionDetails.slot.duration,
+          sport: subscriptionDetails.sport,
+          total: subscriptionDetails.totalAmount,
+          advance: subscriptionDetails.advanceAmount,
+          remaining: subscriptionDetails.totalAmount - subscriptionDetails.advanceAmount
+        }
+      });
+
+      await OwnerSubscriptionUpdate({
+        phoneNumber: turf.owner.phone,
+        notification_data: {
+          user: userData.fullname,
+          userPhone: userData.phone,
+          fromDate: new Date(subscriptionDetails.fromDate).toDateString(),
+          toDate: new Date(subscriptionDetails.toDate).toDateString(),
+          totalDays: subscriptionDetails.durationDays,
+          slotStart: subscriptionDetails.slot.start,
+          slotEnd: subscriptionDetails.slot.end,
+          duration: subscriptionDetails.slot.duration,
+          total: subscriptionDetails.totalAmount,
+          advance: subscriptionDetails.advanceAmount,
+          remaining: subscriptionDetails.totalAmount - subscriptionDetails.advanceAmount
+        }
+      });
+
 
 
 

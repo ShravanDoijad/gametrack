@@ -494,7 +494,8 @@ const BookingManager = () => {
         </div>
       )}
       <DatePick next7Days={next7Days} selectedDate={selectedDate} handleDateSelect={handleDateSelect} showCalendar={showCalendar}
-        setShowCalendar={setShowCalendar} />
+        setShowCalendar={setShowCalendar} customDate={customDate} />
+
       {selectedDate && showSlotPopup && !selectedCheckIn && (
         <SelectCheckIn filteredCheckinTimes={filteredCheckinTimes} selectedCheckIn={selectedCheckIn} selectedDate={selectedDate} handleCheckIn={handleCheckIn} turfInfo={turfInfo._id} availableTimes={availableTimes} getSingleTurf={getSingleTurf} />
       )}

@@ -4,7 +4,7 @@ import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css";
 import { CalendarDays, Calendar, Clock3 } from "lucide-react";
 
-const DatePick = ({next7Days, handleDateSelect, selectedDate, showCalendar, setShowCalendar }) => {
+const DatePick = ({next7Days, handleDateSelect, selectedDate, showCalendar, setShowCalendar, customDate }) => {
   return (
     <>
     <div className="flex gap-3 flex-wrap pb-2">
