@@ -31,10 +31,12 @@ const BookingConfirmationForm = ({
     return hoursPerDay * plan?.amount;
   };
 
-  const calculateAdvanceAmount = () => {
-    const totalAmount = isSubscription ? calculateSubscriptionFee() : calculateFee();
-    return isSubscription? Math.round(totalAmount * 0.2): 200*Math.round(calculateDuration());
-  };
+ const calculateAdvanceAmount = () => {
+  const totalAmount = isSubscription ? calculateSubscriptionFee() : calculateFee();
+  return isSubscription
+    ? Math.round(totalAmount * 0.2)
+    : 200 * Math.round(calculateDuration());
+};
 
   const calculatePlatformFees = () => {
     if (!isSubscription) return 0;
