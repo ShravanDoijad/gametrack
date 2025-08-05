@@ -134,6 +134,10 @@ export const Overview = () => {
     }
   }, [turfInfo, userCoords]);
 
+  if(selectedSport== "football"){
+
+  }
+
 
   const handleDoubleTap = () => {
     const now = Date.now();
@@ -177,7 +181,6 @@ export const Overview = () => {
       localStorage.setItem("selectedTurf", turfInfo._id);
     }
   }, [turfInfo]);
-
 
   const handleFavorite = async () => {
     if (!token) {
@@ -396,7 +399,6 @@ export const Overview = () => {
                       {
                        state:{
                         plan        
-
                        }
                       }
                     )}

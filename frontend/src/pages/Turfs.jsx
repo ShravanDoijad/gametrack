@@ -43,8 +43,6 @@ const CITIES = [
 ];
 
 
-
-
 const generateTimeSlots = (openingHour = 6, closingHour = 24) => {
   const now = new Date();
   const currentHour = now.getHours();
@@ -91,7 +89,7 @@ export const Turfs = () => {
     fetchTurfs();
   }, []);
 
-  
+
 
   const timeSlots = generateTimeSlots();
 

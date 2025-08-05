@@ -1,3 +1,4 @@
+const Owner = require("../models/owner-model")
 const Turf = require("../models/turf-model")
 
 const getAllTurfs = async(req, res)=>{
@@ -22,8 +23,25 @@ const getSingleTurf = async (req, res)=>{
         
     }
 }
+const getSiblingTurf = async (req,res) => {
+  try {
+    const {turfId} = req.query;
+
+    const turf = await Turf.findById(turfId)
+    const owner = await Owner.findById(turf.owner).populate("turfIds")
+    if(!owner){
+        return res.status(400).json("Owner Not Found")
+    }
+   
+    res.status(200).json({turfs: owner.turfIds})
+  } catch (error) {
+    console.log("Can't fetch turfs", error)
+    res.status(500).json({message:"Can't fetch the Turfs"})
+  }
+}
 
 module.exports={
     getAllTurfs,
-    getSingleTurf
+    getSingleTurf,
+    getSiblingTurf
 }

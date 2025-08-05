@@ -48,6 +48,7 @@ const BookingManager = () => {
   const [loading, setloading] = useState(false)
   const [plan, setplan] = useState(location.state.plan);
   const [subscription, setsubscription] = useState()
+  const [siblingTurfs, setsiblingTurfs] = useState([])
   const isSubscription = plan?.days > 0;
 
 
@@ -104,10 +105,28 @@ const BookingManager = () => {
 
   const next7Days = getNext7Days();
 
+  const getSiblingTurf = async () => {
+    try {
+      const response = await axios.get("api/turfs/getSiblingTurf", {
+        params: { turfId: localStorage.getItem("selectedTurf") }
+      })
+
+      setsiblingTurfs(response.data.turfs)
+    } catch (error) {
+      console.log(error)
+      toast.error(error.response?.data?.message || "Internal server Error")
+    }
+  }
+
+  useEffect(() => {
+    getSiblingTurf()
+  }, [])
+
+
 
   const handlePayment = async () => {
     try {
-      const amount= 200* Math.floor(calculateDuration())
+      const amount = 200 * Math.floor(calculateDuration())
 
 
       const bookingDetails = {
@@ -199,14 +218,14 @@ const BookingManager = () => {
 
 
   const calculateSubscriptionFee = () => {
-  
+
     const hoursPerDay = calculateDuration();
-   
+
     return hoursPerDay * plan?.amount;
   };
 
   const addSubscription = async () => {
-    
+
     try {
       const amount = calculateSubscriptionFee();
       let advanceAmount = Math.round(amount * 0.2);
@@ -230,56 +249,56 @@ const BookingManager = () => {
       };
 
       setloading(true);
-        const paymentRes = await axios.post("/api/users/createOrder", {
-          amount: advanceAmount,
-          currency: "INR",
-          receipt: `subscription_advance_${Date.now()}`,
-          subscriptionDetails: subscriptionDetails
-        });
-        console.log("paymentRes", paymentRes)
-        
-        const { order } = paymentRes.data;
-        const options = {
-          key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-          amount: order.amount,
-          currency: "INR",
-          name: `${turfInfo.name} Subscription (Advance)`,
-          description: `Subscription advance for ${selectedSport || turfInfo.sportsAvailable[0]}`,
-          order_id: order.id,
-          handler: async function (response) {
-            try {
-              const verifyRes = await axios.post("/api/users/verifyPayment", {
-                userId: userInfo._id,
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                subscriptionDetails: subscriptionDetails,
-              });
-              if (verifyRes.data.success) {
-                toast.success("Subscription Advance Paid!");
-                setShowFormPopup(false);
-                navigate("/subscriptions");
-              } else {
-                toast.error("Payment Failed");
-              }
-            } catch (err) {
-              console.error(err);
-              toast.warning("Payment verification error");
-            } finally {
-              setloading(false);
+      const paymentRes = await axios.post("/api/users/createOrder", {
+        amount: advanceAmount,
+        currency: "INR",
+        receipt: `subscription_advance_${Date.now()}`,
+        subscriptionDetails: subscriptionDetails
+      });
+      console.log("paymentRes", paymentRes)
+
+      const { order } = paymentRes.data;
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: "INR",
+        name: `${turfInfo.name} Subscription (Advance)`,
+        description: `Subscription advance for ${selectedSport || turfInfo.sportsAvailable[0]}`,
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            const verifyRes = await axios.post("/api/users/verifyPayment", {
+              userId: userInfo._id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              subscriptionDetails: subscriptionDetails,
+            });
+            if (verifyRes.data.success) {
+              toast.success("Subscription Advance Paid!");
+              setShowFormPopup(false);
+              navigate("/subscriptions");
+            } else {
+              toast.error("Payment Failed");
             }
-          },
-          prefill: {
-            name: userInfo.fullname,
-            contact: userInfo.phone
-          },
-          theme: {
-            color: "#00ff87",
-          },
-        };
-        const rzp = new window.Razorpay(options);
-        rzp.open();
-      
+          } catch (err) {
+            console.error(err);
+            toast.warning("Payment verification error");
+          } finally {
+            setloading(false);
+          }
+        },
+        prefill: {
+          name: userInfo.fullname,
+          contact: userInfo.phone
+        },
+        theme: {
+          color: "#00ff87",
+        },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+
     } catch (error) {
       console.error("Handling Subscription Error: ", error);
       toast.error(error.response?.data?.message || "Internal server error");
@@ -351,10 +370,17 @@ const BookingManager = () => {
 
 
     const dateStr = selectedDate.toISOString().split('T')[0];
+    let bookedForDate = [];
 
-
-    const bookedForDate = turfInfo.bookedSlots.find(slot => slot.date === dateStr);
-
+    if (siblingTurfs.length > 1 && selectedSport === "football") {
+      bookedForDate = siblingTurfs
+        .flatMap(turf => turf.bookedSlots)
+        .filter(entry => entry.date === dateStr)
+        .flatMap(entry => entry.slots);
+    } else {
+      const match = turfInfo?.bookedSlots.find(slot => slot.date === dateStr);
+      bookedForDate = match?.slots || [];
+    }
 
 
     if (!bookedForDate) {
@@ -366,7 +392,7 @@ const BookingManager = () => {
     const availableSlots = filteredSlots.filter(slot => {
       const slotTime = timeStringToMinutes(slot.military);
 
-      return !bookedForDate.slots.some(bookedSlot => {
+      return !bookedForDate?.some(bookedSlot => {
         const start = timeStringToMinutes(bookedSlot.start);
         const end = timeStringToMinutes(bookedSlot.end);
         return slotTime >= start && slotTime < end;
@@ -376,12 +402,12 @@ const BookingManager = () => {
     console.log("✅ Available slots after filter:", availableSlots);
 
     setavailableCheckoutSlots(filteredSlots.filter(slot => {
-      return !bookedForDate.slots.some(bookedSlot =>
+      return !bookedForDate.some(bookedSlot =>
         slot.military > bookedSlot.start && slot.military < bookedSlot.end
       );
     }))
     console.log("chcekout", filteredSlots.filter(slot => {
-      return !bookedForDate.slots.some(bookedSlot =>
+      return !bookedForDate.some(bookedSlot =>
 
         slot.military > bookedSlot.start && slot.military < bookedSlot.end
       );
@@ -484,7 +510,7 @@ const BookingManager = () => {
     };
   }, [selectedDate, plan?.days]);
 
-  
+
   return (
     <div className="px-6 pb-24 text-white font-sans">
       <h2 className="font-bold text-2xl sora mb-4">Schedule Your Game</h2>
@@ -504,8 +530,8 @@ const BookingManager = () => {
         <SelectCheckOut selectedCheckIn={convertToMilitary(selectedCheckIn)} selectedCheckOut={selectedCheckOut} allSlots={allSlots} selectedDate={selectedDate} handleCheckOut={handleCheckOut} getSingleTurf={getSingleTurf} />
       )}
 
-        {showFormPopup && (
-        <BookingConfirmationForm 
+      {showFormPopup && (
+        <BookingConfirmationForm
           turfInfo={turfInfo}
           selectedDate={selectedDate}
           selectedCheckIn={selectedCheckIn}
@@ -522,7 +548,7 @@ const BookingManager = () => {
           selectedSport={selectedSport}
           calculateFee={isSubscription ? calculateSubscriptionFee : calculateFee}
           isSubscription={isSubscription}
-        
+
           plan={plan}
           dateRange={dateRange}
         />
