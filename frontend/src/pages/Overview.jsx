@@ -430,7 +430,7 @@ export const Overview = () => {
             <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
             Sports Available
           </h3>
-          <div className="flex justify-between gap-2">
+          <div className="flex gap-2">
             {sports.map((sport) => (
               <button
                 key={sport.id}
