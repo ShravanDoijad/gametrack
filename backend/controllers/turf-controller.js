@@ -15,8 +15,7 @@ const getSingleTurf = async (req, res)=>{
     try {
         const {id} = req.query 
         const turf = await Turf.findById(id);
-         res.status(200).json({turf:turf})
-        
+         res.status(200).json({turf:turf})       
     } catch (error) {
         console.log("can't get turf",error )
         res.status(500).json({message:"Internal Server error", error: error})
@@ -25,8 +24,7 @@ const getSingleTurf = async (req, res)=>{
 }
 const getSiblingTurf = async (req,res) => {
   try {
-    const {turfId} = req.query;
-
+    const {turfId} = req.query
     const turf = await Turf.findById(turfId)
     const owner = await Owner.findById(turf.owner).populate("turfIds")
     if(!owner){

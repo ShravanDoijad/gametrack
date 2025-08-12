@@ -9,10 +9,14 @@ const bookingSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+    default: null,
+  },
+  walkInPhone: {
+    type: String,
+
   },
   date: {
-    type: String, // Store as "YYYY-MM-DD"
+    type: String,
     required: true,
   },
   slotFees: {

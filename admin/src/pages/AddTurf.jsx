@@ -41,7 +41,7 @@ const AddTurf = () => {
     openingTime: "",
     closingTime: "",
     nightPriceStart: "",
-    allowAdvancePayment: true,
+    allowAdvancePayment: "",
     allowFullPaymentOnly: false,
     allowTournaments: false,
     amenities: [],
@@ -222,7 +222,7 @@ const AddTurf = () => {
           openingTime: "",
           closingTime: "",
           nightPriceStart:"",
-          allowAdvancePayment: true,
+          allowAdvancePayment: "",
           allowFullPaymentOnly: false,
           allowTournaments: false,
           amenities: [],
@@ -430,14 +430,15 @@ const AddTurf = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <label className="inline-flex items-center">
                   <input
-                    type="checkbox"
+                    type="Number"
                     name="allowAdvancePayment"
-                    checked={form.allowAdvancePayment}
+                    value={form.allowAdvancePayment}
                     onChange={handleChange}
-                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    placeholder="₹ 100"
+                    className="h-8 w-20 p-2 outline-1 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                   />
                   <span className="ml-2 text-sm text-gray-700">
-                    Allow Advance Payment
+                     Advance Payment (₹)
                   </span>
                 </label>
                 <label className="inline-flex items-center">

@@ -126,7 +126,8 @@ const BookingManager = () => {
 
   const handlePayment = async () => {
     try {
-      const amount = 200 * Math.floor(calculateDuration())
+      console.log("turfInfo", turfInfo.allowAdvancePayment)
+      const amount = parseInt(turfInfo.allowAdvancePayment)* Math.floor(calculateDuration())
 
 
       const bookingDetails = {
@@ -454,23 +455,6 @@ const BookingManager = () => {
 
 
   }, [])
-
-  // useEffect(async()=>{
-  //   if(turfInfo.subscriptionSlots.length>0){
-  //   try{
-
-  //     const res = await axios.get("/api/users/getSubscription",{
-  //       turfId:turfInfo._id
-  //     })
-  //     setsubscription(res.data.subscription)
-  //   }
-  //   catch(error){
-
-  //     toast.error(error.response.data.message || "Internal Server Error")
-  //   }}
-  // }, [turfInfo])
-
-
 
 
 

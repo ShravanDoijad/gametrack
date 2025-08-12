@@ -48,9 +48,7 @@ const addTurf = async (req, res) => {
   try {
     const turfData = JSON.parse(req.body.turfData);
     const files = req.files
-    console.log("turfData", files)
     const imageUrl =[]
-    
     for (const file of files) {
         const b64 = Buffer.from(file.buffer).toString('base64')
         const dataUri = `data:${file.mimetype};base64,${b64}`;

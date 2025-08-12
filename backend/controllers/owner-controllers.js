@@ -7,6 +7,7 @@ const Turf = require("../models/turf-model")
 const bcrypt = require('bcryptjs');
 
 
+
 const ownerRegister = async (req, res) => {
   try {
     const { fullname, email, phone, turfIds, turfname } = req.body;
@@ -232,76 +233,6 @@ const convertToMilitaryTime = (timeStr) => {
 
 
 
-const updateSlotStatus = async (req, res) => {
-  let { date, turfId, start, end, newStatus } = req.body;
-  console.log("start", start, end)
-  
-  start = convertToMilitaryTime(start);
-  end = convertToMilitaryTime(end);
-    
-  try {
-    const turf = await Turf.findById(turfId);
-    if (!turf) return res.status(404).json({ message: "Turf not found" });
-
-    let day = turf.bookedSlots.find((d) => d.date === date);
-
-    if (newStatus === "booked") {
-      
-      if (day) {
-        const hasOverlap = day.slots.some(
-          (slot) =>
-            (start >= slot.start && start < slot.end) ||
-            (end > slot.start && end <= slot.end) ||
-            (start <= slot.start && end >= slot.end) // complete overlap
-        );
-        if (hasOverlap) {
-          return res.status(409).json({ message: "This slot overlaps with an already booked slot." });
-        }
-
-        
-        day.slots.push({ start, end });
-      } else {
-       
-        turf.bookedSlots.push({
-          date,
-          slots: [{ start, end }],
-        });
-      }
-    } else if (newStatus === "available") {
-      // Make available: remove from turf.bookedSlots and update booking collection status
-      if (!day) return res.status(404).json({ message: "No booked slots for this date" });
-
-      const index = day.slots.findIndex((s) => s.start === start && s.end === end);
-      if (index === -1) return res.status(404).json({ message: "Slot not found" });
-
-      // Remove from turf's booked slots
-      day.slots.splice(index, 1);
-      if (day.slots.length === 0) {
-        turf.bookedSlots = turf.bookedSlots.filter((d) => d.date !== date);
-      }
-
-      // Also update booking document status to "cancelled"
-      await Booking.updateOne(
-        {
-          turfId,
-          date,
-          "slots.start": start,
-          "slots.end": end,
-          status: "confirmed"
-        },
-        { $set: { status: "cancelled" } }
-      );
-    }
-
-    await turf.save();
-    return res.status(200).json({ message: "Slot status updated successfully" });
-
-  } catch (err) {
-    console.error("Error updating slot status:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-};
-
 
 
 
@@ -367,6 +298,92 @@ function generateSlots(openingTime, closingTime) {
     return slots;
 }
 
+const addManualBooking = async (req, res) => {
+  try {
+    const {phone, advanceAmount ,date, slots, start, end, turfId, slotFees, newStatus} = req.body
+
+    if(!phone ){
+      res.status(400).json({message:"Phone number Required"})
+    }
+    if(!advanceAmount){
+      advanceAmount = 0;
+    }
+    const turf = await Turf.findById(turfId)
+   
+    if (!turf) return res.status(404).json({ message: "Turf not found" });
+
+    let day = turf.bookedSlots.find((d) => d.date === date);
+
+        if (newStatus === "booked") {
+      
+      if (day) {
+        const hasOverlap = day.slots.some(
+          (slot) =>
+            (start >= slot.start && start < slot.end) ||
+            (end > slot.start && end <= slot.end) ||
+            (start <= slot.start && end >= slot.end) 
+        );
+        if (hasOverlap) {
+          return res.status(409).json({ message: "This slot overlaps with an already booked slot." });
+        }
+
+        
+        day.slots.push({ start, end });
+      } else {
+       
+        turf.bookedSlots.push({
+          date,
+          slots: [{ start, end }],
+        });
+      }
+    } else if (newStatus === "available") {
+      // Make available: remove from turf.bookedSlots and update booking collection status
+      if (!day) return res.status(404).json({ message: "No booked slots for this date" });
+
+      const index = day.slots.findIndex((s) => s.start === start && s.end === end);
+      if (index === -1) return res.status(404).json({ message: "Slot not found" });
+
+      // Remove from turf's booked slots
+      day.slots.splice(index, 1);
+      if (day.slots.length === 0) {
+        turf.bookedSlots = turf.bookedSlots.filter((d) => d.date !== date);
+      }
+
+      // Also update booking document status to "cancelled"
+      await Booking.updateOne(
+        {
+          turfId,
+          date,
+          "slots.start": start,
+          "slots.end": end,
+          status: "confirmed"
+        },
+        { $set: { status: "cancelled" } }
+      );
+    }
+
+    await turf.save();
+    
+    const newManualBooking = await Booking.create({
+      turfId:turfId,
+      walkInPhone:phone,
+      date:date,
+      amountPaid:advanceAmount,
+      slots:slots,
+      slotFees:slotFees,
+      paymentType:"Manual"
+      
+    })
+    console.log("newManualBooking", newManualBooking)
+    return res.status(200).json({ message: "Slot status updated successfully", booking: newManualBooking });
+    
+  } catch (error) {
+    console.log("Manual booking Error", error);
+    res.status(200).json({message:"Manual Booking Error"})
+  }
+}
+
+
 
 module.exports = {
 
@@ -378,9 +395,7 @@ module.exports = {
     ownerRegister,
     dashboardDetails,
     updateOwner,
- 
-    updateSlotStatus,
-    getAvailableSlots
-
+    getAvailableSlots,
+    addManualBooking
 
 };

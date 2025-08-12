@@ -19,6 +19,7 @@ const Bookings = () => {
   
   const filteredBookings = bookings.filter(booking => {
     if (activeFilter === 'all') return true;
+    if (activeFilter === 'manual') return booking.paymentType?.toLowerCase() === 'manual';
     if (activeFilter === 'advance') return booking.paymentType === 'advance';
     if (activeFilter === 'confirmed') return booking.status === 'confirmed';
     if (activeFilter === 'upcoming') return new Date(booking.date) >= new Date();
@@ -77,7 +78,7 @@ const Bookings = () => {
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2 items-center">
-          {['all', 'upcoming', 'confirmed', 'advance', 'past'].map(filter => (
+          {['all', 'upcoming', 'confirmed','manual','advance', 'past'].map(filter => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}

@@ -78,8 +78,8 @@ const TurfSchema = new mongoose.Schema({
  
 
   allowAdvancePayment: {
-    type: Boolean,
-    default: true,
+    type: String,
+    required: true,
   },
   allowFullPaymentOnly: {
     type: Boolean,

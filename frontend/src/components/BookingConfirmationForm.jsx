@@ -25,7 +25,6 @@ const BookingConfirmationForm = ({
   dateRange
 }) => {
 
-    console.log("issubscribed", isSubscription)
   const calculateSubscriptionFee = () => {
     const hoursPerDay = calculateDuration();
     return hoursPerDay * plan?.amount;
@@ -35,7 +34,7 @@ const BookingConfirmationForm = ({
   const totalAmount = isSubscription ? calculateSubscriptionFee() : calculateFee();
   return isSubscription
     ? Math.round(totalAmount * 0.2)
-    : 200 * Math.floor(calculateDuration());
+    : parseInt(turfInfo.allowAdvancePayment)* Math.floor(calculateDuration())
 };
 
   const calculatePlatformFees = () => {
@@ -160,10 +159,10 @@ const BookingConfirmationForm = ({
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-400">
-                  {isSubscription ? "Daily Price:" : "Price/h:"}
+                  {isSubscription ? "Daily Price:" : "Total:"}
                 </span>
                 <span className="font-medium text-white">
-                  ₹{getPriceForSlot(turfInfo, selectedCheckIn)}
+                  ₹{calculateFee()}
                 </span>
               </div>
               
@@ -174,7 +173,7 @@ const BookingConfirmationForm = ({
                     <span className="font-medium text-white">{plan.days}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-400">Advance (20%):</span>
+                    <span className="text-gray-400">Advance:</span>
                     <span className="font-medium text-white">₹{calculateAdvanceAmount()}</span>
                   </div>
                   <div className="flex justify-between">
