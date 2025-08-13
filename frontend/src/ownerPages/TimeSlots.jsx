@@ -141,7 +141,7 @@ const timeStringToMinutes = time => {
 
 
   const handleManualBooking = async () => {
-    isLoading(true);
+    
     try {
       const response = await axios.post("/owner/addManualBooking", {
         phone: phone,
@@ -161,9 +161,7 @@ const timeStringToMinutes = time => {
       console.log(error)
       toast.error(error.response?.data?.message|| "Internal server Error")
     }
-    finally{
-      isLoading(false);
-    }
+  
   };
 
   const generateAvailableTimeSlots = (selectedDate, turfInfo) => {
