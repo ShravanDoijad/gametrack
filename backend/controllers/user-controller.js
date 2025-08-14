@@ -13,13 +13,24 @@ const cron = require("node-cron");
 const { sendMessage, OwnerUpdate, UserSubscriptionUpdate, OwnerSubscriptionUpdate } = require("../twilio/sendMessage");
 const bookingModel = require("../models/booking-model");
 const subscriptionModel = require('../models/subscription-model')
+
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
 });
 
 const userRegister = async (req, res) => {
+  const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      console.log("Validation errors:", errors.array());
+      return res.status(400).json({
+        success: false,
+        message: errors.array()[0].msg,
+      });
+    }
   try {
+
+    
     const { firstName, lastName, phone } = req.body;
 
     if (!firstName || !lastName || !phone) {
@@ -71,6 +82,13 @@ const userRegister = async (req, res) => {
 
 const login = async (req, res) => {
   try {
+     const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        message: errors.array()[0].msg,
+      });
+    }
     const { identifier } = req.body;
 
     if (!identifier) {
@@ -95,6 +113,13 @@ const login = async (req, res) => {
     const user = await User.findOne({
       $or: [{ email: identifier }, { phone: identifier }],
     });
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Account not found. Please create one!",
+      });
+    }
 
     if (user) {
       const result = await sendOtp({ identifier, role: "user" });

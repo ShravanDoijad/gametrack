@@ -10,27 +10,20 @@ userRouter.post(
   "/userRegister",
   [
     body("phone")
-      .optional()
+      .notEmpty()
+      .withMessage("Phone number is required")
+      .isLength({ min: 10, max: 10 })
+      .withMessage("Phone number must be 10 digits")
       .isMobilePhone("en-IN")
       .withMessage("Enter a valid Indian phone number"),
 
-    body("email")
-      .optional()
-      .isEmail()
-      .withMessage("Enter a valid email"),
 
     body("fullname")
       .optional()
       .isLength({ min: 3 })
       .withMessage("Full name must be at least 3 characters"),
 
-    body()
-      .custom((value) => {
-        if (!value.phone && !value.email) {
-          throw new Error("Either phone or email is required");
-        }
-        return true;
-      }),
+    
   ],
   userRegister
 );
@@ -40,6 +33,8 @@ userRouter.post(
   [
     body("phone")
       .optional()
+      .isLength({ min: 10, max: 10 })
+      .withMessage("Phone number must be 10 digits")
       .isMobilePhone("en-IN")
       .withMessage("Enter a valid Indian phone number"),
 
@@ -48,9 +43,7 @@ userRouter.post(
       .isEmail()
       .withMessage("Enter a valid email"),
 
-    body("password")
-      .notEmpty()
-      .withMessage("Password is required"),
+    
   ],
   login
 );

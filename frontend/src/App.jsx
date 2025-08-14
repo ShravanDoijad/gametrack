@@ -38,7 +38,7 @@ function App() {
       setShowSplash(false);
     }, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [showSplash]);
 
   useEffect(() => {
     if (token && userInfo?.role === "user") {
@@ -71,21 +71,11 @@ function App() {
   }
 
 
-
-
-  if (showSplash || isLoading || !hasCheckedAuth) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-black">
-        <img
-          src="/icons/logo-512.png"
-          alt="GameTrack Logo"
-          className="w-28 h-28 animate-bounce rounded-full shadow-lg"
-        />
-        <p className="text-white mt-4 animate-pulse text-sm tracking-wider">Preparing your arena...</p>
-      </div>
-    );
+useEffect(() => {
+  if (isLoading || !hasCheckedAuth) {
+    setShowSplash(true);
   }
-
+}, [isLoading, hasCheckedAuth]);
 
 
 
@@ -108,7 +98,6 @@ function App() {
           <Route path="/overview/:turfId" element={<Overview />} />
           <Route path='/contactUs' element={<ContactUs />} />
 
-
           <Route element={<PrivateRoute />}>
             <Route path="/booking" element={<BookingManager />} />
             <Route path="/notification" element={<Notifications />} />
@@ -118,7 +107,6 @@ function App() {
           </Route>
           <Route path="/forbidden" element={<Error403 />} />
 
-          {/* Protected Owner Routes */}
           <Route element={<OwnerPrivateRoute />}>
             <Route path="/owner/*" element={<Owner />} />
           </Route>

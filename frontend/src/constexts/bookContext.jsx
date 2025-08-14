@@ -88,7 +88,7 @@ const BookContextProvider = ({ children }) => {
 
             settoken(false);
             setmenuPanel(false);
-            navigate('/turfs');
+            navigate('/');
 
         } catch (error) {
             console.error("Error during logout:", error);

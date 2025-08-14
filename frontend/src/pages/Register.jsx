@@ -31,6 +31,7 @@ const Register = () => {
         const identifier = loginTab === 'phone' ? form.phone : form.email;
         if (!identifier) return toast.error(`${loginTab === 'phone' ? 'Phone number' : 'Email'} is required`);
         const res = await axios.post('/api/users/login', { identifier });
+        
         if (res.data.success) {
           toast.success('OTP sent');
           setActiveTab('otp');
@@ -46,8 +47,16 @@ const Register = () => {
         } else toast.error(res.data.message || 'Failed to send OTP');
       }
     } catch (err) {
-      console.error(err);
-      toast.error('Failed to send OTP');
+      
+      if(err.response?.status === 401) {
+        toast.error('Account not found. Please register first.');
+        isLogin ? setIsLogin(false) : setIsLogin(true);
+        setActiveTab('credentials');
+        return;
+      }
+      else{
+      toast.error(err.response?.data?.message ||'Failed to send OTP');
+      }
     } finally {
       setisLoading(false);
     }
