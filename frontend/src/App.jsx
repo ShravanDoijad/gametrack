@@ -32,7 +32,42 @@ function App() {
   const { loginPanel, token, userInfo, isLoading, hasCheckedAuth } = useContext(BookContext);
   const [showSplash, setShowSplash] = useState(true);
   const [pendingReviews, setpendingReviews] = useState([])
+  const [defferedPrompt, setdefferedPrompt] = useState()
+
   const navigate = useNavigate()
+
+  useEffect(() => {
+
+    const handler = (e) => {
+      e.preventDefault();
+      setdefferedPrompt(e);
+    }
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    }
+    
+  }, [])
+
+  const handleInstallClick = async () => {
+    if(defferedPrompt){
+       defferedPrompt.prompt()
+      const { outcome } = await defferedPrompt.userChoice;
+      if (outcome === 'accepted') {
+        toast.success("App installed successfully");
+      } else {
+        toast.error("App installation cancelled");
+      }
+    }
+    else {
+      toast.error("App installation not supported on this device");
+    }
+  }
+  
+
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
@@ -87,7 +122,7 @@ useEffect(() => {
         src="/icons/logo-512.png" // replace with your logo path
         alt="App Logo"
         className="w-15 h-15 "
-      />5
+      />
 
       <div className='flex flex-col  justify-center  items-center ml-2'>
       <h2 className="text-sm sora font-semibold ">Install Our App</h2>
@@ -98,6 +133,7 @@ useEffect(() => {
 
       {/* Button */}
       <button
+      onClick={handleInstallClick}
         className="bg-lime-600 hover:bg-lime-600 text-white font-semibold text-sm px-2 py-2 rounded-xl shadow-md"
       >
         Install App
