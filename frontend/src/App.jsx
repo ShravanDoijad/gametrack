@@ -75,12 +75,34 @@ useEffect(() => {
   if (isLoading ) {
     setShowSplash(true);
   }
-}, [isLoading, hasCheckedAuth]);
+}, [isLoading]);
 
 
 
   return (
     <div className="max-w-screen min-h-[92vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
+      <div className="flex  items-center  p-2 bg-white shadow-md w-full max-w-sm mx-auto text-center">
+      
+      <img
+        src="/icons/logo-512.png" // replace with your logo path
+        alt="App Logo"
+        className="w-15 h-15 "
+      />5
+
+      <div className='flex flex-col  justify-center  items-center ml-2'>
+      <h2 className="text-sm sora font-semibold ">Install Our App</h2>
+      <p className="text-gray-600 text-xs ">
+        Get faster access and smoother experience
+      </p>
+      </div>
+
+      {/* Button */}
+      <button
+        className="bg-lime-600 hover:bg-lime-600 text-white font-semibold text-sm px-2 py-2 rounded-xl shadow-md"
+      >
+        Install App
+      </button>
+    </div>
       {loginPanel && <Register />}
       {token && userInfo?.role === "user" && <PushNotifier userId={userInfo._id} type="user" />}
       {token && userInfo?.role === "owner" && <PushNotifier ownerId={userInfo._id} type="owner" />}

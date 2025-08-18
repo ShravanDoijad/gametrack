@@ -72,6 +72,8 @@ const verifyOtp = async (req, res) => {
     const owner = await Owner.findOne({ email: identifier });
 
     const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
+
+    let name = user ? user.name : owner ? owner.name : null;
     if (owner) {
       role = 'owner';
       targetPhone = owner.phone;
@@ -124,7 +126,7 @@ const verifyOtp = async (req, res) => {
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
 
 
-
+ 
     res.cookie("authToken", token, {
       httpOnly: true,
       secure: true, // true in production (HTTPS)
@@ -149,8 +151,10 @@ const verifyOtp = async (req, res) => {
 
 
 
+
 module.exports = {
   sendOtp,
   verifyOtp,
-  generateOtp
+  generateOtp,
+  
 };

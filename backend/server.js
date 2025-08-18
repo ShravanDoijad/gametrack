@@ -69,7 +69,6 @@ app.use('/api/turfs', turfRouter);
 app.use('/owner', ownerRouter);
 app.use('/admin', adminRouter);
 
-
 app.listen(PORT, () => {
   
   console.log(`🌐 Server running on http://localhost:${PORT}`);
