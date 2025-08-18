@@ -72,7 +72,7 @@ function App() {
 
 
 useEffect(() => {
-  if (isLoading || !hasCheckedAuth) {
+  if (isLoading ) {
     setShowSplash(true);
   }
 }, [isLoading, hasCheckedAuth]);

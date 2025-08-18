@@ -38,11 +38,11 @@ const TodaysBookings = () => {
     <div className="min-h-screen  text-white py-10 px-4">
       <h1 className="text-3xl font-bold text-center mb-8">📅 Today's Bookings</h1>
 
-      {bookings.length === 0 ? (
+      {todayBookings.length === 0 ? (
         <div className="text-center text-gray-400">No bookings today</div>
       ) : (
         <div className="space-y-4 max-w-4xl mx-auto">
-          {bookings.map((booking) => {
+          {todayBookings.map((booking) => {
             const isExpanded = expandedCard === booking._id;
             return (
               <div
@@ -57,7 +57,7 @@ const TodaysBookings = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-white font-semibold text-lg">₹{booking.amountPaid}</p>
-                    <p className="text-sm text-gray-400">{booking.userId?.fullname}</p>
+                    <p className="text-sm text-gray-400">{booking.userId?.fullname || booking.fullname}</p>
                   </div>
                 </div>
 
@@ -66,11 +66,11 @@ const TodaysBookings = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <p className="text-xs text-gray-400">User Email</p>
-                        <p className="text-white text-sm">{booking.userId?.email}</p>
+                        <p className="text-white text-sm">{booking.userId?.email|| "Not a Email"}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-400">Phone Number</p>
-                        <p className="text-white text-sm">{booking.userId?.phone}</p>
+                        <p className="text-white text-sm">{booking.userId?.phone|| booking.phone}</p>
                       </div>
                       <div>
                         <p className="text-xs text-gray-400">Payment ID</p>

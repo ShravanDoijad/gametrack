@@ -8,6 +8,7 @@ const TimeSlotPicker = ({
   onBack,
   onClose,
 }) => {
+  console.log("selectedSlot", selectedSlot)
   return (
     <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
       <div className="bg-gray-800 border border-gray-700 rounded-xl w-full max-w-md max-h-[80vh] overflow-y-auto">
@@ -33,8 +34,9 @@ const TimeSlotPicker = ({
         <div className="p-4 grid grid-cols-2 gap-3">
           {slots.map((slot, index) => (
             <button
+            
               key={index}
-              onClick={() => onSelect(slot)}
+              onClick={() => onSelect(mode === "check-in" ? slot.display : slot)}
               className={`p-3 rounded-lg border text-sm transition-all ${
                 selectedSlot === slot
                   ? "bg-lime-500/20 border-lime-500"
@@ -42,7 +44,7 @@ const TimeSlotPicker = ({
               }`}
             >
               {mode === "check-in" ? (
-                slot
+                slot.display
               ) : (
                 <>
                   {slot} ({index + 1} hr{index > 0 ? "s" : ""})

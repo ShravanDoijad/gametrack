@@ -11,6 +11,7 @@ import { BookContext } from "../constexts/bookContext";
 import { toast } from "react-toastify";
 import SelectCheckOut from "../components/SelectCheckOut";
 import SelectCheckIn from "../components/SelectCheckIn";
+import { Navigate, useNavigate } from "react-router-dom";
 
 const getNext7Days = () => {
   const days = [];
@@ -43,10 +44,15 @@ const TimeSlots = () => {
   const [customDate, setCustomDate] = useState(null);
   const [availableTimes, setAvailableTimes] = useState([]);
   const [allSlots, setallSlots] = useState([])
+  const [firstName, setfirstName] = useState("")
+  const [lastName, setlastName] = useState("")
   const [phone, setPhone] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState("");
+  // const [selectedSport, setselectedSport] = useState("")
   const [turfInfo, setturfInfo] = useState()
   const next7Days = getNext7Days();
+  const navigate = useNavigate()
+
 
   const handleDateSelect = (date) => {
     const timezoneAdjustedDate = new Date(
@@ -84,18 +90,18 @@ const TimeSlots = () => {
 
 
 
-useEffect(() => {
-  if (turfs.length > 0 && selectedTurfId) {
-    const selectedTurf = turfs.find((turf) => turf._id === selectedTurfId);
-    setturfInfo(selectedTurf);
-  }
-}, [turfs, selectedTurfId]);
-  
+  useEffect(() => {
+    if (turfs.length > 0 && selectedTurfId) {
+      const selectedTurf = turfs.find((turf) => turf._id === selectedTurfId);
+      setturfInfo(selectedTurf);
+    }
+  }, [turfs, selectedTurfId]);
 
-const timeStringToMinutes = time => {
-      const [h, m] = time.split(':').map(Number);
-      return h * 60 + m;
-};
+
+  const timeStringToMinutes = time => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
 
 
 
@@ -111,13 +117,13 @@ const timeStringToMinutes = time => {
     return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
   };
 
-   const calculateDuration = () => {
+  const calculateDuration = () => {
     const duration = ((timeStringToMinutes(convertToMilitary(selectedCheckOut)) - timeStringToMinutes(convertToMilitary(selectedCheckIn))) / 60).toFixed(1)
     return duration;
   };
   const formattedDate = selectedDate?.toISOString().split('T')[0];
 
-   const getPriceForSlot = (turfInfo, checkInTime) => {
+  const getPriceForSlot = (turfInfo, checkInTime) => {
 
     const timeParts = checkInTime.split(/:| /);
     let hour = parseInt(timeParts[0]);
@@ -141,27 +147,30 @@ const timeStringToMinutes = time => {
 
 
   const handleManualBooking = async () => {
-    
+
     try {
       const response = await axios.post("/owner/addManualBooking", {
+        fullname:`${firstName} ${lastName}`,
         phone: phone,
         advanceAmount: advanceAmount,
         date: formattedDate,
-        
-          start: convertToMilitary(selectedCheckIn),
-          end: convertToMilitary(selectedCheckOut)
+
+        start: convertToMilitary(selectedCheckIn),
+        end: convertToMilitary(selectedCheckOut)
         ,
         turfId: selectedTurfId,
         slotFees: calculateFee(),
-         newStatus: "booked"
+        newStatus: "booked"
       })
+
       toast.success(response.data.message || "Slot Booked Successfully")
+      navigate("/owner/turfTodaysbookings")
     }
     catch (error) {
       console.log(error)
-      toast.error(error.response?.data?.message|| "Internal server Error")
+      toast.error(error.response?.data?.message || "Internal server Error")
     }
-  
+
   };
 
   const generateAvailableTimeSlots = (selectedDate, turfInfo) => {
@@ -360,6 +369,21 @@ const timeStringToMinutes = time => {
 
                 {/* Inputs for phone and advance */}
                 <div className="w-full mb-4 space-y-3">
+                  <div className="flex gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="First Name"
+                      value={firstName}
+                      onChange={(e) => setfirstName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                    />
+                    <input type="text"
+                      placeholder="Last Name"
+                      value={lastName}
+                      onChange={(e) => setlastName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                    />
+                  </div>
                   <input
                     type="tel"
                     placeholder="Phone Number"
@@ -374,6 +398,7 @@ const timeStringToMinutes = time => {
                     onChange={(e) => setAdvanceAmount(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg bg-neutral-800  text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
                   />
+                  
                 </div>
 
                 {/* Buttons */}

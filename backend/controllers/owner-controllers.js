@@ -5,7 +5,7 @@ const Booking = require("../models/booking-model");
 const User = require("../models/user-model");
 const Turf = require("../models/turf-model")
 const bcrypt = require('bcryptjs');
-
+const { sendMessage, OwnerUpdate } = require('../twilio/sendMessage');
 
 
 const ownerRegister = async (req, res) => {
@@ -300,10 +300,10 @@ function generateSlots(openingTime, closingTime) {
 
 const addManualBooking = async (req, res) => {
   try {
-    const {phone, advanceAmount ,date, slots, start, end, turfId, slotFees, newStatus} = req.body
+    const {phone, fullname, advanceAmount ,date, start, end, turfId, slotFees, newStatus} = req.body
 
-    if(!phone ){
-      res.status(400).json({message:"Phone number Required"})
+    if(!phone || !fullname ){
+      res.status(400).json({message:" All fields are Required"})
     }
     if(!advanceAmount){
       advanceAmount = 0;
@@ -326,8 +326,6 @@ const addManualBooking = async (req, res) => {
         if (hasOverlap) {
           return res.status(409).json({ message: "This slot overlaps with an already booked slot." });
         }
-
-        
         day.slots.push({ start, end });
       } else {
        
@@ -335,6 +333,8 @@ const addManualBooking = async (req, res) => {
           date,
           slots: [{ start, end }],
         });
+
+
       }
     } else if (newStatus === "available") {
       // Make available: remove from turf.bookedSlots and update booking collection status
@@ -366,14 +366,38 @@ const addManualBooking = async (req, res) => {
     
     const newManualBooking = await Booking.create({
       turfId:turfId,
-      walkInPhone:phone,
+      fullname:fullname,
+      phone:phone,
       date:date,
       amountPaid:advanceAmount,
-      slots:slots,
       slotFees:slotFees,
       paymentType:"Manual"
       
     })
+    
+
+     newManualBooking.slots.push({
+      start:start,
+      end:end
+    })
+    
+    await newManualBooking.save()
+     const slotTimeText = `${start} - ${end}`;
+
+     await sendMessage({
+            phoneNumber: phone,
+            notification_data: {
+              name: fullname.split(" ")[0],               
+              turfName: turf.name,                                 
+              date: new Date(date).toDateString(),                           
+              time: slotTimeText,                                  
+              location: turf.location.city,                        
+              amount:slotFees,                                  
+              advance:advanceAmount,              
+              remaining: slotFees - advanceAmount 
+            }
+          });
+
     console.log("newManualBooking", newManualBooking)
     return res.status(200).json({ message: "Slot status updated successfully", booking: newManualBooking });
     

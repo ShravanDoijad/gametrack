@@ -118,10 +118,10 @@ const Bookings = () => {
             </thead>
             <tbody>
               {sortedBookings.map((booking) => {
-                const advance = booking.paymentType === 'advance' ? booking.amountPaid : 0;
+                const advance =   booking.amountPaid> 0 ? booking.amountPaid : "N/A";
 
                 let estimatedAmount = 0;
-                if (booking.paymentType === 'advance') {
+                if (booking.amountPaid) {
 
                   const rate = booking.slotFees;
                   estimatedAmount = rate - booking.amountPaid;
@@ -134,7 +134,7 @@ const Bookings = () => {
                     <td className="px-4 py-2 text-amber-400">₹{advance}</td>
                     <td className="px-4 py-2 text-green-400">₹{estimatedAmount}</td>
                     <td className="px-4 py-2 capitalize">{booking.status}</td>
-                    <td className="px-4 py-2 text-white">{booking.userId?.email || booking.userId?.phone}</td>
+                    <td className="px-4 py-2 text-white">{booking.userId?.email || booking.userId?.phone || booking.phone}</td>
                   </tr>
                 );
               })}

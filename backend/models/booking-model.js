@@ -6,14 +6,17 @@ const bookingSchema = new mongoose.Schema({
     ref: "Turf",
     required: true,
   },
+  fullname:{
+    type:String,
+    default:"Guest"
+  },
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     default: null,
   },
-  walkInPhone: {
+  phone: {
     type: String,
-
   },
   date: {
     type: String,
