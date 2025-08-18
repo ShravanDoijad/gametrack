@@ -33,6 +33,7 @@ function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [pendingReviews, setpendingReviews] = useState([])
   const [defferedPrompt, setdefferedPrompt] = useState()
+  const [installed, setinstalled] = useState(false)
 
   const navigate = useNavigate()
 
@@ -56,7 +57,7 @@ function App() {
        defferedPrompt.prompt()
       const { outcome } = await defferedPrompt.userChoice;
       if (outcome === 'accepted') {
-        toast.success("App installed successfully");
+        toast.success("App intalling ...");
       } else {
         toast.error("App installation cancelled");
       }
@@ -65,8 +66,13 @@ function App() {
       toast.error("App installation not supported on this device");
     }
   }
-  
 
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if( isStandalone) {
+    setinstalled(true);
+  } else {
+    setinstalled(false);
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -116,7 +122,7 @@ useEffect(() => {
 
   return (
     <div className="max-w-screen min-h-[92vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
-      <div className="flex  items-center  p-2 bg-white shadow-md w-full max-w-sm mx-auto text-center">
+      <div className={`flex   items-center ${isStandalone? "hidden" :"block"} p-2 bg-white shadow-md w-full max-w-sm mx-auto text-center`}>
       
       <img
         src="/icons/logo-512.png" // replace with your logo path
