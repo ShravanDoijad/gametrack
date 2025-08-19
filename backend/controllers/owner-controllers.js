@@ -221,19 +221,6 @@ const updateOwner = async (req, res) => {
     }
 };
 
-const convertToMilitaryTime = (timeStr) => {
-  const [time, modifier] = timeStr.split(" ");
-  let [hours, minutes] = time.split(":").map(Number);
-  
-  if (modifier === "PM" && hours !== 12) hours += 12;
-  if (modifier === "AM" && hours === 12) hours = 0;
-
- return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}` 
-};
-
-
-
-
 
 
 const getAvailableSlots = async (req, res) => {
@@ -308,7 +295,7 @@ const addManualBooking = async (req, res) => {
     if(!advanceAmount){
       advanceAmount = 0;
     }
-    const turf = await Turf.findById(turfId)
+    const turf = await Turf.findById(turfId).populate('owner', 'phone');
    
     if (!turf) return res.status(404).json({ message: "Turf not found" });
 
@@ -384,6 +371,11 @@ const addManualBooking = async (req, res) => {
     await newManualBooking.save()
      const slotTimeText = `${start} - ${end}`;
 
+     const timeStringToMinutes = time => {
+    const [h, m] = time.split(':').map(Number);
+    return h * 60 + m;
+  };
+  
      await sendMessage({
             phoneNumber: phone,
             notification_data: {
@@ -397,6 +389,24 @@ const addManualBooking = async (req, res) => {
               remaining: slotFees - advanceAmount 
             }
           });
+
+     await OwnerUpdate({
+             phoneNumber: turf.owner.phone,
+             notification_data: {
+               user: fullname,
+               phone: phone,
+               date: new Date(date).toDateString(),
+               slotStart:start,
+               slotEnd: end,
+               duration: ((timeStringToMinutes(end)-timeStringToMinutes(start))/60).toFixed(1),
+               sport:"sport",
+               total: slotFees,             
+               advance: advanceAmount,            
+               remained: slotFees - advanceAmount
+              
+               
+             }
+           });     
 
     console.log("newManualBooking", newManualBooking)
     return res.status(200).json({ message: "Slot status updated successfully", booking: newManualBooking });

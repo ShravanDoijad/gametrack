@@ -114,6 +114,7 @@ const Bookings = () => {
                 <th className="px-4 py-2 border-b border-gray-800">On-Field</th>
                 <th className="px-4 py-2 border-b border-gray-800">Status</th>
                 <th className="px-4 py-2 border-b border-gray-800">User</th>
+                <th className="px-4 py-2 border-b border-gray-800">Interaction</th>
               </tr>
             </thead>
             <tbody>
@@ -135,6 +136,7 @@ const Bookings = () => {
                     <td className="px-4 py-2 text-green-400">₹{estimatedAmount}</td>
                     <td className="px-4 py-2 capitalize">{booking.status}</td>
                     <td className="px-4 py-2 text-white">{booking.userId?.email || booking.userId?.phone || booking.phone}</td>
+                    <td className="  text-white"><button className='rounded-md bg-red-500'>cancel</button></td>
                   </tr>
                 );
               })}

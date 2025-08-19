@@ -131,7 +131,7 @@ const verifyOtp = async (req, res) => {
       httpOnly: true,
       secure: true, // true in production (HTTPS)
       sameSite: "None",
-      maxAge: 7 * 86400000 // 1 day
+      maxAge: 30 * 86400000 // 1 day
     });
 
     await Otp.deleteMany({ identifier: identifier, role: role });

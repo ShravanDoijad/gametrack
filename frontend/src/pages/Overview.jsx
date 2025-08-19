@@ -9,9 +9,14 @@ import {
   ShowerHead,
   ShieldCheck,
   Navigation,
-  ChevronRight,
   Sun,
-  Moon
+  Moon,
+  Droplet,
+  Toilet,
+  Users,
+  Box,
+  DoorOpen,
+  ChevronRight,
 } from "lucide-react";
 import { useContext, useEffect } from "react";
 import { useLocation } from "react-router-dom";
@@ -38,6 +43,24 @@ import SkeletonLoader from "../components/SkeletonLoader"
 import axios from 'axios'
 
 
+const ICON_MAP = {
+  "gym": Dumbbell,
+  "shower": ShowerHead,
+  "security": ShieldCheck,
+  "parking": Navigation,
+  "day": Sun,
+  "night": Moon,
+  "changing room": DoorOpen,
+  "water": Droplet,
+  "toilet": Toilet,
+  "washroom": Toilet, 
+  "sports equipment": Box,
+  "equipment": Box,
+  
+  "team": Users,
+};
+
+
 
 const SPORTS = [
   {
@@ -57,19 +80,19 @@ const SPORTS = [
 
 const reviews = [
   {
-    name: "John Doe",
+    name: "mohan sudame",
     text: "Amazing turf! Great facilities and well-maintained.",
     rating: 5,
     timeAgo: "4 days ago",
   },
   {
-    name: "Jane Smith",
+    name: "santosh karadge",
     text: "Loved the experience! Highly recommend for football lovers.",
     rating: 5,
     timeAgo: "2 days ago",
   },
   {
-    name: "Mike Johnson",
+    name: "hritik somanth",
     text: "Best turf in the area! Friendly staff and great atmosphere.",
     rating: 4,
     timeAgo: "6 days ago",
@@ -356,7 +379,7 @@ export const Overview = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <Sun size={18} className="text-amber-300" />
                       <span className="text-blue-200 font-medium">Day Rate</span>
-                      <span className="text-xs text-blue-300 ml-auto">7AM - 6PM</span>
+                      <span className="text-xs text-blue-300 sora font-medium ml-auto">{turfInfo.openingTime}-{turfInfo.nightPriceStart}</span>
                     </div>
                     <p className="font-bold text-3xl text-white">₹{turfInfo.dayPrice}<span className="text-blue-300 text-lg">/hour</span></p>
                     <p className="text-blue-200 text-sm mt-1">Perfect for morning matches and practice</p>
@@ -369,7 +392,7 @@ export const Overview = () => {
                     <div className="flex items-center gap-2 mb-1">
                       <Moon size={18} className="text-indigo-300" />
                       <span className="text-purple-200 font-medium">Night Rate</span>
-                      <span className="text-xs text-purple-300 ml-auto">6PM - 11PM</span>
+                      <span className="text-xs text-purple-300 sora font-medium ml-auto">{turfInfo.nightPriceStart}-{turfInfo.closingTime}</span>
                     </div>
                     <p className="font-bold text-3xl text-white">₹{turfInfo.nightPrice}<span className="text-purple-300 text-lg">/hour</span></p>
                     <p className="text-purple-200 text-sm mt-1">Floodlit turf for cooler evening games</p>
@@ -474,13 +497,15 @@ export const Overview = () => {
 
           <div className="grid grid-cols-2 gap-3">
             {
-              turfInfo.amenities.map((amenity, idx) =>
-                <div key={idx} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex items-center gap-3">
+              turfInfo.amenities.map((amenity, idx) =>{
+                const Icon = Object.keys(ICON_MAP).find(k=>amenity.toLowerCase().includes(k))?
+                    ICON_MAP[Object.keys(ICON_MAP).find(k=>amenity.toLowerCase().includes(k))] : ShieldCheck;
+                    return(<div key={idx} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex items-center gap-3">
                   <div className="bg-lime-500/10 p-2 rounded-lg">
-                    <Dumbbell size={18} className="text-lime-400" />
+                    {Icon && <Icon className="w-5 h-5 text-blue-600" />}
                   </div>
                   <span className="text-sm">{amenity}</span>
-                </div>
+                </div>)}
               )}
           </div>
         </div>
@@ -578,89 +603,7 @@ export const Overview = () => {
           </div>
         </div>
       </div>
-
-
-
-
-      <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-gray-900 to-transparent backdrop-blur-sm p-4 z-20">
-        <div className="flex justify-between items-center max-w-md mx-auto w-full">
-          <button
-            onClick={() => setShowSlots(true)}
-            className="bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white px-5 py-3 rounded-xl font-medium transition-colors flex items-center gap-2"
-          >
-            <CalendarClock size={18} /> View Slots
-          </button>
-          <button
-            onClick={() => navigate("/booking",
-              {
-                state: turfInfo
-              }
-            )}
-            className="bg-lime-500 hover:bg-lime-400 text-gray-900 font-semibold px-6 py-3 rounded-xl shadow-lg transition-colors flex items-center gap-2"
-          >
-            Book Now <ChevronRight size={18} />
-          </button>
-        </div>
-      </div>
-
-      {/* Slots Modal */}
-      {showSlots && (
-        <>
-          <div
-            className="fixed inset-0  bg-black/80 z-40 backdrop-blur-sm"
-            onClick={() => setShowSlots(false)}
-          ></div>
-          <div
-            className="fixed bottom-0 left-0 right-0 z-50 bg-gray-900 border-t border-gray-700 rounded-t-2xl p-6 animate-slideUp max-h-[70vh] overflow-y-auto"
-          >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-xl font-bold">Available Slots</h3>
-              <button
-                onClick={() => setShowSlots(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="space-y-3">
-              {availableSlots.map((slot, idx) => (
-
-                <div
-                  key={idx}
-                  className={`p-4 rounded-xl border text-sm transition-all flex justify-between items-center
-
-                         "bg-lime-500/10 border-lime-500/50 text-lime-400 hover:bg-lime-500/20 cursor-pointer"
-                    }`}
-                >
-                  <span>{slot}</span>
-                  <span className="font-medium">
-                    {"Available"}
-                  </span>
-                </div>
-
-              ))}
-              {
-                bookSlots.map((slot, idx) => (
-
-                  <div
-                    key={idx}
-                    className={`p-4 rounded-xl border text-sm transition-all flex justify-between items-center
-
-                         "bg-gray-800/50 border-gray-700 text-gray-500 cursor-not-allowed"
-                    }`}
-                  >
-                    <span>{slot}</span>
-                    <span className="font-medium">
-                      {"Booked"}
-                    </span>
-                  </div>
-
-                ))
-              }
-            </div>
-          </div>
-        </>
-      )}
+      
     </div>
   );
 };

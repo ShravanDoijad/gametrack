@@ -26,7 +26,7 @@ import { toast } from "react-toastify"
 
 import BookingManager from './pages/BookingManager';
 import ContactUs from './pages/ContactUs';
-
+import { X } from 'lucide-react';
 
 function App() {
   const { loginPanel, token, userInfo, isLoading, hasCheckedAuth } = useContext(BookContext);
@@ -57,7 +57,7 @@ function App() {
        defferedPrompt.prompt()
       const { outcome } = await defferedPrompt.userChoice;
       if (outcome === 'accepted') {
-        toast.success("App intalling ...");
+        console.log('App installed');
         setinstalled(true);
       } else {
         toast.error("App installation cancelled");
@@ -115,13 +115,15 @@ useEffect(() => {
 
   return (
     <div className="max-w-screen min-h-[92vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
-      <div className={`flex   items-center ${installed? "hidden" :"block"} p-2 bg-white shadow-md w-full max-w-sm mx-auto text-center`}>
-      
+      <div className={`flex  fixed z-100 items-center ${installed? "hidden" :"block"} px-2 py-1 md:hidden bg-white shadow-md w-full max-w-sm mx-auto text-center`}>
+      <X onClick={()=>setinstalled(true)} className=' text-gray-500 mb-10 mt-1 '  size={25}/>
       <img
         src="/icons/logo-512.png" // replace with your logo path
         alt="App Logo"
         className="w-15 h-15 "
       />
+      
+
 
       <div className='flex flex-col  justify-center  items-center ml-2'>
       <h2 className="text-sm sora font-semibold ">Install Our App</h2>
