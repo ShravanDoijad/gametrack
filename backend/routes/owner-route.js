@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { turfAllBookings, getCustomers, getTurfDetails, updateTurfProfile, getOwnedTurfs, ownerRegister, dashboardDetails, updateOwner, deleteSlot, getSlots, addSlot, updateSlotStatus, getAvailableSlots, addManualBooking } = require('../controllers/owner-controllers');
+const { turfAllBookings, getCustomers, getTurfDetails, updateTurfProfile, getOwnedTurfs, ownerRegister, dashboardDetails, updateOwner, deleteSlot, getSlots, addSlot, updateSlotStatus, getAvailableSlots, addManualBooking, cancelBooking } = require('../controllers/owner-controllers');
 const { ownerMiddleware} = require("../middleware/ownerMiddleware")
 const ownerRouter = express.Router();
 
@@ -15,6 +15,7 @@ ownerRouter.post('/updateOwner',ownerMiddleware, updateOwner )
 
 ownerRouter.get("/availableSlots", ownerMiddleware, getAvailableSlots)
 ownerRouter.post("/addManualBooking", ownerMiddleware, addManualBooking)
+ownerRouter.post('/cancelBooking', ownerMiddleware, cancelBooking);
 
 
 module.exports = ownerRouter

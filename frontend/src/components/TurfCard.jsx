@@ -62,29 +62,6 @@ const TurfCard = ({
 
         <p className="text-gray-400 text-sm mb-3">{turf.address}</p>
 
-        <div className="flex flex-wrap gap-2">
-          {availableSlots.slice(0, 3).map((slot, i) => {
-            const isSelected = availableSlots.includes(checkInSlot)
-           
-            return (
-              <span
-                key={i}
-                className={`text-xs px-2 py-1 rounded ${
-                  isSelected
-                    ? "bg-lime-500/20 text-lime-400 border border-lime-500/50"
-                    : "bg-gray-700/50 text-gray-300"
-                }`}
-              >
-                {slot}
-              </span>
-            );
-          })}
-          {availableSlots.length > 3 && (
-            <span className="bg-gray-700/50 text-xs px-2 py-1 rounded">
-              +{availableSlots.length - 3} more
-            </span>
-          )}
-        </div>
       </div>
     </div>
   );

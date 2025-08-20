@@ -20,6 +20,7 @@ const BookContextProvider = ({ children }) => {
     const [bookings, setbookings] = useState([])
      const [sidebarOpen, setSidebarOpen] = useState(false);
     
+    const [cancelled, setCancelled] = useState(false);
       const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
       const closeSidebar = () => setSidebarOpen(false);
     
@@ -39,7 +40,7 @@ const BookContextProvider = ({ children }) => {
     };
     fetchBookings();
   }
-}, [token, userInfo, selectedTurfId]);
+}, [token, userInfo, selectedTurfId, cancelled]);
 
 
 
@@ -165,8 +166,9 @@ const BookContextProvider = ({ children }) => {
         turfs,
         toggleSidebar, 
         sidebarOpen,
-        closeSidebar
-
+        closeSidebar,
+        cancelled,
+        setCancelled
     }
     return (
         <BookContext.Provider value={value}>

@@ -4,20 +4,32 @@ import { Link } from 'react-router-dom';
 import {
   Calendar,
   ArrowUpDown,
-  Loader2,
   AlertCircle,
-  Zap
+  XCircle,
+  CheckCircle
 } from 'lucide-react';
 import { BookContext } from "../constexts/bookContext";
+import { toast } from 'react-toastify';
 
 const Bookings = () => {
-  const { bookings, setbookings, selectedTurfId, setSelectedTurfId} = useContext(BookContext);
+  const { bookings, setbookings, selectedTurfId, setSelectedTurfId, setCancelled, cancelled} = useContext(BookContext);
 
   const [error, setError] = useState(null);
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortOrder, setSortOrder] = useState('desc');
-  
-  const filteredBookings = bookings.filter(booking => {
+   const [confirmModal, setConfirmModal] = useState({ open: false, booking: null })
+
+ 
+  let filteredBookings = bookings
+
+   if (activeFilter === 'cancelled') {
+    filteredBookings = bookings.filter(booking =>  booking.status ==="cancelled")
+  }
+  else{
+    filteredBookings = bookings.filter(b=>b.status !=="cancelled")
+  }
+
+  filteredBookings = filteredBookings.filter(booking => {
     if (activeFilter === 'all') return true;
     if (activeFilter === 'manual') return booking.paymentType?.toLowerCase() === 'manual';
     if (activeFilter === 'advance') return booking.paymentType === 'advance';
@@ -26,6 +38,8 @@ const Bookings = () => {
     if (activeFilter === 'past') return new Date(booking.date) < new Date();
     return true;
   });
+
+  
 
   const sortedBookings = [...filteredBookings].sort((a, b) => {
     const dateA = new Date(a.date);
@@ -57,9 +71,69 @@ const Bookings = () => {
     );
   }
 
+  const cancelBooking  = async (id,  date, start, end) => {
+    try{
+
+      console.log("cancelBooking called with", id, date, start, end);
+    if (!id || !date || !start || !end) {
+      setError('Invalid booking details provided.');
+      return;
+    }
+      const res = await axios.post('/owner/cancelBooking', {
+        bookingId: id,
+        turfId: selectedTurfId,
+        date:date,
+        start: start,
+        end:end
+      })
+      toast.success("Booking cancelled successfully");
+      setCancelled(prev => !prev);
+  }
+    catch(error){
+      console.error('Error cancelling booking:', error);
+      setError('Failed to cancel booking. Please try again later.');
+    }
+  }
+
+
+  console.log("confirmModal",confirmModal)
+
   return (
     <div className="min-h-screen w-full bg-black px-4 sm:px-6 py-6 overflow-auto">
       <div className="relative z-10 max-w-6xl mx-auto">
+          {confirmModal.open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+              <XCircle className="mx-auto text-red-400 h-12 w-12 mb-3" />
+              <h2 className="text-white text-lg font-sora font-semibold text-center">Cancel Booking?</h2>
+              <p className="text-gray-400 text-sm text-center mt-1 mb-4">
+                Are you sure you want to cancel this booking?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    cancelBooking(
+                      confirmModal.booking._id,
+                      confirmModal.booking.date,
+                      confirmModal.booking.slots[0].start,
+                      confirmModal.booking.slots[0].end
+                    );
+                    setConfirmModal({ open: false, booking: null });
+                  }}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-sora flex items-center justify-center gap-1"
+                >
+                  <CheckCircle size={16} /> Yes, Cancel
+                </button>
+                <button
+                  onClick={() => setConfirmModal({ open: false, booking: null })}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-200 py-2 rounded-lg font-sora"
+                >
+                  Keep Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-lime-300 to-lime-500 font-sora">
@@ -78,7 +152,7 @@ const Bookings = () => {
         </div>
 
         <div className="mb-4 flex flex-wrap gap-2 items-center">
-          {['all', 'upcoming', 'confirmed','manual','advance', 'past'].map(filter => (
+          {['all', 'upcoming', 'confirmed', 'cancelled','manual','advance', 'past'].map(filter => (
             <button
               key={filter}
               onClick={() => setActiveFilter(filter)}
@@ -127,7 +201,6 @@ const Bookings = () => {
                   const rate = booking.slotFees;
                   estimatedAmount = rate - booking.amountPaid;
                 }
-
                 return (
                   <tr key={booking._id} className="bg-gray-800/40 border-b border-gray-700 hover:bg-gray-800/60">
                     <td className="px-4 py-2 font-medium text-white">{formatDate(booking.date)}</td>
@@ -136,7 +209,14 @@ const Bookings = () => {
                     <td className="px-4 py-2 text-green-400">₹{estimatedAmount}</td>
                     <td className="px-4 py-2 capitalize">{booking.status}</td>
                     <td className="px-4 py-2 text-white">{booking.userId?.email || booking.userId?.phone || booking.phone}</td>
-                    <td className="  text-white"><button className='rounded-md bg-red-500'>cancel</button></td>
+                     <td className="px-4 py-2">
+                      <button
+                        onClick={() => setConfirmModal({ open: true, booking })}
+                        className="rounded-md px-3 py-1 bg-red-500 hover:bg-red-600 text-white text-sm"
+                      >
+                        Cancel
+                      </button>
+                    </td>
                   </tr>
                 );
               })}

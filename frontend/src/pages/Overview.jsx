@@ -41,6 +41,7 @@ import { toast } from "react-toastify";
 import { motion } from "framer-motion";
 import SkeletonLoader from "../components/SkeletonLoader"
 import axios from 'axios'
+import moment from 'moment';
 
 
 const ICON_MAP = {
@@ -107,7 +108,6 @@ export const Overview = () => {
 
   const location = useLocation();
   const { location: userCoords, error: locationError } = useGeolocation();
-  const [availableSlots, setAvailableSlots] = useState(location.state?.availableSlots || [] );
   const today = new Date().toISOString().split("T")[0]
   const [bookSlots, setbookSlots] = useState([]);
   const [likes, setLikes] = useState(143);
@@ -127,12 +127,6 @@ export const Overview = () => {
       setLikes((prev) => prev + 1);
     }
   };
-  useEffect(() => {
-    if (turfInfo?.bookedSlots) {
-      setbookSlots(turfInfo.bookedSlots?.find(slot => slot.date === today)?.slots.map(slot => slot.start) || []);
-    }
-  }, [turfInfo, today]);
-
 
   useEffect(() => {
     if (locationError) {

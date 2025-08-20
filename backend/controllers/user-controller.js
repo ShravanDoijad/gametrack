@@ -348,16 +348,10 @@ const verifyOrder = async (req, res) => {
       subscriptionDetails
     } = req.body;
 
-    console.log("bookingDetails", bookingDetails)
     const userId = user._id || details.userId;
-
-
     const details = subscriptionDetails ? subscriptionDetails : bookingDetails
 
     const userData = await User.findById(userId);
-
-    console.log("user", userData)
-
     const turf = await turfModel
       .findById(details.turfId)
       .populate("owner", "fcmTokens turfname phone");

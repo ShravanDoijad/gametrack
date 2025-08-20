@@ -76,7 +76,9 @@ const turfAllBookings = async (req, res) => {
             return res.status(400).json({ success: false, message: "Turf ID is required" });
         }
 
-        const bookings = await Booking.find({ turfId: turfId }).populate('userId', 'fullname email phone');
+        let bookings = await Booking.find({ turfId: turfId }).populate('userId', 'fullname email phone');
+
+        
 
         res.status(200).json({ success: true, bookings });
     } catch (error) {
@@ -287,7 +289,7 @@ function generateSlots(openingTime, closingTime) {
 
 const addManualBooking = async (req, res) => {
   try {
-    const {phone, fullname, advanceAmount ,date, start, end, turfId, slotFees, newStatus} = req.body
+    let {phone, fullname, advanceAmount ,date, start, end, turfId, slotFees, newStatus} = req.body
 
     if(!phone || !fullname ){
       res.status(400).json({message:" All fields are Required"})
@@ -417,6 +419,50 @@ const addManualBooking = async (req, res) => {
   }
 }
 
+const cancelBooking = async (req, res) => {
+  try {
+    const { bookingId, date, turfId, start ,end } = req.body;
+   
+
+    if (!bookingId || !date || !turfId) {
+      return res.status(400).json({ success: false, message: "Booking ID, date, slot ID, and turf ID are required" });
+    }
+
+    const turf = await Turf.findById(turfId);
+    if (!turf) {
+      return res.status(404).json({ success: false, message: "Turf not found" });
+    }
+
+    const day = turf.bookedSlots.find((d) => d.date === date);
+    if (!day) {
+      return res.status(404).json({ success: false, message: "No booked slots for this date" });
+    }
+
+    const slotIndex = day.slots.findIndex((s) => s.start === start && s.end === end);
+    if (slotIndex === -1) {
+      return res.status(404).json({ success: false, message: "Slot not found" });
+    }
+    day.slots.splice(slotIndex, 1);
+    if (day.slots.length === 0) {
+      turf.bookedSlots = turf.bookedSlots.filter((d) => d.date !== date);
+    }
+    await turf.save();
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    booking.status = 'cancelled';
+    await booking.save();
+
+    res.status(200).json({ success: true, message: "Booking cancelled successfully" });
+  } catch (error) {
+    console.error("Error cancelling booking:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+}
+
 
 
 module.exports = {
@@ -430,6 +476,7 @@ module.exports = {
     dashboardDetails,
     updateOwner,
     getAvailableSlots,
-    addManualBooking
+    addManualBooking,
+    cancelBooking
 
 };

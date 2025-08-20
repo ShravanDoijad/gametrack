@@ -20,6 +20,7 @@ import TurfCard from "../components/TurfCard";
 import TimeSlotPicker from "../components/TimeSlotPicker";
 import { BookContext } from "../constexts/bookContext";
 import SkeletonLoader from "../components/SkeletonLoader";
+import moment from "moment";
 const SPORTS = [
   {
     id: "football",
@@ -121,7 +122,7 @@ export const Turfs = () => {
     let allSlots = [];
     let results = [...turfs];
 
-    results = results.filter((turf) => turf.owner !== "6888b4240c7965c5e42f9e10")
+    // results = results.filter((turf) => turf.owner !== "6888b4240c7965c5e42f9e10")
 
     if (selectedSport && results.length > 0) {
       results = results.filter((turf) =>
@@ -147,6 +148,7 @@ export const Turfs = () => {
         .filter((turf) => turf.distance < 5)
         .sort((a, b) => a.distance - b.distance);
     }
+
     let timeToMinutes = (timeStr) => {
       if (!timeStr) return 0;
       const [time, period] = timeStr.split(" ");
@@ -158,65 +160,40 @@ export const Turfs = () => {
       return totalHours * 60 + (minutes || 0);
     };
 
-
-    results = results.map((turf) => {
+    const isSlotAvailable = (checkInSlot, checkOutSlot, bookedSlots) => {
+          const checkInTime = moment(checkInSlot, "h:mm");
+          const checkOutTime = moment(checkOutSlot, "h:mm");
+          // console.log("checkInTime", checkInTime, "checkOutTime", checkOutTime, "todayBookings", bookedSlots)
+          for (const slot of bookedSlots) {
+            const slotStart = moment(slot.start, "h:mm");
+            const slotEnd = moment(slot.end, "h:mm");
+            if (
+              (checkInTime.isBetween(slotStart, slotEnd, null, "[]") ||
+                checkOutTime.isBetween(slotStart, slotEnd, null, "[]")) ||
+              (checkInTime.isSameOrBefore(slotStart) &&
+                checkOutTime.isSameOrAfter(slotEnd))
+            ) {
+              return false; 
+            }
+          }   return true; 
+        };
+    results = results.filter((turf) => {
       const today = new Date().toISOString().split("T")[0];
       const todayBookings = turf.bookedSlots.filter(
         (slot) => slot.date === today
       );
-
-
-
-
+      const bookedSlots= todayBookings.flatMap(slot => slot.slots);
+      console.log("todayBookings", todayBookings, "bookedSlots", bookedSlots)
       const openingHour = Number(turf.openingTime.split(":")[0]);
       const closingHour = Number(turf.closingTime.split(":")[0]);
+     
 
-      for (let hour = openingHour; hour < closingHour; hour++) {
-        const period = hour >= 12 ? "PM" : "AM";
-        const displayHour = hour % 12 || 12;
-        allSlots.push({
-          display: `${displayHour}:00 ${period}`,
-          startMinutes: hour * 60,
-          endMinutes: (hour + 1) * 30,
-        });
-      }
-
-
-
-      const availableSlots = allSlots.filter(
-        (slot) =>
-          !todayBookings.some((booking) =>
-            booking.slots.some(
-              (bookedSlot) =>
-                slot.startMinutes < timeToMinutes(bookedSlot.end) &&
-                slot.endMinutes > timeToMinutes(bookedSlot.start)
-            )
-          )
-      );
-      console.log("allSlots", allSlots)
-
-      return {
-        ...turf,
-        availableSlots: availableSlots.map(slot => slot.display),
-
-      };
+     return isSlotAvailable(checkInSlot, checkOutSlot, bookedSlots)
 
     });
-    
-    if (checkInSlot && checkOutSlot) {
-      results = results.filter((turf) => {
-        const checkInMinutes = timeToMinutes(checkInSlot);
-        const checkOutMinutes = timeToMinutes(checkOutSlot);
 
-        return turf.availableSlots.some(slot => {
-          const slotMinutes = timeToMinutes(slot);
-          return (
-            slotMinutes <= checkInMinutes &&
-            slotMinutes + 60 >= checkOutMinutes
-          );
-        });
-      });
-    }
+    console.log("filteredTurfs", results)
+
 
     return results;
   }, [
@@ -283,7 +260,7 @@ export const Turfs = () => {
 
   return (
     <div className="w-full  px-6 py-4 text-white bg-gradient-to-b from-gray-900 to-gray-950">
-      
+
       <div className="flex  sm:flex-row items-center justify-between mb-6 gap-4">
         <button
           onClick={() => setNearestSwitch(!nearestSwitch)}
@@ -317,14 +294,14 @@ export const Turfs = () => {
                 key={sport.id}
                 onClick={() => handleSportFilter(sport.id)}
                 className={`flex flex-col items-center p-2 rounded-lg transition-all ${selectedSport === sport.id
-                    ? `${sport.color} border border-white/20 shadow-lg transform scale-105`
-                    : "bg-gray-700/30 hover:bg-gray-700/50"
+                  ? `${sport.color} border border-white/20 shadow-lg transform scale-105`
+                  : "bg-gray-700/30 hover:bg-gray-700/50"
                   }`}
               >
                 <div
                   className={`p-2 rounded-full ${selectedSport === sport.id
-                      ? "bg-white/20"
-                      : "bg-gray-600/30"
+                    ? "bg-white/20"
+                    : "bg-gray-600/30"
                     }`}
                 >
                   <img
@@ -335,8 +312,8 @@ export const Turfs = () => {
                 </div>
                 <span
                   className={`text-xs mt-1 ${selectedSport === sport.id
-                      ? "font-bold text-white"
-                      : "text-gray-300"
+                    ? "font-bold text-white"
+                    : "text-gray-300"
                     }`}
                 >
                   {sport.name}
@@ -355,8 +332,8 @@ export const Turfs = () => {
                 setShowSlotPicker(true);
               }}
               className={`flex justify-between items-center p-3 rounded-lg transition-all ${checkInSlot
-                  ? "bg-lime-500/20 border border-lime-500/50"
-                  : "bg-gray-700/30 hover:bg-gray-700/50"
+                ? "bg-lime-500/20 border border-lime-500/50"
+                : "bg-gray-700/30 hover:bg-gray-700/50"
                 }`}
             >
               <span>{checkInSlot || "Check-in"}</span>
@@ -370,8 +347,8 @@ export const Turfs = () => {
                 }
               }}
               className={`flex justify-between items-center p-3 rounded-lg transition-all ${checkOutSlot
-                  ? "bg-lime-500/20 border border-lime-500/50"
-                  : "bg-gray-700/30 hover:bg-gray-700/50"
+                ? "bg-lime-500/20 border border-lime-500/50"
+                : "bg-gray-700/30 hover:bg-gray-700/50"
                 } ${!checkInSlot ? "opacity-50 cursor-not-allowed" : ""}`}
               disabled={!checkInSlot}
             >
@@ -406,7 +383,6 @@ export const Turfs = () => {
             <TurfCard
               key={turf._id}
               sports={SPORTS}
-              availableSlots={turf.availableSlots}
               bookedSlots={turf.bookedSlots}
               turf={turf}
               selectedSport={selectedSport}
@@ -416,7 +392,6 @@ export const Turfs = () => {
               onClick={() => {
                 navigate(`/overview/${turf._id}`, setNearestSwitch(true), {
                   state: {
-                    availableSlots: turf.availableSlots,
                     bookedSlots: turf.bookedSlots,
                     selectedSport,
                     turfDistance: turf.distance
