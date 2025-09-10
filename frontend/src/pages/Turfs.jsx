@@ -122,7 +122,12 @@ export const Turfs = () => {
     let allSlots = [];
     let results = [...turfs];
 
-    // results = results.filter((turf) => turf.owner !== "6888b4240c7965c5e42f9e10")
+   results = results.filter((turf) => 
+  turf.owner !== "6888b4240c7965c5e42f9e10" && 
+  turf.owner !== "68a2df8058370b975f64cdaa"
+);
+
+
 
     if (selectedSport && results.length > 0) {
       results = results.filter((turf) =>
@@ -191,8 +196,6 @@ export const Turfs = () => {
      return isSlotAvailable(checkInSlot, checkOutSlot, bookedSlots)
 
     });
-
-    console.log("filteredTurfs", results)
 
 
     return results;

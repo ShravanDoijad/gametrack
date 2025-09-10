@@ -15,8 +15,6 @@ async function sendOtp({ identifier, role }) {
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-  console.log("cred", identifier, role);
-
   try {
     let targetPhone
     if (role === 'owner') {

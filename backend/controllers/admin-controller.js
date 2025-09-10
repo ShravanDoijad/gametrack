@@ -1,6 +1,8 @@
 const jwt = require("jsonwebtoken");
 const Turf = require("../models/turf-model");
 const Owner = require("../models/owner-model");
+const User = require("../models/user-model");
+const Booking = require("../models/booking-model");
 const cloudinary = require("../cloudinary");
 const adminLogin = async (req, res) => {
   try {
@@ -9,6 +11,7 @@ const adminLogin = async (req, res) => {
       return res.status(400).json({ message: "all fields are required" });
     }
 
+    console.log(email , password)
     if (
       email !== process.env.ADMIN_EMAIL ||
       password !== process.env.ADMIN_PASSWORD
@@ -22,7 +25,7 @@ const adminLogin = async (req, res) => {
         password: process.env.ADMIN_PASSWORD,
       },
       process.env.JWT_SECRET,
-      { expiresIn: "1d" }
+      { expiresIn: "7d" }
     );
     await res.cookie("adminToken", token);
     return res.status(200).json({ message: "admin loggedIn successfully" });
@@ -84,14 +87,60 @@ const addTurf = async (req, res) => {
   }
 };
 
+const getAllTurfs = async (req, res) => {
+  try {
+    const turfs = await Turf.find({}).populate("owner", "name email");
+    res.status(200).json(turfs);
+  }
+  catch (error) {
+    console.log("Error fetching turfs:", error);
+    res.status(500).json({ message: "Enable Load turfs", error: error });
+  }
+}
 
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).select("-password");
+    res.status(200).json(users);
+  } catch (error) {
+    console.log("Error fetching users:", error);
+    res.status(500).json({ message: "Enable Load users", error: error });
+  }
+};
 
+const getAllBookings = async (req, res) => {
+  try {
+    const bookings = await Booking.find({})
+      .populate("userId", "fullname email")
+      .populate("turfId", "name location");
+    res.status(200).json(bookings);
+  } catch (error) {
+    console.log("Error fetching bookings:", error);
+    res.status(500).json({ message: "Enable Load bookings", error: error });
+  }
+};
 
+const adminAuthCheck = async (req, res)=>{
+  try{
+    const token = req.cookies.adminToken;
+    if(!token){
+      return res.status(401).json({message: "Unauthorized! Token missing."})
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.status(200).json({message: "Authorized", admin: decoded})
 
-
+  }
+  catch(error){
+    console.error("Admin Auth Error:", error.message);
+    res.status(401).json({message: "Unauthorized! Invalid or expired token."})
+  }
+}
 module.exports = {
   adminLogin,
   adminLogout,
   addTurf,
-  
+  getAllTurfs,
+  getAllUsers,
+  getAllBookings,
+  adminAuthCheck
 };
