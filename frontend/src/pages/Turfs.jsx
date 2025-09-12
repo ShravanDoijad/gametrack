@@ -188,7 +188,7 @@ export const Turfs = () => {
         (slot) => slot.date === today
       );
       const bookedSlots= todayBookings.flatMap(slot => slot.slots);
-      console.log("todayBookings", todayBookings, "bookedSlots", bookedSlots)
+  
       const openingHour = Number(turf.openingTime.split(":")[0]);
       const closingHour = Number(turf.closingTime.split(":")[0]);
      

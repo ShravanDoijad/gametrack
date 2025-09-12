@@ -3,7 +3,23 @@ const Turf = require("../models/turf-model")
 
 const getAllTurfs = async(req, res)=>{
     try {
-        const turfs = await Turf.find({})
+        let turfs = await Turf.find({}, "name bookedSlots sportsAvailable createdAt averageRating images location dayPrice nightPrice openingTime closingTime")
+        if(!turfs || turfs.length === 0){
+            return res.status(404).json({message: "No turfs found"})
+        }
+
+        // key={turf._id}
+        //       sports={SPORTS}
+        //       bookedSlots={turf.bookedSlots}
+        //       turf={turf}
+        //       selectedSport={selectedSport}
+        //       nearestSwitch={nearestSwitch}
+        //       checkInSlot={checkInSlot}
+        //       checkOutSlot={checkOutSlot}
+
+        turfs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+       
+        console.log("Turfs fetched successfully", turfs) 
        res.status(200).json(turfs)
     } catch (error) {
         res.status(500).json({message: "Enable Load turfs", error: error})
