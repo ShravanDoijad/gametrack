@@ -8,14 +8,6 @@ const getAllTurfs = async(req, res)=>{
             return res.status(404).json({message: "No turfs found"})
         }
 
-        // key={turf._id}
-        //       sports={SPORTS}
-        //       bookedSlots={turf.bookedSlots}
-        //       turf={turf}
-        //       selectedSport={selectedSport}
-        //       nearestSwitch={nearestSwitch}
-        //       checkInSlot={checkInSlot}
-        //       checkOutSlot={checkOutSlot}
 
         turfs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
        

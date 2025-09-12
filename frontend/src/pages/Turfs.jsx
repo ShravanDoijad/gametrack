@@ -123,8 +123,9 @@ export const Turfs = () => {
     let results = [...turfs];
 
    results = results.filter((turf) => 
-  turf.owner !== "6888b4240c7965c5e42f9e10" && 
-  turf.owner !== "68a2df8058370b975f64cdaa"
+  turf.name !== "admin Turf" && 
+  turf.name !== "admin #3" &&
+  turf.name.toLowerCase() !== "dream sports club"
 );
 
 
