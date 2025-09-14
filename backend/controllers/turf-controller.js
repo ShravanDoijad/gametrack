@@ -7,11 +7,7 @@ const getAllTurfs = async(req, res)=>{
         if(!turfs || turfs.length === 0){
             return res.status(404).json({message: "No turfs found"})
         }
-
-
         turfs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-       
-        console.log("Turfs fetched successfully", turfs) 
        res.status(200).json(turfs)
     } catch (error) {
         res.status(500).json({message: "Enable Load turfs", error: error})
@@ -22,6 +18,7 @@ const getAllTurfs = async(req, res)=>{
 const getSingleTurf = async (req, res)=>{
     try {
         const {id} = req.query 
+        
         const turf = await Turf.findById(id);
          res.status(200).json({turf:turf})       
     } catch (error) {

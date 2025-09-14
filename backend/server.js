@@ -3,10 +3,29 @@ const dotenv = require('dotenv');
 const webpush = require('web-push');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
-// Load environment variables
-dotenv.config();
-const connectDB = require('./db/db');
+const morgan = require('morgan');
 
+const app = express();
+const PORT = process.env.PORT || 10000;
+dotenv.config();
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.log("⛔ Blocked by CORS:", origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+};
+app.use(cors(corsOptions));
+app.use(express.json());
+app.use(cookieParser());
+app.use(morgan('dev'));
+
+const connectDB = require('./db/db');
 const userRouter = require('./routes/user-route');
 const verifyRouter = require('./routes/verifyOtp-route');
 const authCheckRouter = require('./routes/authCheck-route');
@@ -14,16 +33,6 @@ const ownerRouter = require('./routes/owner-route');
 const adminRouter = require('./routes/admin-route');
 const turfRouter = require('./routes/turf-route');
 
-const app = express();
-const PORT = process.env.PORT || 10000;
-
-
-app.use((req, res, next) => {
-  console.log("🔥 Incoming request from Origin:", req.headers.origin);
-  next();
-});
-
-// ✅ CORS Setup
 const allowedOrigins = [
   "https://gametrack-sigma.vercel.app",
   "https://gametrack-lhzg92l2o-shravans-projects-00476bc1.vercel.app",
@@ -34,33 +43,16 @@ const allowedOrigins = [
 ];
 
 
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log("⛔ Blocked by CORS:", origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
-};
-
-app.use(cors(corsOptions));
-
-app.use(express.json());
-app.use(cookieParser());
+app.use((req, res, next) => {
+  console.log("🔥 Incoming request from Origin:", req.headers.origin);
+  next();
+});
 
 
 app.get("/", (req, res) => {
   res.send(" API is live...");
 });
-
 app.get("/api/ping", (req, res) => res.status(200).send("pong"));
-
-
 
 app.use('/otp', verifyRouter);
 app.use('/api/users', userRouter);
