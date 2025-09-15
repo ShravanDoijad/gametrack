@@ -284,15 +284,13 @@ const updateSubscriptionSlots = async (turfId, subscriptionDetails) => {
     if (!turf) {
       throw new Error('Turf not found');
     }
-
-    // Create new subscription slot object
     const newSubscriptionSlot = {
-      user: subscriptionDetails.userId, // assuming userId is passed in subscriptionDetails
-      fromDate: subscriptionDetails.fromDate, // "YYYY-MM-DD"
-      toDate: subscriptionDetails.toDate,     // "YYYY-MM-DD"
+      user: subscriptionDetails.userId,
+      fromDate: subscriptionDetails.fromDate, 
+      toDate: subscriptionDetails.toDate,    
       slot: {
-        start: subscriptionDetails.slot.start, // "HH:MM" format
-        end: subscriptionDetails.slot.end     // "HH:MM" format
+        start: subscriptionDetails.slot.start,
+        end: subscriptionDetails.slot.end     
       }
     };
 
@@ -337,6 +335,8 @@ const updateTurfBookedSlots = async (turfId, bookingDetails) => {
     );
   }
 };
+
+
 const verifyOrder = async (req, res) => {
   try {
     const { data: user, role } = req.auth
@@ -461,11 +461,6 @@ const verifyOrder = async (req, res) => {
         }
       });
 
-
-
-
-
-
       await Promise.all([
         Notification.create({
           user: userId,
@@ -524,8 +519,6 @@ const verifyOrder = async (req, res) => {
           remaining: subscriptionDetails.totalAmount - subscriptionDetails.advanceAmount
         }
       });
-
-
 
 
     }
@@ -831,7 +824,6 @@ const getPendingReviews = async (req, res) => {
     const { data: user, role } = req.auth;
     const currentTime = new Date();
 
-    // Step 1: Get all bookings of the user
     const bookings = await bookingModel.find({ userId: user._id }).populate("turfId");
 
     const pendingReviews = [];
@@ -842,7 +834,7 @@ const getPendingReviews = async (req, res) => {
         (rev) => rev.user.toString() === user._id.toString()
       );
 
-      // Loop through all slots in this booking
+
       for (let slot of booking.slots) {
         const bookingDateTime = new Date(booking.date);
         const [endHour, endMinute] = slot.end.split(":").map(Number);
@@ -891,7 +883,6 @@ const submitReview = async (req, res) => {
       return res.status(400).json({ message: 'You can review only after the slot ends' });
     }
 
-    // Optional: Check if already reviewed
     if (userBooking.isReviewed) {
       return res.status(400).json({ message: 'You already submitted a review for this booking' });
     }

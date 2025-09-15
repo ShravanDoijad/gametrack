@@ -1,19 +1,46 @@
 const Owner = require("../models/owner-model")
 const Turf = require("../models/turf-model")
+const cron = require("node-cron")
 
-const getAllTurfs = async(req, res)=>{
-    try {
-        let turfs = await Turf.find({}, "name bookedSlots sportsAvailable createdAt averageRating images location dayPrice nightPrice openingTime closingTime")
-        if(!turfs || turfs.length === 0){
-            return res.status(404).json({message: "No turfs found"})
-        }
-        turfs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-       res.status(200).json(turfs)
-    } catch (error) {
-        res.status(500).json({message: "Enable Load turfs", error: error})
+const fetchAllTurfs = async () => {
+  let turfs = await Turf.find(
+    {},
+    "name bookedSlots sportsAvailable createdAt averageRating images location dayPrice nightPrice openingTime closingTime"
+  );
+
+  if (!turfs || turfs.length === 0) {
+    return null;
+  }
+
+  turfs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  return turfs;
+};
+
+const getAllTurfs = async (req, res) => {
+  try {
+    const turfs = await fetchAllTurfs();
+    if (!turfs) {
+      return res.status(404).json({ message: "No turfs found" });
     }
-   
-}
+    res.status(200).json(turfs);
+  } catch (error) {
+    res.status(500).json({ message: "Unable to load turfs", error });
+  }
+};
+
+cron.schedule("*/15 * * * *", async () => {
+  try {
+    const turfs = await fetchAllTurfs();
+    if (turfs) {
+      console.log(`[CRON] Warmed up DB: ${turfs.length} turfs`);
+    } else {
+      console.log("[CRON] No turfs found in DB");
+    }
+  } catch (error) {
+    console.error("[CRON] Error fetching turfs:", error);
+  }
+});
+
 
 const getSingleTurf = async (req, res)=>{
     try {
