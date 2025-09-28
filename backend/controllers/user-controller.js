@@ -165,15 +165,32 @@ const userLogout = async (req, res) => {
 const createOrder = async (req, res) => {
   const { amount, receipt, bookingDetails, subscriptionDetails } = req.body;
 
-  const options = {
+  
+
+  let options = {
     amount: amount * 100,
     currency: "INR",
     receipt: receipt,
   };
+  const user = await User.findById(bookingDetails ? bookingDetails.userId : subscriptionDetails.userId)
+  user.firstBooking == true;
+  console.log("user first booking", user.firstBooking)
+  if (!user) {
+    return res.status(400).json({
+      success: false,
+      message: "User not found, Login First",
+    });
+  }
+  if(user.firstBooking && bookingDetails){
+    
+      bookingDetails.finalPrice = bookingDetails.slotFees -50
+      bookingDetails.originalPrice = bookingDetails.slotFees
+      options.amount = bookingDetails.finalPrice * 100
+    
 
-
+  }
   try {
-
+    console.log("Creating order with options:", options);
 
     if (subscriptionDetails) {
       const { turfId, userId, fromDate, toDate, slot } = subscriptionDetails;
@@ -187,9 +204,6 @@ const createOrder = async (req, res) => {
             end: { $gt: subscriptionDetails.slot.start }
           }
         },
-
-
-        // status: { $ne: "cancelled" },
       });
 
       if (existingUserBooking) {
@@ -223,10 +237,6 @@ const createOrder = async (req, res) => {
 
     } else {
       const { turfId, userId, date, slots } = bookingDetails
-
-
-
-
       const existingUserBooking = await Booking.findOne({
         turfId,
         userId,
@@ -348,6 +358,11 @@ const verifyOrder = async (req, res) => {
       subscriptionDetails
     } = req.body;
 
+    if (user.firstBooking && bookingDetails) {
+      user.firstBooking = false
+      await user.save()
+    }
+
     const userId = user._id || details.userId;
     const details = subscriptionDetails ? subscriptionDetails : bookingDetails
 
@@ -410,6 +425,8 @@ const verifyOrder = async (req, res) => {
         slots: bookingDetails.slots,
         sport: bookingDetails.sport,
         slotFees: bookingDetails.slotFees,
+        originalPrice: bookingDetails.originalPrice,
+        finalPrice: bookingDetails.finalPrice,
         amountPaid: bookingDetails.amount,
         razorpay_payment_id,
         razorpay_order_id,

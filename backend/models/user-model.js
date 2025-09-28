@@ -19,7 +19,10 @@ const UserSchema = new mongoose.Schema({
     lowercase: true,
     trim: true,
   },
- 
+  firstBooking:{
+    type: Boolean,
+    default: true,
+  },
   favoriteTurfs: [
     {
       type: mongoose.Schema.Types.ObjectId,

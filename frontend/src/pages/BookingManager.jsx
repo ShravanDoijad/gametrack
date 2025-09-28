@@ -126,7 +126,7 @@ const BookingManager = () => {
 
   const handlePayment = async () => {
     try {
-      console.log("turfInfo", turfInfo.allowAdvancePayment)
+      
       const amount = parseInt(turfInfo.allowAdvancePayment)* Math.floor(calculateDuration())
 
 

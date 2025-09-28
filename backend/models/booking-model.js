@@ -34,6 +34,8 @@ const bookingSchema = new mongoose.Schema({
   ],
   amountPaid: Number,
 
+  originalPrice:Number,
+  finalPrice:Number,
   razorpay_payment_id: String,
   
   razorpay_order_id: String,

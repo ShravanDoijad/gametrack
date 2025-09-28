@@ -41,7 +41,6 @@ cron.schedule("*/15 * * * *", async () => {
   }
 });
 
-
 const getSingleTurf = async (req, res)=>{
     try {
         const {id} = req.query 
