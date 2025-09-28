@@ -37,7 +37,7 @@ const allowedOrigins = [
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (allowedOrigins.includes(origin) || !origin) {
+    if (allowedOrigins.includes(origin) || !origin || origin === "https://gametrack-admin.vercel.app") {
       callback(null, true);
     } else {
       console.log("⛔ Blocked by CORS:", origin);
