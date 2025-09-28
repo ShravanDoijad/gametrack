@@ -29,7 +29,7 @@ const allowedOrigins = [
   "http://localhost:5174",
   "https://www.gametrack.in",
   "https://gametrack-admin.vercel.app",
-  "gametrack-admin-git-main-shravans-projects-00476bc1.vercel.app",
+  "https://gametrack-admin-1qcw2cjv2-shravans-projects-00476bc1.vercel.app",
   "https://gametrack-admin-1qcw2cjv2-shravans-projects-00476bc1.vercel.app"
  
   
