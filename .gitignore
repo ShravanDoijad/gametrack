@@ -23,9 +23,6 @@ gametrack-key.json
 firebase.json    # (if not needed on frontend)
 onesignal-keys.json
 
-# Builds (optional: if you're deploying separately)
-dist/
-build/
 
 # Vercel / Netlify / Firebase local settings
 .vercel
