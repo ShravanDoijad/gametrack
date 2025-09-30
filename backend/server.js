@@ -11,29 +11,29 @@ dotenv.config();
 
 const allowedOrigins = [
   "https://gametrack-sigma.vercel.app",
-  "https://gametrack-lhzg92l2o-shravans-projects-00476bc1.vercel.app",
+  "https://gametrack-admin.vercel.app",
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://www.gametrack.in",
-  "https://gametrack-admin.vercel.app",
-  "https://gametrack-admin-1qcw2cjv2-shravans-projects-00476bc1.vercel.app",
-  "https://gametrack-admin-1qcw2cjv2-shravans-projects-00476bc1.vercel.app"
- 
-  
+  "https://www.gametrack.in"
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
-    if (allowedOrigins.includes(origin) || !origin || origin === "https://gametrack-admin.vercel.app") {
+    if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.log("⛔ Blocked by CORS:", origin);
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error("Not allowed by CORS"));
     }
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
+
 app.use(cors(corsOptions));
+app.options("*", cors(corsOptions)); 
+
 
 app.use(express.json());
 app.use(cookieParser());
