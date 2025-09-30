@@ -27,7 +27,12 @@ const adminLogin = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "7d" }
     );
-    await res.cookie("adminToken", token);
+    await res.cookie("token", token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "none",
+  maxAge: 24 * 60 * 60 * 1000
+});
     return res.status(200).json({ message: "admin loggedIn successfully" });
   } catch (error) {
     console.log("adminLogin error", error);
