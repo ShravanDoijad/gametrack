@@ -9,19 +9,6 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 dotenv.config();
 
-
-app.use(express.json());
-app.use(cookieParser());
-app.use(morgan('dev'));
-
-const connectDB = require('./db/db');
-const userRouter = require('./routes/user-route');
-const verifyRouter = require('./routes/verifyOtp-route');
-const authCheckRouter = require('./routes/authCheck-route');
-const ownerRouter = require('./routes/owner-route');
-const adminRouter = require('./routes/admin-route');
-const turfRouter = require('./routes/turf-route');
-
 const allowedOrigins = [
   "https://gametrack-sigma.vercel.app",
   "https://gametrack-lhzg92l2o-shravans-projects-00476bc1.vercel.app",
@@ -47,6 +34,20 @@ const corsOptions = {
   credentials: true
 };
 app.use(cors(corsOptions));
+
+app.use(express.json());
+app.use(cookieParser());
+app.use(morgan('dev'));
+
+const connectDB = require('./db/db');
+const userRouter = require('./routes/user-route');
+const verifyRouter = require('./routes/verifyOtp-route');
+const authCheckRouter = require('./routes/authCheck-route');
+const ownerRouter = require('./routes/owner-route');
+const adminRouter = require('./routes/admin-route');
+const turfRouter = require('./routes/turf-route');
+
+
 
 app.use((req, res, next) => {
   console.log("🔥 Incoming request from Origin:", req.headers.origin);
