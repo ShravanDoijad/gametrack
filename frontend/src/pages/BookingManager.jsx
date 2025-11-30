@@ -126,9 +126,10 @@ const BookingManager = () => {
 
   const handlePayment = async () => {
     try {
-      
-      const amount = parseInt(turfInfo.allowAdvancePayment)* Math.floor(calculateDuration())
+      if (loading) return;
 
+      const amount = Math.round(calculateFee()*0.2) * Math.floor(calculateDuration())
+    
 
       const bookingDetails = {
         turfId: turfInfo._id,
@@ -163,6 +164,12 @@ const BookingManager = () => {
       const { order } = res.data;
 
       const options = {
+        modal: {
+          ondismiss: function () {
+            toast.info("Payment window closed");
+            setloading(false);
+          }
+        },
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: "INR",
@@ -187,6 +194,8 @@ const BookingManager = () => {
 
             } else {
               toast.error("Payment Failed");
+              setloading(false);
+
             }
           } catch (err) {
             console.error(err);
@@ -228,9 +237,11 @@ const BookingManager = () => {
   const addSubscription = async () => {
 
     try {
+      if (loading) return;
+
       const amount = calculateSubscriptionFee();
       let advanceAmount = Math.round(amount * 0.2);
-      advanceAmount = advanceAmount + advanceAmount * 0.0218
+      advanceAmount = Math.round(advanceAmount + (advanceAmount * 0.0218));
       const subscriptionDetails = {
         turfId: turfInfo._id,
         userId: userInfo._id,
@@ -260,6 +271,12 @@ const BookingManager = () => {
 
       const { order } = paymentRes.data;
       const options = {
+        modal: {
+          ondismiss: function () {
+            toast.info("Payment window closed");
+            setloading(false);
+          }
+        },
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
         amount: order.amount,
         currency: "INR",
@@ -281,6 +298,8 @@ const BookingManager = () => {
               navigate("/subscriptions");
             } else {
               toast.error("Payment Failed");
+              setloading(false);
+
             }
           } catch (err) {
             console.error(err);

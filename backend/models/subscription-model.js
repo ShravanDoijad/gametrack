@@ -6,69 +6,95 @@ const subscriptionSchema = new mongoose.Schema({
     ref: "Turf",
     required: true,
   },
+
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
+
+  // ───────────── DATE RANGE ─────────────
   startDate: {
-    type: String, // Store as "YYYY-MM-DD"
+    type: Date,
     required: true,
   },
+
   endDate: {
-    type: String, // Store as "YYYY-MM-DD"
+    type: Date,
     required: true,
   },
+
   durationDays: {
     type: Number,
-    required: true,
-    enum: [7, 15, 30, 60, 90] 
-  },
-  slot: {
-    start: {
-      type: String,
-      required: true
-    },
-    end: {
-      type: String,
-      required: true
-    }
-  },
-  sport: {
-    type: String,
+    enum: [7, 15, 30, 60, 90],
     required: true
   },
-  amountPaid:{
+
+  // ───────────── TIME SLOT ─────────────
+  slot: {
+    start: { type: String, required: true }, // "06:00"
+    end: { type: String, required: true }     // "07:00"
+  },
+
+  daysOfWeek: {
+    type: [String], // ["Mon", "Wed", "Fri"]
+    required: true
+  },
+
+  sport: {
+    type: String,
+    required: true,
+  },
+
+  // ───────────── PAYMENT ─────────────
+  amountPaid: {
     type: Number,
     required: true
   },
-  
+
   totalAmount: {
     type: Number,
     required: true
   },
+
   paymentType: {
     type: String,
-    required: true,
-    enum: ['full', 'advance'] // Match your payment options
+    enum: ['full', 'advance'],
+    required: true
   },
+
   razorpay_payment_id: String,
   razorpay_order_id: String,
+
+  // ───────────── STATUS ─────────────
   status: {
     type: String,
-    enum: ['active', 'confirmed', 'cancelled'],
+    enum: ['active', 'paused', 'confirmed', 'cancelled'],
     default: 'active'
   },
-  // To track which dates have been used/attended
 
-  // For tracking reminders
+  autoRenew: {
+    type: Boolean,
+    default: false
+  },
+
+  // ───────────── ATTENDANCE ─────────────
+  attendance: [
+    {
+      date: Date,
+      status: {
+        type: String,
+        enum: ['present', 'absent'],
+        default: 'present'
+      }
+    }
+  ],
+
+  // ───────────── SYSTEM/FOLLOWUP ─────────────
   lastReminderSent: Date,
-  // For cancellation policy
   cancellationDate: Date,
   cancellationReason: String
+
 }, { timestamps: true });
-
-// Pre-save hook to generate attendance records
-
 
 module.exports = mongoose.model("Subscription", subscriptionSchema);

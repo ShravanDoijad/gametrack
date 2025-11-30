@@ -54,10 +54,10 @@ const ICON_MAP = {
   "changing room": DoorOpen,
   "water": Droplet,
   "toilet": Toilet,
-  "washroom": Toilet, 
+  "washroom": Toilet,
   "sports equipment": Box,
   "equipment": Box,
-  
+
   "team": Users,
 };
 
@@ -114,7 +114,14 @@ export const Overview = () => {
   const [liked, setLiked] = useState(false);
   const [loading, setloading] = useState(false)
   const [turfDistance, setTurfDistance] = useState(null);
- 
+  const [editPlan, setEditPlan] = useState(null)
+  const [editInput, setEditInput] = useState({
+    days: "",
+    amount: "",
+    description: ""
+  })
+
+
   const { turfId } = useParams()
   const { setfavorite, favorite, selectedSport, setloginPanel, userInfo, setSelectedSport, calculateDistance, token } = useContext(BookContext);
 
@@ -151,7 +158,7 @@ export const Overview = () => {
     }
   }, [turfInfo, userCoords]);
 
-  if(selectedSport== "football"){
+  if (selectedSport == "football") {
 
   }
 
@@ -166,6 +173,39 @@ export const Overview = () => {
 
   const toggleFavorite = (id) => {
     setfavorite(id);
+  };
+
+  const handleUpdatePlan = async () => {
+    try {
+      const res = await axios.put("/api/turfs/update-subscription", {
+        turfId: turfInfo._id,
+        planId: editPlan,
+        ...editInput
+      });
+
+      toast.success("Plan updated");
+      console.log(res.data);
+      setturfInfo(res.data.updatedTurf);
+      setEditPlan(null);
+
+    } catch (err) {
+      console.log(err);
+      toast.error("Update failed");
+    }
+  };
+
+  const handleDeletePlan = async (id) => {
+    try {
+      const res = await axios.delete("/api/turfs/delete-subscription", {
+        data: { turfId: turfInfo._id, planId: id }
+      });
+
+      toast.success("Plan deleted");
+      setturfInfo(res.data.updatedTurf);
+
+    } catch (err) {
+      toast.error("Delete failed");
+    }
   };
 
 
@@ -191,7 +231,7 @@ export const Overview = () => {
     getSingleTurf()
   }, [turfId])
 
- 
+
 
   useEffect(() => {
     if (turfInfo) {
@@ -245,7 +285,6 @@ export const Overview = () => {
     )
   );
 
- 
 
   return (
     <div className="w-full pb-10  text-white relative animate-fadeIn">
@@ -401,6 +440,7 @@ export const Overview = () => {
             * Rates include standard equipment. Premium sports may have additional charges.
           </p>
         </div>
+
         {
           turfInfo.subscription && turfInfo.subscription.length > 0 ? (
             <div className="mt-8">
@@ -412,35 +452,57 @@ export const Overview = () => {
                 {turfInfo.subscription.map((plan, index) => (
                   <div
                     key={plan._id}
-                    onClick={()=> navigate("/booking",
+                    
+                    className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg"
+                  >
+                    <div onClick={()=> navigate("/booking",
                       {
                        state:{
                         plan        
                        }
                       }
-                    )}
-                    className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg active:opacity-90"
-                  >
-                    <div className="flex justify-between items-start">
+                    )} className="flex justify-between items-start">
                       <div>
                         <h4 className="text-lime-400 font-bold">
-                          {plan.days === 15 ? '15 Days Plan' :
-                            plan.days === 30 ? 'Monthly Plan' :
-                              plan.days === 45 ? '45 Days Plan' :
-                                `${plan.days} Days Plan`}
+                          {plan.days} Days Plan
                         </h4>
-                        <p className="text-gray-300 text-sm">{plan.description || 'Premium subscription plan'}</p>
+
+                        <p className="text-gray-300 text-sm">{plan.description}</p>
                       </div>
+
                       <span className="bg-lime-500/10 text-lime-400 px-3 py-1 rounded-full text-sm font-medium">
                         ₹{plan.amount}
                       </span>
                     </div>
+
+                    {/* OWNER CONTROLS */}
+                    {userInfo?.role === "owner" && (
+                      <div className="flex gap-3 mt-4">
+                        <button
+                          onClick={() => {
+                            setEditPlan(plan._id)
+                            setEditInput(plan)
+                          }}
+                          className="text-xs px-4 py-2 rounded-md z-20 bg-blue-600 hover:bg-blue-500"
+                        >
+                          EDIT
+                        </button>
+
+                        <button
+                          onClick={() => handleDeletePlan(plan._id)}
+                          className="text-xs px-4 py-2 rounded-md bg-red-600 z-20  hover:bg-red-500"
+                        >
+                          DELETE
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
           ) : null
         }
+
         {/* Sports Section */}
         <div className="mt-8">
           <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
@@ -491,15 +553,16 @@ export const Overview = () => {
 
           <div className="grid grid-cols-2 gap-3">
             {
-              turfInfo.amenities.map((amenity, idx) =>{
-                const Icon = Object.keys(ICON_MAP).find(k=>amenity.toLowerCase().includes(k))?
-                    ICON_MAP[Object.keys(ICON_MAP).find(k=>amenity.toLowerCase().includes(k))] : ShieldCheck;
-                    return(<div key={idx} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex items-center gap-3">
+              turfInfo.amenities.map((amenity, idx) => {
+                const Icon = Object.keys(ICON_MAP).find(k => amenity.toLowerCase().includes(k)) ?
+                  ICON_MAP[Object.keys(ICON_MAP).find(k => amenity.toLowerCase().includes(k))] : ShieldCheck;
+                return (<div key={idx} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex items-center gap-3">
                   <div className="bg-lime-500/10 p-2 rounded-lg">
                     {Icon && <Icon className="w-5 h-5 text-blue-600" />}
                   </div>
                   <span className="text-sm">{amenity}</span>
-                </div>)}
+                </div>)
+              }
               )}
           </div>
         </div>
@@ -597,7 +660,52 @@ export const Overview = () => {
           </div>
         </div>
       </div>
-      
+      {editPlan && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-gray-900 p-6 rounded-xl w-96 border border-gray-700">
+            <h2 className="text-lg font-bold mb-4">Edit Subscription</h2>
+
+            <input
+              type="number"
+              placeholder="Days"
+              value={editInput.days}
+              onChange={(e) => setEditInput({ ...editInput, days: e.target.value })}
+              className="w-full p-2 mb-3 bg-gray-800 border border-gray-600 rounded"
+            />
+
+            <input
+              type="number"
+              placeholder="Amount"
+              value={editInput.amount}
+              onChange={(e) => setEditInput({ ...editInput, amount: e.target.value })}
+              className="w-full p-2 mb-3 bg-gray-800 border border-gray-600 rounded"
+            />
+
+            <textarea
+              placeholder="Description"
+              value={editInput.description}
+              onChange={(e) => setEditInput({ ...editInput, description: e.target.value })}
+              className="w-full p-2 mb-3 bg-gray-800 border border-gray-600 rounded"
+            />
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setEditPlan(null)}
+                className="px-4 py-1 bg-gray-700 rounded"
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={handleUpdatePlan}
+                className="px-4 py-1 bg-lime-500 text-black rounded"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

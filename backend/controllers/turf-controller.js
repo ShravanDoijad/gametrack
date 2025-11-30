@@ -69,8 +69,75 @@ const getSiblingTurf = async (req,res) => {
   }
 }
 
+const addSubscriptionSlot = async (req, res) => {
+  try {
+    const { turfId, days, amount, desc } = req.body;
+    console.log("Adding subscription slot:", req.body);
+    const turf = await Turf.findById(turfId);
+    if (!turf) {
+      return res.status(404).json({ message: "Turf not found" });
+    }
+    turf.subscription.push({ days, amount, desc });
+    await turf.save();
+    res.status(200).json({ message: "Subscription slot added successfully" });
+  } catch (error) {
+    console.error("Error adding subscription slot:", error);
+    res.status(500).json({ message: "Internal server error", error });
+  } 
+};
+
+const updateSubscription = async (req, res) => {
+  try {
+    const { turfId, planId, days, amount, desc } = req.body;
+    console.log("Updating subscription slot:", req.body);
+    const turf = await Turf.findById(turfId);
+    if (!turf) {
+      return res.status(404).json({ message: "Turf not found" });
+    }
+    const subscription = turf.subscription.id(planId);
+    if (!subscription) {
+      return res.status(404).json({ message: "Subscription slot not found" });
+    } 
+    subscription.days = days;
+    subscription.amount = amount;
+    subscription.desc = desc;
+    await turf.save();
+    res.status(200).json({ message: "Subscription slot updated successfully" });
+  }
+  catch (error) {
+    console.error("Error updating subscription slot:", error);
+    res.status(500).json({ message: "Internal server error", error });
+  } 
+};
+
+const deleteSubscription = async (req, res) => {
+  try {
+    const { turfId, planId } = req.body;
+    console.log("Deleting subscription slot:", req.body);
+    const turf = await Turf.findById(turfId);
+    if (!turf) {
+      return res.status(404).json({ message: "Turf not found" });
+    }
+    const subscription = turf.subscription.id(planId);
+    if (!subscription) {
+      return res.status(404).json({ message: "Subscription slot not found" });
+    }
+    subscription.remove();
+    await turf.save();
+    res.status(200).json({ message: "Subscription slot deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting subscription slot:", error);
+    res.status(500).json({ message: "Internal server error", error });
+  }
+};
+
+
 module.exports={
     getAllTurfs,
     getSingleTurf,
-    getSiblingTurf
+    getSiblingTurf,
+    addSubscriptionSlot,
+    updateSubscription,
+    deleteSubscription
+
 }

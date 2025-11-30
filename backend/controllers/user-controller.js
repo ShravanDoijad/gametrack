@@ -13,7 +13,7 @@ const cron = require("node-cron");
 const { sendMessage, OwnerUpdate, UserSubscriptionUpdate, OwnerSubscriptionUpdate } = require("../twilio/sendMessage");
 const bookingModel = require("../models/booking-model");
 const subscriptionModel = require('../models/subscription-model')
-
+const Payment = require("../models/payment-model");
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
@@ -21,16 +21,16 @@ const razorpay = new Razorpay({
 
 const userRegister = async (req, res) => {
   const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      console.log("Validation errors:", errors.array());
-      return res.status(400).json({
-        success: false,
-        message: errors.array()[0].msg,
-      });
-    }
+  if (!errors.isEmpty()) {
+    console.log("Validation errors:", errors.array());
+    return res.status(400).json({
+      success: false,
+      message: errors.array()[0].msg,
+    });
+  }
   try {
 
-    
+
     const { firstName, lastName, phone } = req.body;
 
     if (!firstName || !lastName || !phone) {
@@ -82,7 +82,7 @@ const userRegister = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-     const errors = validationResult(req);
+    const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
         success: false,
@@ -165,33 +165,33 @@ const userLogout = async (req, res) => {
 const createOrder = async (req, res) => {
   const { amount, receipt, bookingDetails, subscriptionDetails } = req.body;
 
-  
 
+  console.log("Create order called with:", { amount, receipt, bookingDetails,  });
   let options = {
     amount: amount * 100,
     currency: "INR",
     receipt: receipt,
   };
+
   const user = await User.findById(bookingDetails ? bookingDetails.userId : subscriptionDetails.userId)
-  user.firstBooking == true;
-  console.log("user first booking", user.firstBooking)
+  // user.firstBooking == true;
+  // console.log("user first booking", user.firstBooking)
   if (!user) {
     return res.status(400).json({
       success: false,
       message: "User not found, Login First",
     });
   }
-  if(user.firstBooking && bookingDetails){
-    
-      bookingDetails.finalPrice = bookingDetails.slotFees -50
-      bookingDetails.originalPrice = bookingDetails.slotFees
-      options.amount = bookingDetails.finalPrice * 100
-    
+  // if(user.firstBooking && bookingDetails){
 
-  }
+  //     bookingDetails.finalPrice = bookingDetails.slotFees -50
+  //     bookingDetails.originalPrice = bookingDetails.slotFees
+  //     options.amount = bookingDetails.finalPrice * 100
+
+
+  // }
   try {
     console.log("Creating order with options:", options);
-
     if (subscriptionDetails) {
       const { turfId, userId, fromDate, toDate, slot } = subscriptionDetails;
       const existingUserBooking = await subscriptionModel.findOne({
@@ -232,7 +232,31 @@ const createOrder = async (req, res) => {
         });
       }
 
+      const pendingPayment = await Payment.findOne({
+        userId: subscriptionDetails.userId,
+        status: { $in: ['created', 'attempted'] },
+        "subscription.turfId": subscriptionDetails.turfId,
+        "subscription.fromDate": subscriptionDetails.fromDate,
+        "subscription.toDate": subscriptionDetails.toDate,
+        "subscription.slot.start": subscriptionDetails.slot.start
+      });
+
+      if (pendingPayment) {
+        return res.json({
+          order: { id: pendingPayment.orderId, amount: pendingPayment.amount }
+        });
+      }
       const order = await razorpay.orders.create(options);
+
+      await Payment.create({
+        userId: subscriptionDetails.userId,
+        orderId: order.id,
+        amount: options.amount,
+        status: "created",
+        subscription: subscriptionDetails
+      });
+
+      return res.json({ order });
       return res.json({ order });
 
     } else {
@@ -280,7 +304,29 @@ const createOrder = async (req, res) => {
         });
       }
 
+      const pendingPayment = await Payment.findOne({
+        userId: bookingDetails.userId,
+        status: { $in: ['created', 'attempted'] },
+        "booking.turfId": bookingDetails.turfId,
+        "booking.date": bookingDetails.date,
+        "booking.slots.0.start": bookingDetails.slots[0].start
+      });
+
+      if (pendingPayment) {
+        return res.json({
+          order: { id: pendingPayment.orderId, amount: pendingPayment.amount }
+        });
+      }
+
       const order = await razorpay.orders.create(options);
+
+      await Payment.create({
+        userId: bookingDetails.userId,
+        orderId: order.id,
+        amount: options.amount,
+        status: "created",
+        booking: bookingDetails
+      });
       res.json({ order });
     }
   } catch (err) {
@@ -296,11 +342,11 @@ const updateSubscriptionSlots = async (turfId, subscriptionDetails) => {
     }
     const newSubscriptionSlot = {
       user: subscriptionDetails.userId,
-      fromDate: subscriptionDetails.fromDate, 
-      toDate: subscriptionDetails.toDate,    
+      fromDate: subscriptionDetails.fromDate,
+      toDate: subscriptionDetails.toDate,
       slot: {
         start: subscriptionDetails.slot.start,
-        end: subscriptionDetails.slot.end     
+        end: subscriptionDetails.slot.end
       }
     };
 
@@ -363,8 +409,9 @@ const verifyOrder = async (req, res) => {
       await user.save()
     }
 
-    const userId = user._id || details.userId;
+
     const details = subscriptionDetails ? subscriptionDetails : bookingDetails
+    const userId = user._id || details.userId;
 
     const userData = await User.findById(userId);
     const turf = await turfModel
@@ -372,6 +419,32 @@ const verifyOrder = async (req, res) => {
       .populate("owner", "fcmTokens turfname phone");
 
     const turfName = turf?.owner?.turfname || "your turf";
+
+    const alreadyProcessed = await Booking.findOne({
+      $or: [
+        { razorpay_payment_id },
+        { razorpay_order_id }
+      ]
+    });
+
+    if (alreadyProcessed) {
+      return res.status(200).json({
+        success: true,
+        message: "Payment already processed",
+        booking: alreadyProcessed
+      });
+    }
+    const paymentExists = await Payment.findOne({
+      orderId: razorpay_order_id,
+      status: { $in: ["created", "attempted"] }
+    });
+
+    if (!paymentExists) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired payment order"
+      });
+    }
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -385,6 +458,10 @@ const verifyOrder = async (req, res) => {
         .json({ success: false, message: "Invalid payment signature" });
     }
 
+    await Payment.updateOne(
+      { orderId: razorpay_order_id },
+      { $set: { status: "paid" } }
+    );
 
     if (!subscriptionDetails) {
       await updateTurfBookedSlots(details.turfId, details);
@@ -446,15 +523,15 @@ const verifyOrder = async (req, res) => {
       await sendMessage({
         phoneNumber: userData.phone,
         notification_data: {
-          name: userData.fullname.split(" ")[0],               
-          turfName: turfName,                                 
-          date: new Date(bookingDetails.date).toDateString(),                           
-          time: slotTimeText,                                  
-          location: turf.location.city,                        
-          amount:bookingDetails.slotFees,             
-          sport: bookingDetails.sport,                         
-          advance: bookingDetails.amount,              
-          remaining: bookingDetails.slotFees - bookingDetails.amount 
+          name: userData.fullname.split(" ")[0],
+          turfName: turfName,
+          date: new Date(bookingDetails.date).toDateString(),
+          time: slotTimeText,
+          location: turf.location.city,
+          amount: bookingDetails.slotFees,
+          sport: bookingDetails.sport,
+          advance: bookingDetails.amount,
+          remaining: bookingDetails.slotFees - bookingDetails.amount
         }
       });
 
@@ -468,13 +545,13 @@ const verifyOrder = async (req, res) => {
           slotEnd: bookingDetails.slots[0].end,
           duration: bookingDetails.duration,
           sport: bookingDetails.sport,
-          total: bookingDetails.slotFees,             
-          advance: bookingDetails.amount,            
+          total: bookingDetails.slotFees,
+          advance: bookingDetails.amount,
           remained:
             bookingDetails.status === "cancelled"
               ? 0
               : bookingDetails.slotFees - bookingDetails.amount
-          
+
         }
       });
 
@@ -547,6 +624,13 @@ const verifyOrder = async (req, res) => {
 
   } catch (err) {
     console.error(" Payment verification error:", err);
+    if (req.body?.razorpay_order_id) {
+      await Payment.updateOne(
+        { orderId: req.body.razorpay_order_id },
+        { $set: { status: "failed" } }
+      );
+    }
+
     return res.status(500).json({
       success: false,
       message: "Internal server error",
@@ -956,6 +1040,23 @@ const getSubscriptionSlots = async (req, res) => {
   }
 }
 
+const userSubscription = async (req, res) => {
+  try {
+    const { data: user, role } = req.auth;
+    const subscriptions = await subscriptionModel.find({ userId: user._id }).populate("turfId", "name");
+    res.status(200).json({ success: true, subscriptions });
+  }
+  catch (error) {
+    console.log("Error to Fetch Subscriptions", error);
+    return res.status(500).json({
+      success: false,
+      message: "Fetch Subscriptions Error",
+    });
+  }
+};
+
+
+
 
 module.exports = {
   userRegister,
@@ -974,7 +1075,8 @@ module.exports = {
   getPendingReviews,
   submitReview,
 
-  getSubscriptionSlots
+  getSubscriptionSlots,
+  userSubscription
 
 };
 

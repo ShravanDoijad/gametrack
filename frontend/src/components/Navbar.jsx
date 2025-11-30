@@ -102,7 +102,7 @@ const Navbar = () => {
                     </button>
                     {userInfo?.role === "owner" && (
                       <button
-                        onClick={() => navigate('/owner/dashboard')}
+                        onClick={() =>{ navigate('/owner/dashboard'); setShowDropdown(false)}}
                         className="w-full px-4 py-2 text-left text-sm text-lime-400 hover:bg-gray-700 transition-colors flex items-center gap-2"
                       >
                         Owner Dashboard
@@ -135,7 +135,7 @@ const Navbar = () => {
         {
             token && userInfo.role==="owner"&&
             <button
-              onClick={toggleSidebar}
+              onClick={()=>{navigate('/owner/dashboard'); toggleSidebar()}}
               className=" z-20  rounded-md  text-white lg:hidden"
             >
               <Menu size={24} />

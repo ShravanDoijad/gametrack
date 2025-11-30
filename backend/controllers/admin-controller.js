@@ -58,6 +58,7 @@ const addTurf = async (req, res) => {
     const files = req.files
     const imageUrl =[]
     for (const file of files) {
+      console.log("Uploading file:", file.buffer);
         const b64 = Buffer.from(file.buffer).toString('base64')
         const dataUri = `data:${file.mimetype};base64,${b64}`;
         const result = await cloudinary.uploader.upload(dataUri,{

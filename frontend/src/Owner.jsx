@@ -13,6 +13,7 @@ import PushNotifier from "./components/PushNotifier";
 import TodaysBookings from "./ownerPages/TodaysBookings";
 import OwnerPrivateRoute from "./OwnerPrivateRoute";
 import TimeSlots from "./ownerPages/TimeSlots";
+import SubscribedCustomer from "./ownerPages/SubcribedCustomer";
 
 const Owner = () => {
   const {userInfo, token} = useContext(BookContext)
@@ -30,6 +31,7 @@ const Owner = () => {
           <Route path="revenue" element={<Revenue />} />
           <Route path="turf-profile" element={<TurfProfile />} />
           <Route path="time-slots" element={<TimeSlots />} />
+          <Route path="subscription" element={<SubscribedCustomer />} />
           
           <Route path="/turfTodaysbookings" element={<TodaysBookings />} />
           

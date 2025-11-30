@@ -34,8 +34,9 @@ const BookingConfirmationForm = ({
   const totalAmount = isSubscription ? calculateSubscriptionFee() : calculateFee();
   return isSubscription
     ? Math.round(totalAmount * 0.2)
-    : parseInt(turfInfo.allowAdvancePayment)* Math.floor(calculateDuration())
+    :parseInt( Math.round(totalAmount*0.2)* Math.floor(calculateDuration()))
 };
+
 
   const calculatePlatformFees = () => {
     if (!isSubscription) return 0;
@@ -46,7 +47,6 @@ const BookingConfirmationForm = ({
     const advance = calculateAdvanceAmount();
     return isSubscription ? advance + calculatePlatformFees() : advance;
   };
-
   const formatDate = (date) => {
     return date.toLocaleDateString('en-US', { 
       weekday: 'short', 
