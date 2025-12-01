@@ -5,6 +5,8 @@ import "react-datepicker/dist/react-datepicker.css";
 import { CalendarDays, Calendar, Clock3 } from "lucide-react";
 
 const DatePick = ({next7Days, handleDateSelect, selectedDate, showCalendar, setShowCalendar, customDate }) => {
+  const maxDate = new Date();
+  maxDate.setMonth(maxDate.getMonth()+4)
   return (
     <>
     <div className="flex gap-3 flex-wrap pb-2">
@@ -40,7 +42,7 @@ const DatePick = ({next7Days, handleDateSelect, selectedDate, showCalendar, setS
                 onChange={(date) => handleDateSelect(date)}
                 inline
                 minDate={new Date()}
-                maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)}
+                maxDate={maxDate}
               />
             </div>
           )}
