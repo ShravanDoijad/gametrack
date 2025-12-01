@@ -926,15 +926,16 @@ const getPendingReviews = async (req, res) => {
     const currentTime = new Date();
 
     const bookings = await bookingModel.find({ userId: user._id }).populate("turfId");
-
+    const turfs = await turfModel.find();
     const pendingReviews = [];
-
-    for (let booking of bookings) {
+    const booking = bookings.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+   
       const turf = booking.turfId;
       const alreadyReviewed = turf.reviews.some(
-        (rev) => rev.user.toString() === user._id.toString()
+        (rev) => rev.user._id.toString() === user._id.toString()
       );
-
+    
+      console.log("alreadyReviewed:", alreadyReviewed);
 
       for (let slot of booking.slots) {
         const bookingDateTime = new Date(booking.date);
@@ -952,8 +953,11 @@ const getPendingReviews = async (req, res) => {
           });
           break; // No need to push multiple entries for the same booking
         }
+        else {
+          return res.status(200).json({ success: true, pendingReviews: [] });
+        }
       }
-    }
+    
 
     return res.status(200).json({ success: true, pendingReviews });
   } catch (error) {
@@ -1013,7 +1017,7 @@ const submitReview = async (req, res) => {
     await turf.save();
     await userBooking.save();
 
-    return res.status(200).json({ message: 'Review submitted successfully' });
+    return res.status(200).json({status:'success', message: 'Review submitted successfully' });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ message: 'Something went wrong while submitting review' });

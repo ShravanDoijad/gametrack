@@ -79,26 +79,28 @@ const SPORTS = [
   },
 ];
 
-const reviews = [
-  {
-    name: "mohan sudame",
-    text: "Amazing turf! Great facilities and well-maintained.",
-    rating: 5,
-    timeAgo: "4 days ago",
-  },
-  {
-    name: "santosh karadge",
-    text: "Loved the experience! Highly recommend for football lovers.",
-    rating: 5,
-    timeAgo: "2 days ago",
-  },
-  {
-    name: "hritik somanth",
-    text: "Best turf in the area! Friendly staff and great atmosphere.",
-    rating: 4,
-    timeAgo: "6 days ago",
-  },
-];
+
+
+// const reviews = [
+//   {
+//     name: "mohan sudame",
+//     text: "Amazing turf! Great facilities and well-maintained.",
+//     rating: 5,
+//     timeAgo: "4 days ago",
+//   },
+//   {
+//     name: "santosh karadge",
+//     text: "Loved the experience! Highly recommend for football lovers.",
+//     rating: 5,
+//     timeAgo: "2 days ago",
+//   },
+//   {
+//     name: "hritik somanth",
+//     text: "Best turf in the area! Friendly staff and great atmosphere.",
+//     rating: 4,
+//     timeAgo: "6 days ago",
+//   },
+// ];
 
 export const Overview = () => {
 
@@ -115,6 +117,7 @@ export const Overview = () => {
   const [loading, setloading] = useState(false)
   const [turfDistance, setTurfDistance] = useState(null);
   const [editPlan, setEditPlan] = useState(null)
+  const [reviews, setReviews] = useState([])
   const [editInput, setEditInput] = useState({
     days: "",
     amount: "",
@@ -161,6 +164,20 @@ export const Overview = () => {
   if (selectedSport == "football") {
 
   }
+  const getReviews = async() => {
+    try {
+      const res =await  axios.get("/api/turfs/get-reviews", {
+        params: { turfId: turfId }
+      });
+      console.log(res.data.reviews)
+      setReviews(res.data.reviews);
+    } catch (err) {
+      console.log(err)
+    }
+  }
+  useEffect(() => {
+    getReviews();
+  }, [turfId])
 
 
   const handleDoubleTap = () => {
@@ -284,6 +301,12 @@ export const Overview = () => {
       available.toLowerCase() === sport.name.toLowerCase()
     )
   );
+
+  const formatedTime = (date) => {
+    const now = moment();
+    const reviewDate = moment(date);
+    return reviewDate.from(now);
+  }
 
 
   return (
@@ -633,11 +656,11 @@ export const Overview = () => {
                             />
                           ))}
                         </div>
-                        <span className="text-gray-400 text-sm">{review.timeAgo}</span>
+                        <span className="text-gray-400 text-sm">{formatedTime(review.date)}</span>
                       </div>
                     </div>
                   </div>
-                  <p className="text-gray-300 text-sm">"{review.text}"</p>
+                  <p className="text-gray-300 text-sm">"{review.comment}"</p>
                 </div>
               </SwiperSlide>
             ))}

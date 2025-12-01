@@ -90,8 +90,8 @@ export const Turfs = () => {
     results = results.filter(
       (turf) =>
         turf.name !== "admin Turf" &&
-        turf.name !== "admin #3" 
-        // turf.name.toLowerCase() !== "dream sports club"
+        turf.name !== "admin #3" &&
+        turf.name !== "Hupare Round Turf -DP Turf"  
     );
 
     if (selectedSport) {

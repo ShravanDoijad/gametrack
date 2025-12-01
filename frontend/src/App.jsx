@@ -27,6 +27,8 @@ import { toast } from "react-toastify"
 import BookingManager from './pages/BookingManager';
 import ContactUs from './pages/ContactUs';
 import { X } from 'lucide-react';
+import turfReview from './pages/TurfReview';
+import TurfReview from './pages/TurfReview';
 
 function App() {
   const { loginPanel, token, userInfo, isLoading, hasCheckedAuth } = useContext(BookContext);
@@ -81,6 +83,7 @@ function App() {
   }, [token, userInfo]);
 
 
+  console.log('pendingReviews', pendingReviews.length);
 
 
   useEffect(() => {
@@ -125,7 +128,7 @@ useEffect(() => {
       
 
 
-      <div className='flex flex-col  justify-center  items-center ml-2'>
+      <div className='flex flex-col  w-full justify-center  items-center ml-2'>
       <h2 className="text-sm sora font-semibold ">Install Our App</h2>
       <p className="text-gray-600 text-xs ">
         Get faster access and smoother experience
@@ -156,6 +159,7 @@ useEffect(() => {
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
           <Route path='/contactUs' element={<ContactUs />} />
+          <Route path="/review" element={<TurfReview/>} />
 
           <Route element={<PrivateRoute />}>
             <Route path="/booking" element={<BookingManager />} />

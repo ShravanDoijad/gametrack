@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
+import { toast } from "react-toastify";
 
 const TurfReview = () => {
   const [params] = useSearchParams();
@@ -25,15 +26,16 @@ const TurfReview = () => {
         rating,
         comment,
       });
-
       if (res.data.success) {
         setSubmitted(true);
+        toast.success(res.data.message);
       } else {
-        alert("Something went wrong.");
+        alert("Failed to submit review.");
       }
+
     } catch (err) {
       console.error(err);
-      alert("Failed to submit review.");
+      toast.error(response.err?.data?.message || "An error occurred while submitting the review.");
     } finally {
       setSubmitting(false);
     }

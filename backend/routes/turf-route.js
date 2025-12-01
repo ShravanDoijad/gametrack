@@ -9,6 +9,7 @@ turfRouter.get("/getSiblingTurf", turfController.getSiblingTurf)
 turfRouter.post("/add-subscription", turfController.addSubscriptionSlot)
 turfRouter.put("/update-subscription", turfController.updateSubscription)
 turfRouter.delete("/delete-subscription", turfController.deleteSubscription)
+turfRouter.get("/get-reviews", turfController.getReviews)
 
 
 // turfRouter.post('/book', userMiddleware, turfController.bookTurf);
