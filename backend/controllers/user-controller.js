@@ -91,6 +91,7 @@ const login = async (req, res) => {
     }
     const { identifier } = req.body;
 
+    console.log(identifier);
     if (!identifier) {
       return res.status(400).json({
         success: false,
@@ -115,10 +116,12 @@ const login = async (req, res) => {
     });
 
     if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Account not found. Please create one!",
-      });
+     const newUser = await User.create({
+      phone:identifier,
+      isVerified: false,
+    });
+
+    await sendOtp({ identifier, role: "user" });
     }
 
     if (user) {
@@ -143,6 +146,33 @@ const login = async (req, res) => {
   }
 };
 
+const completeProfile = async (req, res) => {
+  try{
+    const {firstName, lastName} = req.body;
+    const { data: user, role } = req.auth;
+    if(role !== "user"){
+      return res.status(403).json({
+        success: false,
+        message: "Only users can complete profile",
+      });
+    }
+    user.fullname = `${firstName} ${lastName}`;
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      message: "Profile completed successfully",
+      user,
+    });
+  }
+  catch(err){
+    console.error("Complete Profile Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
 const userLogout = async (req, res) => {
   try {
 
@@ -928,6 +958,9 @@ const getPendingReviews = async (req, res) => {
     const bookings = await bookingModel.find({ userId: user._id }).populate("turfId");
     const turfs = await turfModel.find();
     const pendingReviews = [];
+    if (bookings.length === 0) {
+      return res.status(200).json({ success: true, pendingReviews: [] });
+    }
     const booking = bookings.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
    
       const turf = booking.turfId;
@@ -1080,7 +1113,8 @@ module.exports = {
   submitReview,
 
   getSubscriptionSlots,
-  userSubscription
+  userSubscription,
+  completeProfile
 
 };
 

@@ -27,8 +27,9 @@ import { toast } from "react-toastify"
 import BookingManager from './pages/BookingManager';
 import ContactUs from './pages/ContactUs';
 import { X } from 'lucide-react';
-import turfReview from './pages/TurfReview';
+
 import TurfReview from './pages/TurfReview';
+
 
 function App() {
   const { loginPanel, token, userInfo, isLoading, hasCheckedAuth } = useContext(BookContext);

@@ -263,16 +263,10 @@ const TimeSlots = () => {
       });
     });
 
-    console.log("✅ Available slots after filter:", availableSlots);
+  
 
     setavailableCheckoutSlots(filteredSlots.filter(slot => {
       return !bookedForDate.slots.some(bookedSlot =>
-        slot.military > bookedSlot.start && slot.military < bookedSlot.end
-      );
-    }))
-    console.log("chcekout", filteredSlots.filter(slot => {
-      return !bookedForDate.slots.some(bookedSlot =>
-
         slot.military > bookedSlot.start && slot.military < bookedSlot.end
       );
     }))
@@ -345,9 +339,6 @@ const TimeSlots = () => {
             <PlusCircle size={20} /> Create Booking
           </button>
         </div>
-
-
-
 
         {confirmingSlot && (
           <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4 backdrop-blur-sm">

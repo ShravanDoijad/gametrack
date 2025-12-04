@@ -34,7 +34,7 @@ const BookingManager = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const [turfInfo, setturfInfo] = useState()
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState();
   const [selectedCheckIn, setSelectedCheckIn] = useState(null);
   const [availableCheckoutSlots, setavailableCheckoutSlots] = useState([])
   const [selectedCheckOut, setSelectedCheckOut] = useState(null);

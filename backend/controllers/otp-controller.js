@@ -59,7 +59,7 @@ async function sendOtp({ identifier, role }) {
 const verifyOtp = async (req, res) => {
   try {
     const { identifier, otp } = req.body;
-
+    console.log("identifier, otp", identifier, otp);
     if (!identifier || !otp) {
       return res.status(400).json({ success: false, message: 'Credentials and OTP are required.' });
     }
@@ -139,6 +139,7 @@ const verifyOtp = async (req, res) => {
       message: 'OTP verified successfully. User logged in.',
       token,
       role: payload.role,
+      user: role=="user"? user.fullname: owner.fullname
     });
   } catch (err) {
     console.error('OTP Verification Error:', err);
