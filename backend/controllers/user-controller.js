@@ -110,32 +110,14 @@ const login = async (req, res) => {
         message: `OTP sent to owner account`,
       });
     }
-
-    const user = await User.findOne({
-      $or: [{ email: identifier }, { phone: identifier }],
-    });
-
-    if (!user) {
-     const newUser = await User.create({
-      phone:identifier,
-      isVerified: false,
-    });
-
-    await sendOtp({ identifier, role: "user" });
-    }
-
-    if (user) {
+    else {
       const result = await sendOtp({ identifier, role: "user" });
       return res.status(200).json({
         success: true,
         message: `OTP sent to user account`,
       });
     }
-
-    return res.status(404).json({
-      success: false,
-      message: "Account not found. Please create one!",
-    });
+    
   } catch (error) {
     console.error("Login Error:", error);
     return res.status(500).json({
@@ -146,33 +128,7 @@ const login = async (req, res) => {
   }
 };
 
-const completeProfile = async (req, res) => {
-  try{
-    const {firstName, lastName} = req.body;
-    const { data: user, role } = req.auth;
-    if(role !== "user"){
-      return res.status(403).json({
-        success: false,
-        message: "Only users can complete profile",
-      });
-    }
-    user.fullname = `${firstName} ${lastName}`;
-    await user.save();
-    return res.status(200).json({
-      success: true,
-      message: "Profile completed successfully",
-      user,
-    });
-  }
-  catch(err){
-    console.error("Complete Profile Error:", err);
-    return res.status(500).json({
-      success: false,
-      message: "Server error",
-      error: err.message,
-    });
-  }
-};
+
 const userLogout = async (req, res) => {
   try {
 
@@ -1077,6 +1033,34 @@ const getSubscriptionSlots = async (req, res) => {
   }
 }
 
+const completeProfile = async (req, res) => {
+  try{
+    const {firstName, lastName} = req.body;
+    const { data: user, role } = req.auth;
+    if(role !== "user"){
+      return res.status(403).json({
+        success: false,
+        message: "Only users can complete profile",
+      });
+    }
+    user.fullname = `${firstName} ${lastName}`;
+    await user.save();
+    return res.status(200).json({
+      success: true,
+      message: "Profile completed successfully",
+      user,
+    });
+  }
+  catch(err){
+    console.error("Complete Profile Error:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: err.message,
+    });
+  }
+};
+
 const userSubscription = async (req, res) => {
   try {
     const { data: user, role } = req.auth;
@@ -1091,7 +1075,6 @@ const userSubscription = async (req, res) => {
     });
   }
 };
-
 
 
 
@@ -1111,10 +1094,9 @@ module.exports = {
   getBookedSlots,
   getPendingReviews,
   submitReview,
-
+  completeProfile,
   getSubscriptionSlots,
-  userSubscription,
-  completeProfile
+  userSubscription
 
 };
 

@@ -9,7 +9,6 @@ import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft, MessageCircle, User, 
 const Register = () => {
   const { settoken, userInfo, setloginPanel, fetchToken } = useContext(BookContext);
   const [isLoading, setisLoading] = useState(false)
-  console.log("userInfo in register:", userInfo);
   const [form, setForm] = useState({ 
     firstName: '', 
     lastName: '', 
@@ -100,7 +99,7 @@ const Register = () => {
         toast.success('Login Successful!');
         
         console.log("res_data:", res.data);
-        if (!isOwnerLogin && (res.data.user=="" || res.data.user=="Guest" || res.data.user=='guest')) {
+        if (!isOwnerLogin && (res.data.name=="" || res.data.name=="Guest" || res.data.name=='guest')) {
           setActiveTab('profile');
         } else {
           fetchToken();

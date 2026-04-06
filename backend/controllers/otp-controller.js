@@ -69,19 +69,21 @@ const verifyOtp = async (req, res) => {
     let targetPhone;
     const owner = await Owner.findOne({ email: identifier });
 
-    const user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
+    let user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
 
-    let name = user ? user.name : owner ? owner.name : null;
+    if( !user && !owner) {
+      user = await User.create({ email: identifier, phone: identifier });
+    }
+
+    let name = user ? user.fullname : owner ? owner.fullname : "Guest";
     if (owner) {
       role = 'owner';
       targetPhone = owner.phone;
 
-    } else if (user) {
+    } else {
       role = 'user';
       targetPhone = identifier;
-    } else {
-      return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
-    }
+    } 
 
 
     const dbOtp = await Otp.findOne({ identifier: targetPhone, role: role });
@@ -103,22 +105,20 @@ const verifyOtp = async (req, res) => {
     if (role === 'owner') {
       account = owner;
     }
-    else if (role === 'user') {
+    else  {
       account = user;
     }
-    else {
-      return res.status(404).json({ success: false, message: 'User not found. Please register first.' });
-    }
-
+    if (account) {
     account.isVerified = true;
     await account.save();
+    };
 
 
     const payload = {
-      id: account._id,
+      id: account._id || null,
       role: role,
-      email: account.email,
-      phone: account.phone,
+      email: account.email || null,
+      phone: account.phone || identifier,
     };
 
     const token = jwt.sign(payload, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -138,8 +138,8 @@ const verifyOtp = async (req, res) => {
       success: true,
       message: 'OTP verified successfully. User logged in.',
       token,
-      role: payload.role,
-      user: role=="user"? user.fullname: owner.fullname
+      role: payload.role, 
+      name: name
     });
   } catch (err) {
     console.error('OTP Verification Error:', err);
