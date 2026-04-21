@@ -148,6 +148,9 @@ const userLogout = async (req, res) => {
   }
 };
 
+
+//create order for booking and subscription
+
 const createOrder = async (req, res) => {
   const { amount, receipt, bookingDetails, subscriptionDetails } = req.body;
 

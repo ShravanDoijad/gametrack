@@ -11,4 +11,4 @@ if (!admin.apps.length) {
   });
 }
 
-module.exports = admin; // ✅ Export the whole `admin` object, not just messaging
+module.exports = admin; //  Export the whole `admin` object, not just messaging

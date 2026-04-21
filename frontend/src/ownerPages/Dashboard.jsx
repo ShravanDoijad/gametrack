@@ -1,255 +1,305 @@
-import React, { useEffect, useState, useContext } from 'react';
+import React, { useEffect, useState, useContext, useMemo } from 'react';
 import axios from 'axios';
 import { BookContext } from '../constexts/bookContext';
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar, Cell
 } from 'recharts';
-import { BarChartBig, LineChart as LineChartIcon, Calendar, Clock3, TrendingUp } from 'lucide-react';
+import {
+  TrendingUp, IndianRupee, CalendarCheck, Users,
+  Flame, Clock3, BarChart2, ArrowUpRight, ArrowDownRight
+} from 'lucide-react';
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const Dashboard = () => {
-
   const [dashboardData, setDashboardData] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [view, setView] = useState('month');
-  const {selectedTurfId, setSelectedTurfId, turfs, setTurfs}= useContext(BookContext)
- 
+  const { selectedTurfId, turfs } = useContext(BookContext);
 
   useEffect(() => {
-    const fetchDashboardData = async () => {
-      if (!selectedTurfId) return;
-      try {
-        const response = await axios.get(`/owner/dashboardDetails?turfId=${selectedTurfId}`);
-        setDashboardData(response.data.details);
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error);
-      }
-    };
-    fetchDashboardData();
+    if (!selectedTurfId) return;
+    axios.get(`/owner/dashboardDetails?turfId=${selectedTurfId}`)
+      .then(r => setDashboardData(r.data.details || []))
+      .catch(console.error);
   }, [selectedTurfId]);
-
-  const handleTurfChange = (e) => {
-    setSelectedTurfId(e.target.value);
-  };
 
   const now = new Date();
 
-  const generateChartData = (bookings = []) => {
+  /* ── chart data ── */
+  const chartData = useMemo(() => {
     const map = {};
-
     if (view === '7days') {
       for (let i = 6; i >= 0; i--) {
-        const date = new Date();
-        date.setDate(now.getDate() - i);
-        const key = `${date.getDate()} ${date.toLocaleString('default', { month: 'short' })}`;
-        map[key] = { date: key, revenue: 0, bookings: 0 };
+        const d = new Date(); d.setDate(now.getDate() - i);
+        const k = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
+        map[k] = { date: k, revenue: 0, bookings: 0 };
       }
     } else if (view === 'week') {
-      for (let i = 1; i <= 5; i++) {
-        map[`Week ${i}`] = { date: `Week ${i}`, revenue: 0, bookings: 0 };
-      }
+      [1,2,3,4,5].forEach(w => { map[`Week ${w}`] = { date: `Week ${w}`, revenue: 0, bookings: 0 }; });
     } else {
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      for (let i = 1; i <= daysInMonth; i++) {
-        const key = `${i} ${now.toLocaleString('default', { month: 'short' })}`;
-        map[key] = { date: key, revenue: 0, bookings: 0 };
+      const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      for (let i = 1; i <= days; i++) {
+        const k = `${i} ${now.toLocaleString('default', { month: 'short' })}`;
+        map[k] = { date: k, revenue: 0, bookings: 0 };
       }
     }
-
-    bookings?.forEach((booking) => {
-      const bookingDate = new Date(booking.date);
-      const month = bookingDate.getMonth();
-      const year = bookingDate.getFullYear();
-      const sameMonth = month === now.getMonth() && year === now.getFullYear();
-
-      if (!sameMonth) return;
-
+    dashboardData.forEach(b => {
+      const bd = new Date(b.date);
+      if (bd.getMonth() !== now.getMonth() || bd.getFullYear() !== now.getFullYear()) return;
       let key;
-      if (view === '7days') {
-        key = `${bookingDate.getDate()} ${now.toLocaleString('default', { month: 'short' })}`;
-      } else if (view === 'week') {
-        const week = Math.ceil(bookingDate.getDate() / 7);
-        key = `Week ${week}`;
-      } else {
-        key = `${bookingDate.getDate()} ${now.toLocaleString('default', { month: 'short' })}`;
-      }
-
-      if (map[key]) {
-        map[key].revenue += booking.amountPaid || 0;
-        map[key].bookings += 1;
-      }
+      if (view === '7days') key = `${bd.getDate()} ${now.toLocaleString('default', { month: 'short' })}`;
+      else if (view === 'week') key = `Week ${Math.ceil(bd.getDate() / 7)}`;
+      else key = `${bd.getDate()} ${now.toLocaleString('default', { month: 'short' })}`;
+      if (map[key]) { map[key].revenue += b.amountPaid || 0; map[key].bookings += 1; }
     });
-
     return Object.values(map);
+  }, [dashboardData, view]);
+
+  /* ── real stats ── */
+  const totalRevenue = dashboardData.reduce((s, b) => s + (b.amountPaid || 0), 0);
+  const totalBookings = dashboardData.length;
+
+  const todayBookings = useMemo(() =>
+    dashboardData.filter(b => {
+      const d = new Date(b.date);
+      return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length, [dashboardData]);
+
+  const uniqueCustomers = useMemo(() =>
+    new Set(dashboardData.map(b => b.userId?._id || b.phone).filter(Boolean)).size,
+    [dashboardData]);
+
+  /* ── peak day (by booking count) ── */
+  const peakDay = useMemo(() => {
+    const dayCounts = {};
+    dashboardData.forEach(b => {
+      const d = new Date(b.date).getDay();
+      dayCounts[d] = (dayCounts[d] || 0) + 1;
+    });
+    if (!Object.keys(dayCounts).length) return { day: '—', count: 0 };
+    const topDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0];
+    return { day: DAYS[topDay[0]], count: topDay[1] };
+  }, [dashboardData]);
+
+  /* ── prime hour ── */
+  const primeHour = useMemo(() => {
+    const hourCounts = {};
+    dashboardData.forEach(b => {
+      b.slots?.forEach(slot => {
+        const h = parseInt(slot.start?.split(':')[0] || 0);
+        hourCounts[h] = (hourCounts[h] || 0) + 1;
+      });
+    });
+    if (!Object.keys(hourCounts).length) return '—';
+    const top = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
+    const h = parseInt(top[0]);
+    return `${h > 12 ? h - 12 : h === 0 ? 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
+  }, [dashboardData]);
+
+  /* ── occupancy rate (booked hours / total possible hours this month) ── */
+  const occupancyRate = useMemo(() => {
+    if (!dashboardData.length) return 0;
+    const turf = turfs?.find(t => t._id === selectedTurfId);
+    if (!turf) return 0;
+    const [oh] = (turf.openingTime || '06:00').split(':').map(Number);
+    const [ch] = (turf.closingTime || '23:00').split(':').map(Number);
+    const hoursPerDay = ch - oh;
+    const daysElapsed = now.getDate();
+    const totalHours = hoursPerDay * daysElapsed;
+    const bookedHours = dashboardData.reduce((s, b) => {
+      return s + (b.slots?.reduce((ss, sl) => {
+        const [sh, sm] = (sl.start || '00:00').split(':').map(Number);
+        const [eh, em] = (sl.end || '00:00').split(':').map(Number);
+        return ss + ((eh * 60 + em) - (sh * 60 + sm)) / 60;
+      }, 0) || 0);
+    }, 0);
+    return Math.min(100, Math.round((bookedHours / totalHours) * 100));
+  }, [dashboardData, turfs, selectedTurfId]);
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-sm shadow-xl">
+        <p className="text-gray-400 mb-1">{label}</p>
+        {payload.map((p, i) => (
+          <p key={i} style={{ color: p.color }} className="font-semibold">
+            {p.name === 'revenue' ? `₹${p.value.toLocaleString()}` : `${p.value} bookings`}
+          </p>
+        ))}
+      </div>
+    );
   };
 
-  const currentChartData = generateChartData(dashboardData);
-  const totalRevenue = dashboardData?.reduce((acc, booking) => acc + (booking.slotFees || 0), 0);
+  const statCards = [
+    {
+      label: 'Total Revenue',
+      value: `₹${totalRevenue.toLocaleString()}`,
+      icon: IndianRupee,
+      color: 'text-lime-400',
+      bg: 'bg-lime-500/10',
+      sub: `This month`,
+      up: true,
+    },
+    {
+      label: 'Total Bookings',
+      value: totalBookings,
+      icon: CalendarCheck,
+      color: 'text-blue-400',
+      bg: 'bg-blue-500/10',
+      sub: `${todayBookings} today`,
+      up: todayBookings > 0,
+    },
+    {
+      label: 'Unique Customers',
+      value: uniqueCustomers,
+      icon: Users,
+      color: 'text-purple-400',
+      bg: 'bg-purple-500/10',
+      sub: 'All time',
+      up: true,
+    },
+    {
+      label: 'Occupancy Rate',
+      value: `${occupancyRate}%`,
+      icon: TrendingUp,
+      color: 'text-amber-400',
+      bg: 'bg-amber-500/10',
+      sub: 'This month',
+      up: occupancyRate > 50,
+    },
+  ];
 
   return (
-    <div className="p-4 min-h-screen bg-black text-white">
-      
-      <header className="mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
-          <div className="flex items-center gap-3">
-            <TrendingUp size={24} className="text-green-400" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-              Turf Analytics Dashboard
-            </h1>
+    <div className="p-5 min-h-screen bg-[#0a0a0a] text-white space-y-6">
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {statCards.map(({ label, value, icon: Icon, color, bg, sub, up }) => (
+          <div key={label} className="bg-[#111] border border-white/5 rounded-2xl p-4 hover:border-white/10 transition-all">
+            <div className="flex items-start justify-between mb-3">
+              <div className={`p-2 rounded-xl ${bg}`}>
+                <Icon size={16} className={color} />
+              </div>
+              <span className={`flex items-center gap-0.5 text-xs font-medium ${up ? 'text-lime-400' : 'text-red-400'}`}>
+                {up ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+              </span>
+            </div>
+            <p className="text-2xl font-bold text-white">{value}</p>
+            <p className="text-xs text-gray-500 mt-1">{label}</p>
+            <p className="text-[10px] text-gray-600 mt-0.5">{sub}</p>
           </div>
-          
-          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-            <select
-              value={selectedTurfId}
-              onChange={handleTurfChange}
-              className="border border-gray-700 rounded-md px-3 py-2 text-sm bg-gray-900 text-white focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              {turfs.map((turf) => (
-                <option key={turf._id} value={turf._id}>
-                  {turf.name}
-                </option>
+        ))}
+      </div>
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Revenue Bar */}
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <BarChart2 size={16} className="text-lime-400" />
+              <span className="text-sm font-medium">Revenue</span>
+            </div>
+            <div className="flex gap-1">
+              {['7days','week','month'].map(v => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    view === v ? 'bg-lime-500 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  {v === '7days' ? '7D' : v === 'week' ? 'WK' : 'MO'}
+                </button>
               ))}
-            </select>
-
-            <select
-              value={view}
-              onChange={(e) => setView(e.target.value)}
-              className="border border-gray-700 rounded-md px-3 py-2 text-sm bg-gray-900 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="7days">Last 7 Days</option>
-              <option value="week">This Month by Week</option>
-              <option value="month">Full Month</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="mt-4 p-3 bg-gray-900/50 rounded-lg border border-gray-800">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-400">Total Revenue</p>
-              <p className="text-2xl font-bold text-green-400">₹{totalRevenue?.toFixed(2)}</p>
-            </div>
-            <div className="text-xs text-gray-500">
-              Last updated: {new Date().toLocaleString()}
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* Charts Section */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
-        <div className="p-3 rounded-lg bg-gray-900/50 border border-gray-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-md font-medium flex items-center gap-2">
-              <BarChartBig size={18} className="text-yellow-400" />
-              <span>Revenue Analysis</span>
-            </h3>
-            <span className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
-              {view === '7days' ? '7 Days' : view === 'week' ? 'Weekly' : 'Monthly'}
-            </span>
-          </div>
-          <div className="h-[250px]">
+          <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={currentChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="date" tick={{ fill: '#aaa' }} fontSize={11} />
-                <YAxis tick={{ fill: '#aaa' }} fontSize={11} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#111',
-                    borderColor: '#333',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                  }} 
-                />
-                <Bar 
-                  dataKey="revenue" 
-                  fill="#34d399" 
-                  radius={[4, 4, 0, 0]} 
-                  animationDuration={1500}
-                />
+              <BarChart data={chartData} barSize={view === 'month' ? 4 : 12}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                <XAxis dataKey="date" tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} interval={view === 'month' ? 4 : 0} />
+                <YAxis tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff08' }} />
+                <Bar dataKey="revenue" radius={[4,4,0,0]} animationDuration={1200}>
+                  {chartData.map((_, i) => (
+                    <Cell key={i} fill={`rgba(163,230,53,${0.4 + (chartData[i]?.revenue / (Math.max(...chartData.map(d => d.revenue)) || 1)) * 0.6})`} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="p-3 rounded-lg bg-gray-900/50 border border-gray-800">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-md font-medium flex items-center gap-2">
-              <LineChartIcon size={18} className="text-blue-400" />
-              <span>Booking Trends</span>
-            </h3>
-            <span className="text-xs bg-gray-800 px-2 py-1 rounded text-gray-300">
-              {view === '7days' ? '7 Days' : view === 'week' ? 'Weekly' : 'Monthly'}
-            </span>
+        {/* Booking trend line */}
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp size={16} className="text-blue-400" />
+            <span className="text-sm font-medium">Booking Trends</span>
           </div>
-          <div className="h-[250px]">
+          <div className="h-52">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={currentChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#333" />
-                <XAxis dataKey="date" tick={{ fill: '#aaa' }} fontSize={11} />
-                <YAxis tick={{ fill: '#aaa' }} fontSize={11} />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#111',
-                    borderColor: '#333',
-                    borderRadius: '8px',
-                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                  }} 
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="bookings" 
-                  stroke="#60a5fa" 
-                  strokeWidth={2} 
-                  dot={{ r: 3 }} 
-                  activeDot={{ r: 5 }}
-                  animationDuration={1500}
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
+                <XAxis dataKey="date" tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} interval={view === 'month' ? 4 : 0} />
+                <YAxis tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Line
+                  type="monotone"
+                  dataKey="bookings"
+                  stroke="#60a5fa"
+                  strokeWidth={2}
+                  dot={false}
+                  activeDot={{ r: 4, fill: '#60a5fa', strokeWidth: 0 }}
+                  animationDuration={1200}
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Insights Section */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 rounded-lg bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 hover:border-green-500/30 transition-colors">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-full bg-yellow-500/10">
-              <Calendar size={18} className="text-yellow-400" />
+      {/* Insights — now with real data */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-lime-500/20 transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-amber-500/10">
+              <Flame size={16} className="text-amber-400" />
             </div>
-            <h4 className="font-medium">Peak Day</h4>
+            <p className="text-sm font-medium">Peak Day</p>
           </div>
-          <p className="text-sm text-gray-400">
-            Analytics coming soon to identify your most profitable days and optimize scheduling.
-          </p>
+          <p className="text-3xl font-bold text-white">{peakDay.day}</p>
+          {peakDay.count > 0
+            ? <p className="text-xs text-gray-500 mt-1">{peakDay.count} bookings — your busiest day</p>
+            : <p className="text-xs text-gray-600 mt-1">Not enough data yet</p>
+          }
         </div>
 
-        <div className="p-4 rounded-lg bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 hover:border-purple-500/30 transition-colors">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-full bg-purple-500/10">
-              <Clock3 size={18} className="text-purple-400" />
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-blue-500/20 transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-blue-500/10">
+              <Clock3 size={16} className="text-blue-400" />
             </div>
-            <h4 className="font-medium">Prime Hours</h4>
+            <p className="text-sm font-medium">Prime Hour</p>
           </div>
-          <p className="text-sm text-gray-400">
-            Future feature will highlight your most popular booking times for dynamic pricing.
-          </p>
+          <p className="text-3xl font-bold text-white">{primeHour}</p>
+          <p className="text-xs text-gray-500 mt-1">Most popular booking start time</p>
         </div>
 
-        <div className="p-4 rounded-lg bg-gradient-to-br from-gray-900 to-gray-900/50 border border-gray-800 hover:border-pink-500/30 transition-colors">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-full bg-pink-500/10">
-              <TrendingUp size={18} className="text-pink-400" />
+        <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-purple-500/20 transition-all">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="p-2.5 rounded-xl bg-purple-500/10">
+              <TrendingUp size={16} className="text-purple-400" />
             </div>
-            <h4 className="font-medium">Performance</h4>
+            <p className="text-sm font-medium">Avg. per Booking</p>
           </div>
-          <p className="text-sm text-gray-400">
-            Comparative analytics in development to track weekly/monthly growth metrics.
+          <p className="text-3xl font-bold text-white">
+            ₹{totalBookings > 0 ? Math.round(totalRevenue / totalBookings).toLocaleString() : '0'}
           </p>
+          <p className="text-xs text-gray-500 mt-1">Average revenue per booking</p>
         </div>
-      </section>
+      </div>
     </div>
   );
 };

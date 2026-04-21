@@ -101,17 +101,17 @@ const OwnerSubscriptionUpdate = async ({ phoneNumber, notification_data }) => {
       to: `whatsapp:+91${phoneNumber}`,
       contentSid: process.env.TWILIO_OWNER_SUBSCRIPTION, // Must match template SID
       contentVariables: JSON.stringify({
-        '1': String(data.user),          // 👤 Name: {{1}}
-        '2': String(data.userPhone),     // 📱 Mobile: {{2}}
+        '1': String(data.user),          //  Name: {{1}}
+        '2': String(data.userPhone),     //  Mobile: {{2}}
         '3': String(data.fromDate),      // From: {{3}}
         '4': String(data.toDate),        // to {{4}}
         '5': String(data.totalDays),     // Total Days: {{5}}
         '6': String(data.slotStart),     // Slot: {{6}}
         '7': String(data.slotEnd),       // - {{7}}
         '8': String(data.duration),      // ({{8}} hrs)
-        '9': String(data.total),         // 💰 Total: ₹{{9}}
-        '10':String( data.advance),      // 💸 Advance: ₹{{10}}
-        '11':String( data.remaining)     // 🧾 Remained: ₹{{11}}
+        '9': String(data.total),         //  Total: ₹{{9}}
+        '10':String( data.advance),      //  Advance: ₹{{10}}
+        '11':String( data.remaining)     //  Remained: ₹{{11}}
       })
     });
 

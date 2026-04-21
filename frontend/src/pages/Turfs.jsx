@@ -1,3 +1,4 @@
+// Import necessary libraries and components
 import React, { useState, useEffect, useMemo, useContext } from "react";
 import {
   MapPin,
@@ -17,6 +18,7 @@ import { BookContext } from "../constexts/bookContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import moment from "moment";
 
+// Constants for available sports and cities
 const SPORTS = [
   { id: "football", name: "Football", icon: footballIcon, color: "bg-orange-500" },
   { id: "cricket", name: "Cricket", icon: cricketIcon, color: "bg-blue-500" },
@@ -25,6 +27,7 @@ const SPORTS = [
 
 const CITIES = [{ id: "ichalkaranji", name: "Ichalkaranji" }];
 
+// Function to generate available time slots
 const generateTimeSlots = (openHour = 6, closeHour = 24) => {
   const now = new Date();
   const slots = [];
@@ -52,8 +55,11 @@ const generateTimeSlots = (openHour = 6, closeHour = 24) => {
   });
 };
 
+// Main component for displaying and filtering turfs
 export const Turfs = () => {
   const navigate = useNavigate();
+
+  // State variables for component management
   const [nearestSwitch, setNearestSwitch] = useState(false);
   const [turfs, setTurfs] = useState([]);
   const [checkInSlot, setCheckInSlot] = useState(null);
@@ -65,6 +71,7 @@ export const Turfs = () => {
   const { selectedSport, setSelectedSport, calculateDistance } = useContext(BookContext);
   const [isLoading, setisLoading] = useState(false);
 
+  // Function to fetch all turfs from the API
   const fetchTurfs = async () => {
     try {
       setisLoading(true);
@@ -78,12 +85,14 @@ export const Turfs = () => {
     }
   };
 
+  // Fetch turfs on component mount
   useEffect(() => {
     fetchTurfs();
   }, []);
 
   const timeSlots = generateTimeSlots();
 
+  // Filter and sort turfs based on selected criteria
   const filteredTurfs = useMemo(() => {
     let results = [...turfs];
 
@@ -120,6 +129,7 @@ export const Turfs = () => {
         .sort((a, b) => a.distance - b.distance);
     }
 
+    // Check if selected time slot is available
     const isSlotAvailable = (checkInSlot, checkOutSlot, bookedSlots) => {
       const checkInTime = moment(checkInSlot, "h:mm");
       const checkOutTime = moment(checkOutSlot, "h:mm");
@@ -137,6 +147,7 @@ export const Turfs = () => {
       }
       return true;
     };
+    
 
     results = results.filter((turf) => {
       const today = new Date().toISOString().split("T")[0];
@@ -148,6 +159,7 @@ export const Turfs = () => {
     return results;
   }, [turfs, selectedSport, nearestSwitch, location, checkInSlot, checkOutSlot]);
 
+  // Update available checkout hours based on check-in time
   useEffect(() => {
     if (checkInSlot) {
       const checkInHour = parseInt(checkInSlot.split(":")[0]);
@@ -168,6 +180,7 @@ export const Turfs = () => {
     }
   }, [checkInSlot]);
 
+  // Handle time slot selection
   const handleSlotSelection = (slot) => {
     if (currentPickerMode === "check-in") {
       setCheckInSlot(slot);
@@ -178,14 +191,18 @@ export const Turfs = () => {
     }
   };
 
+  // Handle sport filter selection
   const handleSportFilter = (id) => {
     setSelectedSport(selectedSport === id ? "" : id);
   };
 
+  // Show loading skeleton while fetching data
   if (isLoading) return <SkeletonLoader />;
 
+  // Render the main UI
   return (
     <div className="w-full px-6 py-4 text-white bg-gradient-to-b from-gray-900 to-gray-950">
+      {/* Filter controls */}
       <div className="flex flex-wrap items-center justify-between mb-6 gap-4">
         <button
           onClick={() => setNearestSwitch(!nearestSwitch)}
@@ -210,6 +227,7 @@ export const Turfs = () => {
         </div>
       </div>
 
+      {/* Sport and time selection grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
         <div className="bg-gray-800/50 border border-gray-700 rounded-lg p-3">
           <h3 className="text-sm text-gray-400 mb-2">Sport</h3>
@@ -285,6 +303,7 @@ export const Turfs = () => {
         </div>
       </div>
 
+      {/* Time slot picker modal */}
       {showSlotPicker && (
         <TimeSlotPicker
           mode={currentPickerMode}
@@ -296,10 +315,12 @@ export const Turfs = () => {
         />
       )}
 
+      {/* Available turfs header */}
       <h2 className="font-bold text-2xl mb-6 bg-clip-text text-transparent bg-gradient-to-r from-lime-400 to-emerald-500">
         Available Turfs
       </h2>
 
+      {/* Turfs grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredTurfs.map((turf) => (
           <TurfCard

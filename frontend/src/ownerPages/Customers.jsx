@@ -1,294 +1,224 @@
 import React, { useEffect, useState, useContext } from "react";
 import axios from "axios";
-import { 
-  User, Mail, Phone, CalendarDays, BadgeCheck, 
-  AlertTriangle, Loader2, Star, Crown, Activity,
-  TrendingUp, Zap, Award, Shield, Clock
+import {
+  User, Mail, Phone, CalendarDays,
+  Loader2, Star, Crown, Activity,
+  TrendingUp, Zap, Award, Clock, Search
 } from "lucide-react";
 import moment from "moment";
 import { BookContext } from "../constexts/bookContext";
+
+const classify = (customer, allCustomers) => {
+  const count = allCustomers.filter(c => c.userId === customer.userId).length;
+  const days  = moment().diff(moment(customer.bookingDate), "days");
+  if (count > 5 && days <= 10)  return "VIP";
+  if (count > 3 || days <= 15)  return "Regular";
+  if (count > 1 && days <= 30)  return "Active";
+  return "Inactive";
+};
+
+const statusConfig = {
+  VIP:      { color: "text-amber-400",  bg: "bg-amber-400/10",  border: "border-amber-400/20",  icon: Crown,    badge: "from-amber-500 to-yellow-400"  },
+  Regular:  { color: "text-lime-400",   bg: "bg-lime-400/10",   border: "border-lime-400/20",   icon: Star,     badge: "from-lime-500 to-emerald-400"  },
+  Active:   { color: "text-blue-400",   bg: "bg-blue-400/10",   border: "border-blue-400/20",   icon: Activity, badge: "from-blue-500 to-cyan-400"     },
+  Inactive: { color: "text-gray-400",   bg: "bg-gray-400/10",   border: "border-gray-400/20",   icon: Clock,    badge: "from-gray-600 to-gray-500"     },
+};
+
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [activeFilter, setActiveFilter] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const {selectedTurfId,
-        setSelectedTurfId} =  useContext(BookContext)
+  const [loading, setLoading]     = useState(true);
+  const [filter, setFilter]       = useState("all");
+  const [search, setSearch]       = useState("");
+  const { selectedTurfId }        = useContext(BookContext);
+
   useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const res = await axios.get(`/owner/customers?turfId=${selectedTurfId}`);
-        setCustomers(res.data.customers);
-      } catch (err) {
-        console.error("Error fetching customers:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCustomers();
-  }, []);
+    axios.get(`/owner/customers?turfId=${selectedTurfId}`)
+      .then(r => setCustomers(r.data.customers || []))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [selectedTurfId]);
 
-  const classifyCustomer = (customer) => {
-    const bookingsCount = customers.filter(c => c.userId === customer.userId).length;
-    const lastBooking = moment(customer.bookingDate);
-    const now = moment();
-    const daysSinceLast = now.diff(lastBooking, 'days');
-
-    if (bookingsCount > 5 && daysSinceLast <= 10) return "VIP";
-    if (bookingsCount > 3 || daysSinceLast <= 15) return "Regular";
-    if (bookingsCount > 1 && daysSinceLast <= 30) return "Active";
-    return "Inactive";
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "VIP": return "bg-gradient-to-r from-amber-500 to-yellow-400";
-      case "Regular": return "bg-gradient-to-r from-lime-500 to-emerald-400";
-      case "Active": return "bg-gradient-to-r from-blue-500 to-cyan-400";
-      default: return "bg-gray-600";
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "VIP": return <Crown className="text-amber-400" size={16} />;
-      case "Regular": return <Star className="text-lime-400" size={16} />;
-      case "Active": return <Activity className="text-blue-400" size={16} />;
-      default: return <AlertTriangle className="text-gray-400" size={16} />;
-    }
-  };
-
-  const filteredCustomers = customers.filter(customer => {
-    const matchesSearch = customer.fullname?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                         customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         customer.phone.includes(searchQuery);
-    
-    if (activeFilter === "all") return matchesSearch;
-    return classifyCustomer(customer) === activeFilter && matchesSearch;
+  const displayed = customers.filter(c => {
+    const matchFilter = filter === "all" || classify(c, customers) === filter;
+    if (!search) return matchFilter;
+    const q = search.toLowerCase();
+    return matchFilter && (
+      (c.name || "").toLowerCase().includes(q) ||
+      (c.email || "").toLowerCase().includes(q) ||
+      (c.phone || "").includes(q)
+    );
   });
 
-  const getCustomerValue = (customer) => {
-    const status = classifyCustomer(customer);
-    const bookingsCount = customers.filter(c => c.userId === customer.userId).length;
-    const totalSpent = customers
-      .filter(c => c.userId === customer.userId)
-      .reduce((sum, c) => sum + c.amountPaid, 0);
+  const counts = ["VIP","Regular","Active","Inactive"].reduce((acc, s) => {
+    acc[s] = customers.filter(c => classify(c, customers) === s).length;
+    return acc;
+  }, {});
 
-    if (status === "VIP") return 5;
-    if (status === "Regular") return 4;
-    if (bookingsCount > 3) return 3;
-    if (totalSpent > 2000) return 2;
-    return 1;
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="animate-spin text-lime-400" size={32} />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-950 p-6 text-white font-sora">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+    <div className="min-h-screen bg-[#0a0a0a] text-white p-5 font-sora">
+      <div className="max-w-7xl mx-auto space-y-5">
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-lime-300 to-emerald-400 mb-2">
-              Customer Intelligence
-            </h1>
-            <p className="text-gray-400 flex items-center">
-              <Zap className="mr-2 text-lime-400" size={16} />
-              Actionable insights about your customers
+            <h1 className="text-2xl font-bold text-white">Customers</h1>
+            <p className="text-gray-500 text-sm mt-0.5 flex items-center gap-1.5">
+              <Zap size={13} className="text-lime-400" />
+              {customers.length} total · smart classification
             </p>
           </div>
-          
-          <div className="mt-4 md:mt-0 w-full md:w-auto">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Search customers..."
-                className="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 pl-10 w-full md:w-64 text-white focus:outline-none focus:ring-2 focus:ring-lime-500/50"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              <svg
-                className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </div>
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search name, email, phone…"
+              className="bg-[#111] border border-white/5 text-sm text-white pl-9 pr-4 py-2 rounded-xl focus:outline-none focus:ring-1 focus:ring-lime-500/50 w-64 placeholder:text-gray-600"
+            />
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-3 mb-8">
-          <button
-            onClick={() => setActiveFilter("all")}
-            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-all ${
-              activeFilter === "all" 
-                ? 'bg-lime-500/20 text-lime-300 border border-lime-500/30' 
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <TrendingUp className="mr-2" size={16} /> All Customers
-          </button>
-          <button
-            onClick={() => setActiveFilter("VIP")}
-            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-all ${
-              activeFilter === "VIP" 
-                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' 
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <Crown className="mr-2" size={16} /> VIP
-          </button>
-          <button
-            onClick={() => setActiveFilter("Regular")}
-            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-all ${
-              activeFilter === "Regular" 
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' 
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <Star className="mr-2" size={16} /> Regular
-          </button>
-          <button
-            onClick={() => setActiveFilter("Active")}
-            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-all ${
-              activeFilter === "Active" 
-                ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30' 
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <Activity className="mr-2" size={16} /> Active
-          </button>
-          <button
-            onClick={() => setActiveFilter("Inactive")}
-            className={`px-4 py-2 rounded-full text-sm font-medium flex items-center transition-all ${
-              activeFilter === "Inactive" 
-                ? 'bg-gray-600/20 text-gray-300 border border-gray-500/30' 
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
-            }`}
-          >
-            <Clock className="mr-2" size={16} /> Inactive
-          </button>
+        {/* Segment counts */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[
+            { key: "all",      label: "All",      count: customers.length, icon: TrendingUp, color: "text-white",   bg: "bg-white/5"      },
+            { key: "VIP",      label: "VIP",       count: counts.VIP,       icon: Crown,      color: "text-amber-400", bg: "bg-amber-500/10" },
+            { key: "Regular",  label: "Regular",   count: counts.Regular,   icon: Star,       color: "text-lime-400",  bg: "bg-lime-500/10"  },
+            { key: "Active",   label: "Active",    count: counts.Active,    icon: Activity,   color: "text-blue-400",  bg: "bg-blue-500/10"  },
+          ].map(({ key, label, count, icon: Icon, color, bg }) => (
+            <button
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`flex items-center gap-3 p-3.5 rounded-2xl border transition-all text-left
+                ${filter === key ? "border-white/15 bg-white/5" : "border-white/5 bg-[#111] hover:border-white/10"}`}
+            >
+              <div className={`p-2 rounded-xl ${bg}`}>
+                <Icon size={14} className={color} />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-white">{count}</p>
+                <p className="text-[11px] text-gray-500">{label}</p>
+              </div>
+            </button>
+          ))}
         </div>
 
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <Loader2 className="animate-spin h-12 w-12 text-lime-400 mx-auto mb-4" />
-              <p className="text-lime-200">Loading customer intelligence...</p>
-            </div>
-          </div>
-        ) : filteredCustomers.length === 0 ? (
-          <div className="bg-gray-900/50 rounded-xl p-8 text-center border border-gray-800">
-            <Award className="mx-auto h-12 w-12 text-gray-500 mb-4" />
-            <h3 className="text-xl text-gray-300 mb-2">No customers found</h3>
-            <p className="text-gray-500">Try adjusting your search or filters</p>
+        {/* Customer grid */}
+        {displayed.length === 0 ? (
+          <div className="bg-[#111] border border-white/5 rounded-2xl p-12 text-center">
+            <Award size={36} className="text-gray-700 mx-auto mb-3" />
+            <p className="text-gray-500">No customers found</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCustomers.map((customer, index) => {
-              const status = classifyCustomer(customer);
-              const customerValue = getCustomerValue(customer);
-              const bookingsCount = customers.filter(c => c.userId === customer.userId).length;
-              const lastBooking = moment(customer.bookingDate);
-              const now = moment();
-              const daysSinceLast = now.diff(lastBooking, 'days');
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {displayed.map((customer, i) => {
+              const status = classify(customer, customers);
+              const cfg    = statusConfig[status];
+              const Icon   = cfg.icon;
+              const count  = customers.filter(c => c.userId === customer.userId).length;
+              const spent  = customers.filter(c => c.userId === customer.userId).reduce((s, c) => s + c.amountPaid, 0);
+              const avg    = count > 0 ? Math.round(spent / count) : 0;
+              const days   = moment().diff(moment(customer.bookingDate), "days");
 
               return (
-                <div 
-                  key={index} 
-                  className="bg-gradient-to-br from-gray-900/80 to-gray-800/50 border border-gray-700 rounded-2xl overflow-hidden shadow-xl hover:shadow-lime-500/10 transition-all hover:-translate-y-1"
+                <div
+                  key={i}
+                  className={`bg-[#111] border ${cfg.border} rounded-2xl overflow-hidden hover:-translate-y-0.5 hover:shadow-lg transition-all duration-200`}
                 >
-                  <div className={`h-2 ${getStatusColor(status)}`}></div>
-                  
+                  {/* Color strip */}
+                  <div className={`h-1 bg-gradient-to-r ${cfg.badge}`} />
+
                   <div className="p-5">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="text-xl font-bold text-white flex items-center">
-                          {customer.name}
-                          <span className="ml-2">{getStatusIcon(status)}</span>
-                        </h3>
-                        <div className={`text-xs px-2 py-1 rounded-full inline-flex items-center mt-1 ${
-                          status === "VIP" ? "bg-amber-900/30 text-amber-300" :
-                          status === "Regular" ? "bg-lime-900/30 text-lime-300" :
-                          status === "Active" ? "bg-blue-900/30 text-blue-300" :
-                          "bg-gray-700 text-gray-400"
-                        }`}>
-                          {status} Customer
+                    {/* Name + badge */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-xl ${cfg.bg} flex items-center justify-center`}>
+                          <span className={`font-bold text-sm ${cfg.color}`}>
+                            {(customer.name || "?")[0].toUpperCase()}
+                          </span>
                         </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end">
-                        <div className="text-xs text-gray-400 mb-1">Customer Value</div>
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <Star 
-                              key={i} 
-                              className={`${i < customerValue ? "text-amber-400 fill-amber-400" : "text-gray-600"}`} 
-                              size={16} 
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="flex items-center text-sm">
-                        <Mail className="text-gray-400 mr-3" size={16} />
-                        <span className="text-gray-300">{customer.email || 'N/A'}</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <Phone className="text-gray-400 mr-3" size={16} />
-                        <span className="text-gray-300">{customer.phone}</span>
-                      </div>
-                      <div className="flex items-center text-sm">
-                        <CalendarDays className="text-gray-400 mr-3" size={16} />
                         <div>
-                          <div className="text-gray-300">Last Booking: {lastBooking.format("MMM D, YYYY")}</div>
-                          <div className="text-xs text-gray-500">{daysSinceLast} days ago</div>
+                          <p className="font-semibold text-white text-sm">{customer.name || "Guest"}</p>
+                          <span className={`text-[10px] font-medium flex items-center gap-1 mt-0.5 ${cfg.color}`}>
+                            <Icon size={11} /> {status}
+                          </span>
                         </div>
+                      </div>
+                      {/* Stars */}
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_, j) => (
+                          <Star
+                            key={j}
+                            size={12}
+                            className={j < Math.min(count, 5) ? "text-amber-400 fill-amber-400" : "text-gray-700"}
+                          />
+                        ))}
                       </div>
                     </div>
 
-                    <div className="mt-4 pt-4 border-t border-gray-800 grid grid-cols-3 gap-2 text-center">
-                      <div>
-                        <div className="text-xs text-gray-400">Bookings</div>
-                        <div className="text-lg font-bold text-lime-300">{bookingsCount}</div>
+                    {/* Contact info */}
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2 text-xs">
+                        <Mail size={12} className="text-gray-600 flex-shrink-0" />
+                        <span className="text-gray-400 truncate">{customer.email || "—"}</span>
                       </div>
-                      <div>
-                        <div className="text-xs text-gray-400">Total Spent</div>
-                        <div className="text-lg font-bold text-emerald-300">
-                          ₹{customers
-                            .filter(c => c.userId === customer.userId)
-                            .reduce((sum, c) => sum + c.amountPaid, 0)}
-                        </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <Phone size={12} className="text-gray-600 flex-shrink-0" />
+                        <span className="text-gray-400">{customer.phone || "—"}</span>
                       </div>
-                      <div>
-                        <div className="text-xs text-gray-400">Avg. Spend</div>
-                        <div className="text-lg font-bold text-amber-300">
-                          ₹{bookingsCount > 0 ? 
-                            Math.round(customers
-                              .filter(c => c.userId === customer.userId)
-                              .reduce((sum, c) => sum + c.amountPaid, 0) / bookingsCount) 
-                            : 0}
-                        </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <CalendarDays size={12} className="text-gray-600 flex-shrink-0" />
+                        <span className="text-gray-400">
+                          {moment(customer.bookingDate).format("DD MMM YYYY")}
+                          <span className="text-gray-600 ml-1">({days}d ago)</span>
+                        </span>
                       </div>
                     </div>
 
-                    <div className="mt-4 flex justify-between">
-                      <button className="text-xs bg-gray-800 hover:bg-gray-700 text-lime-300 px-3 py-1.5 rounded-lg flex items-center transition">
-                        <Phone className="mr-1" size={14} /> Contact
-                      </button>
-                      <button className="text-xs bg-gray-800 hover:bg-gray-700 text-blue-300 px-3 py-1.5 rounded-lg flex items-center transition">
-                        <Shield className="mr-1" size={14} /> Offer
-                      </button>
-                      <button className="text-xs bg-gray-800 hover:bg-gray-700 text-amber-300 px-3 py-1.5 rounded-lg flex items-center transition">
-                        <Star className="mr-1" size={14} /> Reward
-                      </button>
+                    {/* Stats */}
+                    <div className="grid grid-cols-3 gap-2 py-3 border-t border-white/5">
+                      {[
+                        { label: "Bookings", value: count,  color: "text-lime-400"   },
+                        { label: "Spent",    value: `₹${spent}`, color: "text-emerald-400" },
+                        { label: "Avg",      value: `₹${avg}`,   color: "text-amber-400"  },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className="text-center">
+                          <p className={`text-base font-bold ${color}`}>{value}</p>
+                          <p className="text-[10px] text-gray-600 mt-0.5">{label}</p>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex gap-2 mt-3">
+                      <a
+                        href={`tel:${customer.phone}`}
+                        className="flex-1 text-xs text-center py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition flex items-center justify-center gap-1.5"
+                      >
+                        <Phone size={12} /> Call
+                      </a>
+                      <a
+                        href={`mailto:${customer.email}`}
+                        className="flex-1 text-xs text-center py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 transition flex items-center justify-center gap-1.5"
+                      >
+                        <Mail size={12} /> Email
+                      </a>
+                      <a
+                        href={`https://wa.me/91${customer.phone}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex-1 text-xs text-center py-2 rounded-xl bg-lime-500/10 hover:bg-lime-500/20 text-lime-400 transition flex items-center justify-center gap-1.5"
+                      >
+                        <Zap size={12} /> WhatsApp
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -297,10 +227,10 @@ const Customers = () => {
           </div>
         )}
 
-        {!loading && filteredCustomers.length > 0 && (
-          <div className="mt-8 text-center text-sm text-gray-400">
-            Showing <span className="font-medium text-lime-300">{filteredCustomers.length}</span> of <span className="font-medium text-white">{customers.length}</span> customers
-          </div>
+        {displayed.length > 0 && (
+          <p className="text-center text-xs text-gray-600">
+            Showing <span className="text-gray-400">{displayed.length}</span> of <span className="text-gray-400">{customers.length}</span> customers
+          </p>
         )}
       </div>
     </div>

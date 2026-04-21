@@ -16,6 +16,7 @@ const TimeSlotPicker = ({
           {mode === "check-out" && (
             <button
               onClick={onBack}
+             
               className="mr-2 text-gray-400 hover:text-white"
             >
               <ChevronLeft size={20} />

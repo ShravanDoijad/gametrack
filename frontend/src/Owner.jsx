@@ -14,7 +14,7 @@ import TodaysBookings from "./ownerPages/TodaysBookings";
 import OwnerPrivateRoute from "./OwnerPrivateRoute";
 import TimeSlots from "./ownerPages/TimeSlots";
 import SubscribedCustomer from "./ownerPages/SubcribedCustomer";
-
+import TournamentManager from "./ownerPages/TournamentManager";
 const Owner = () => {
   const {userInfo, token} = useContext(BookContext)
   
@@ -26,6 +26,7 @@ const Owner = () => {
         <Route path="/" element={<OwnerLayout />}>
         <Route element={<OwnerPrivateRoute />}>
           <Route index element={<Dashboard />} />
+           <Route path="tournaments" element={<TournamentManager />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="bookings" element={<Bookings />} />
           <Route path="revenue" element={<Revenue />} />
