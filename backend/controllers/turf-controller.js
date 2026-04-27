@@ -147,6 +147,25 @@ const getReviews = async (req, res) => {
 
 
 
+const getOwnerTurfs = async (req, res) => {
+  try {
+    const { ownerId } = req.query;
+    if (!ownerId) {
+      return res.status(400).json({ message: "Owner ID is required" });
+    }
+    
+    const owner = await Owner.findById(ownerId).populate("turfIds");
+    if (!owner) {
+      return res.status(404).json({ message: "Owner not found" });
+    }
+
+    res.status(200).json(owner.turfIds);
+  } catch (error) {
+    console.error("Error fetching owner turfs:", error);
+    res.status(500).json({ message: "Internal Server error", error: error });
+  }
+};
+
 module.exports={
     getAllTurfs,
     getSingleTurf,
@@ -154,6 +173,6 @@ module.exports={
     addSubscriptionSlot,
     updateSubscription,
     deleteSubscription,
-    getReviews
-
+    getReviews,
+    getOwnerTurfs
 }

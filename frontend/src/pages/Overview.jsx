@@ -331,26 +331,11 @@ export const Overview = () => {
               <p className="text-sm flex items-center gap-1 text-gray-300">
                 <MapPin size={14} /> {turfInfo.location.city}
               </p>
-              <span className="text-gray-400">•</span>
 
-              {turfDistance !== null && (
-                <p className="text-lime-400 text-sm font-medium">
-                  {turfDistance.toFixed(2)} km
-                </p>
-              )}
 
             </div>
           </div>
-          <button
-            onClick={toggleFavorite && handleFavorite}
-            className="p-2 bg-gray-800/80 rounded-full hover:bg-gray-700 transition-colors"
-          >
-            <Bookmark
-              size={20}
-              className={`transition-colors duration-300 ${favorite ? "text-yellow-400 fill-yellow-400" : "text-white"
-                }`}
-            />
-          </button>
+
         </div>
       </div>
 
@@ -360,35 +345,37 @@ export const Overview = () => {
         <div
           onClick={handleDoubleTap}
           onDoubleClick={handleLike}
-          className="relative w-full h-72 rounded-2xl overflow-hidden shadow-2xl group cursor-pointer"
+          className="relative w-full h-80 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] group cursor-pointer border border-white/10"
         >
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent z-10" />
+          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-900/40 to-transparent z-10" />
           <img
             src={turfInfo.images[0]}
             alt="Turf"
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
-          <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
+          <div className="absolute bottom-0 left-0 right-0 z-20 p-5">
             <div className="flex justify-between items-end">
               <div>
-                <div className="flex items-center gap-2 text-white/90 mb-1">
-                  <MapPin size={16} className="text-lime-400" />
-                  <span>{turfInfo.location.address}, {turfInfo.location.pincode}</span>
+                <div className="flex items-center gap-2 text-white/90 mb-2">
+                  <div className="p-1.5 bg-white/10 backdrop-blur-md rounded-full">
+                    <MapPin size={16} className="text-lime-400" />
+                  </div>
+                  <span className="font-medium text-shadow-sm">{turfInfo.location.address}, {turfInfo.location.pincode}</span>
                 </div>
                 <button
                   onClick={() => setmapView(true)}
-                  className="flex items-center gap-1 text-lime-400 hover:text-lime-300 transition-colors"
+                  className="flex items-center gap-1 text-lime-400 hover:text-lime-300 transition-colors font-medium hover:underline decoration-lime-400/50 underline-offset-4"
                 >
                   <Navigation size={16} /> View on Map
                 </button>
               </div>
               <div className="flex items-center gap-2">
-                <div className="bg-gray-900/80 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-1">
+                <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-1.5 shadow-lg">
                   <Heart
                     size={18}
-                    className={liked ? "fill-pink-500 text-pink-500" : "text-gray-300"}
+                    className={`transition-colors duration-300 ${liked ? "fill-pink-500 text-pink-500" : "text-white group-hover:text-pink-300"}`}
                   />
-                  <span className="text-sm font-medium">{turfInfo.likes}</span>
+                  <span className="text-sm font-semibold">{turfInfo.likes}</span>
                 </div>
               </div>
             </div>
@@ -396,62 +383,63 @@ export const Overview = () => {
         </div>
 
 
-        <div className="mt-6 bg-gradient-to-r from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-5 shadow-lg overflow-hidden">
+        <div className="mt-8 bg-gray-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-lime-500/5 rounded-full blur-3xl pointer-events-none"></div>
 
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-xl font-bold text-white">Turf Booking Rates</h3>
+          <div className="flex justify-between items-center mb-6 relative z-10">
+            <h3 className="text-2xl font-bold text-white tracking-tight">Turf Booking Rates</h3>
             <button
               onClick={() => navigate("/booking",
                 {
                   state: turfInfo._id
                 }
               )}
-              className="bg-lime-500 hover:bg-lime-400 text-gray-900 font-semibold px-5 py-2 rounded-lg transition-colors flex items-center gap-1"
+              className="bg-lime-400 hover:bg-lime-300 text-gray-950 font-bold px-6 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:shadow-[0_0_30px_rgba(163,230,53,0.5)] active:scale-95"
             >
-              Book Now <ChevronRight size={18} />
+              Book Now <ChevronRight size={18} className="stroke-[3]" />
             </button>
           </div>
 
-          <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex flex-col md:flex-row gap-4 relative z-10">
             {turfInfo.dayPrice === turfInfo.nightPrice ? (
-              <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 relative overflow-hidden">
-                <div className="absolute -right-10 -top-10 w-24 h-24 bg-blue-600 rounded-full opacity-20"></div>
+              <div className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 transition-colors rounded-xl p-5 relative overflow-hidden group">
+                <div className="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
                 <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sun size={18} className="text-amber-300" />
-                    <Moon size={18} className="text-indigo-300" />
-                    <span className="text-blue-200 font-medium">Standard Rate</span>
-                    <span className="text-xs text-blue-300 ml-auto">All Day</span>
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-1.5 bg-amber-500/20 rounded-md"><Sun size={18} className="text-amber-400" /></div>
+                    <div className="p-1.5 bg-indigo-500/20 rounded-md"><Moon size={18} className="text-indigo-400" /></div>
+                    <span className="text-gray-200 font-semibold ml-2">Standard Rate</span>
+                    <span className="text-xs font-bold text-gray-400 bg-white/5 px-2 py-1 rounded-full ml-auto">All Day</span>
                   </div>
-                  <p className="font-bold text-3xl text-white">₹{turfInfo.dayPrice}<span className="text-blue-300 text-lg">/hour</span></p>
-                  <p className="text-blue-200 text-sm mt-1">Same rate for day and night</p>
+                  <p className="font-extrabold text-4xl text-white mt-4 mb-1">₹{turfInfo.dayPrice}<span className="text-gray-400 text-lg font-medium">/hour</span></p>
+                  <p className="text-gray-400 text-sm">Consistent rate for both day and night</p>
                 </div>
               </div>
             ) : (
               <>
-                <div className="flex-1 bg-gradient-to-br from-blue-900 to-blue-800 border border-blue-700 rounded-lg p-4 relative overflow-hidden">
-                  <div className="absolute -right-10 -top-10 w-24 h-24 bg-blue-600 rounded-full opacity-20"></div>
+                <div className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 transition-colors rounded-xl p-5 relative overflow-hidden group">
+                  <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Sun size={18} className="text-amber-300" />
-                      <span className="text-blue-200 font-medium">Day Rate</span>
-                      <span className="text-xs text-blue-300 sora font-medium ml-auto">{turfInfo.openingTime}-{turfInfo.nightPriceStart}</span>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 bg-amber-500/20 rounded-md"><Sun size={18} className="text-amber-400" /></div>
+                      <span className="text-gray-200 font-semibold">Day Rate</span>
+                      <span className="text-xs font-bold text-gray-400 bg-white/5 px-2 py-1 rounded-full ml-auto">{turfInfo.openingTime}-{turfInfo.nightPriceStart}</span>
                     </div>
-                    <p className="font-bold text-3xl text-white">₹{turfInfo.dayPrice}<span className="text-blue-300 text-lg">/hour</span></p>
-                    <p className="text-blue-200 text-sm mt-1">Perfect for morning matches and practice</p>
+                    <p className="font-extrabold text-4xl text-white mt-4 mb-1">₹{turfInfo.dayPrice}<span className="text-gray-400 text-lg font-medium">/hour</span></p>
+                    <p className="text-gray-400 text-sm">Perfect for morning matches and practice</p>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-gradient-to-br from-indigo-900 to-purple-800 border border-purple-700 rounded-lg p-4 relative overflow-hidden">
-                  <div className="absolute -right-10 -top-10 w-24 h-24 bg-purple-600 rounded-full opacity-20"></div>
+                <div className="flex-1 bg-white/5 backdrop-blur-md border border-indigo-500/20 hover:border-indigo-400/40 transition-colors rounded-xl p-5 relative overflow-hidden group">
+                  <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-1">
-                      <Moon size={18} className="text-indigo-300" />
-                      <span className="text-purple-200 font-medium">Night Rate</span>
-                      <span className="text-xs text-purple-300 sora font-medium ml-auto">{turfInfo.nightPriceStart}-{turfInfo.closingTime}</span>
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="p-1.5 bg-indigo-500/20 rounded-md"><Moon size={18} className="text-indigo-400" /></div>
+                      <span className="text-indigo-100 font-semibold">Night Rate</span>
+                      <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2 py-1 rounded-full ml-auto">{turfInfo.nightPriceStart}-{turfInfo.closingTime}</span>
                     </div>
-                    <p className="font-bold text-3xl text-white">₹{turfInfo.nightPrice}<span className="text-purple-300 text-lg">/hour</span></p>
-                    <p className="text-purple-200 text-sm mt-1">Floodlit turf for cooler evening games</p>
+                    <p className="font-extrabold text-4xl text-white mt-4 mb-1">₹{turfInfo.nightPrice}<span className="text-indigo-200 text-lg font-medium">/hour</span></p>
+                    <p className="text-indigo-200 text-sm">Floodlit turf for cooler evening games</p>
                   </div>
                 </div>
               </>
@@ -476,7 +464,7 @@ export const Overview = () => {
                   <div
                     key={plan._id}
                     
-                    className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg"
+                    className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-lime-500/30 rounded-2xl p-5 shadow-lg transition-all duration-300 group cursor-pointer"
                   >
                     <div onClick={()=> navigate("/booking",
                       {
@@ -486,14 +474,14 @@ export const Overview = () => {
                       }
                     )} className="flex justify-between items-start">
                       <div>
-                        <h4 className="text-lime-400 font-bold">
+                        <h4 className="text-lime-400 font-bold text-lg mb-1 group-hover:text-glow transition-all">
                           {plan.days} Days Plan
                         </h4>
 
-                        <p className="text-gray-300 text-sm">{plan.description}</p>
+                        <p className="text-gray-400 text-sm leading-relaxed">{plan.description}</p>
                       </div>
 
-                      <span className="bg-lime-500/10 text-lime-400 px-3 py-1 rounded-full text-sm font-medium">
+                      <span className="bg-lime-400/10 border border-lime-400/20 text-lime-400 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm">
                         ₹{plan.amount}
                       </span>
                     </div>
@@ -534,20 +522,20 @@ export const Overview = () => {
           </h3>
           <div className="flex gap-2">
             {sports.map((sport) => (
-              <button
-                key={sport.id}
-                onClick={() => { selectedSport == sport.id ? setSelectedSport("") : setSelectedSport(sport.id) }}
-                className={`flex flex-col items-center p-2 rounded-lg transition-all ${selectedSport === sport.id
-                  ? `${sport.color} border border-white/20 shadow-lg transform scale-105`
-                  : "bg-gray-700/30 hover:bg-gray-700/50"
-                  }`}
-              >
-                <div
-                  className={`p-2 rounded-full ${selectedSport === sport.id
-                    ? "bg-white/20"
-                    : "bg-gray-600/30"
+                <button
+                  key={sport.id}
+                  onClick={() => { selectedSport == sport.id ? setSelectedSport("") : setSelectedSport(sport.id) }}
+                  className={`flex flex-col items-center p-3 rounded-2xl transition-all duration-300 ${selectedSport === sport.id
+                    ? `${sport.color} border border-white/20 shadow-[0_10px_20px_rgba(0,0,0,0.3)] transform scale-105`
+                    : "bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10"
                     }`}
                 >
+                  <div
+                    className={`p-3 rounded-full transition-colors ${selectedSport === sport.id
+                      ? "bg-white/20 shadow-inner"
+                      : "bg-black/30"
+                      }`}
+                  >
                   <img
                     src={sport.icon}
                     alt={sport.name}
@@ -579,11 +567,11 @@ export const Overview = () => {
               turfInfo.amenities.map((amenity, idx) => {
                 const Icon = Object.keys(ICON_MAP).find(k => amenity.toLowerCase().includes(k)) ?
                   ICON_MAP[Object.keys(ICON_MAP).find(k => amenity.toLowerCase().includes(k))] : ShieldCheck;
-                return (<div key={idx} className="bg-gray-800/50 border border-gray-700 rounded-lg p-3 flex items-center gap-3">
-                  <div className="bg-lime-500/10 p-2 rounded-lg">
-                    {Icon && <Icon className="w-5 h-5 text-blue-600" />}
+                return (<div key={idx} className="bg-white/5 backdrop-blur-sm border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all rounded-2xl p-4 flex items-center gap-4 shadow-sm group">
+                  <div className="bg-lime-400/10 border border-lime-400/20 p-2.5 rounded-xl group-hover:scale-110 transition-transform">
+                    {Icon && <Icon className="w-5 h-5 text-lime-400" />}
                   </div>
-                  <span className="text-sm">{amenity}</span>
+                  <span className="text-sm font-medium text-gray-200">{amenity}</span>
                 </div>)
               }
               )}

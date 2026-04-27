@@ -73,10 +73,10 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={() => setActiveZone(zone)}
-      className={`flex-1 py-3 px-4 rounded-xl flex flex-col items-center justify-center transition-all ${
+      className={`flex-1 py-3 px-4 rounded-2xl flex flex-col items-center justify-center transition-all duration-300 border ${
         activeZone === zone 
-          ? `${gradient} text-white shadow-lg`
-          : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+          ? `${gradient} text-white border-transparent shadow-[0_10px_20px_rgba(0,0,0,0.3)] transform scale-105`
+          : "bg-white/5 backdrop-blur-md border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20 hover:text-white"
       }`}
     >
       <div className="flex items-center gap-2">
@@ -95,8 +95,8 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
       transition={{ duration: 0.3 }}
     >
       <div className="mb-6">
-        <h3 className="text-2xl font-bold text-white mb-2">Select Your Time</h3>
-        <p className="text-gray-400">Choose your preferred playing time</p>
+        <h3 className="text-2xl font-extrabold text-white mb-2 tracking-tight">Select Check-in Time</h3>
+        <p className="text-gray-400 font-medium">Choose your preferred playing time</p>
       </div>
 
       <div className="flex gap-3 mb-6 overflow-scroll  scroll-smooth">
@@ -136,14 +136,14 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
             <div
               key={idx}
               onClick={() => isAvailable && handleCheckIn(slot.display)}
-              className={`px-4 py-3 rounded-lg text-center border transition ${
+              className={`px-4 py-3 rounded-xl text-center border transition-all duration-300 font-medium ${
                 selectedCheckIn === slot.display
-                  ? "bg-green-500 text-black border-green-500"
+                  ? "bg-lime-400 text-gray-950 border-lime-400 shadow-[0_0_15px_rgba(163,230,53,0.4)] scale-105 font-bold"
                   : isBooked
-                  ? "bg-red-600 text-white border-red-700"
+                  ? "bg-rose-500/10 text-rose-400/50 border-rose-500/20 cursor-not-allowed"
                   : isAvailable
-                  ? "bg-[#1a1a1a] text-white border-[#2a2a2a]"
-                  : "bg-gray-800 text-gray-400 border-gray-600 cursor-not-allowed"
+                  ? "bg-white/5 backdrop-blur-md text-gray-200 border-white/10 hover:bg-white/10 hover:border-white/20 cursor-pointer"
+                  : "bg-white/5 text-gray-600/50 border-transparent cursor-not-allowed"
               }`}
             >
               {slot.display}

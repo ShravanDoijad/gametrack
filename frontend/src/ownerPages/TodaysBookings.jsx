@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useContext } from 'react';
+import axios from 'axios';
 import { parse, format, isToday, parseISO } from 'date-fns';
 import { BookContext } from '../constexts/bookContext';
 import {
   Clock, User, Phone, IndianRupee, CheckCircle2,
-  ChevronDown, ChevronUp, CalendarX, CreditCard, BadgeCheck, Loader2
+  ChevronDown, ChevronUp, CalendarX, CreditCard, BadgeCheck, Loader2, Repeat
 } from 'lucide-react';
 
 const formatTime = (t) => {
@@ -19,10 +20,43 @@ const statusColors = {
 };
 
 const TodaysBookings = () => {
-  const { bookings } = useContext(BookContext);
+  const { bookings, selectedTurfId } = useContext(BookContext);
   const [loading, setLoading]       = useState(true);
+  const [subsLoading, setSubsLoading] = useState(true);
   const [expanded, setExpanded]     = useState(null);
   const [todayBookings, setToday]   = useState([]);
+  const [todaySubs, setTodaySubs]   = useState([]);
+
+  useEffect(() => {
+    const fetchSubs = async () => {
+      try {
+        setSubsLoading(true);
+        const res = await axios.get(`/owner/subscriptions?turfId=${selectedTurfId}`);
+        const allSubs = res.data.subscription || [];
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        const activeToday = allSubs.filter(sub => {
+          const startDate = new Date(sub.startDate);
+          startDate.setHours(0, 0, 0, 0);
+          const endDate = new Date(sub.endDate);
+          endDate.setHours(0, 0, 0, 0);
+          return startDate <= today && endDate >= today && sub.status === 'confirmed';
+        });
+        setTodaySubs(activeToday);
+      } catch (err) {
+        console.error("Failed to load subscriptions", err);
+      } finally {
+        setSubsLoading(false);
+      }
+    };
+
+    if (selectedTurfId) {
+      fetchSubs();
+    } else {
+      setSubsLoading(false);
+    }
+  }, [selectedTurfId]);
 
   useEffect(() => {
     const filtered = bookings.filter(b => isToday(parseISO(b.date)));
@@ -31,15 +65,103 @@ const TodaysBookings = () => {
   }, [bookings]);
 
   const totalToday    = todayBookings.reduce((s, b) => s + (b.amountPaid || 0), 0);
-  const confirmed     = todayBookings.filter(b => b.status === 'confirmed').length;
+  const totalCount    = todayBookings.length + todaySubs.length;
+  const confirmed     = todayBookings.filter(b => b.status === 'confirmed').length + todaySubs.length;
 
-  if (loading) {
+  if (loading || subsLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Loader2 className="animate-spin text-lime-400" size={32} />
       </div>
     );
   }
+
+  const renderTable = (data, isSub = false) => {
+    return (
+      <div className="w-full overflow-x-auto bg-[#111] border border-white/5 rounded-2xl">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-white/[0.02] border-b border-white/5 text-xs text-gray-400 uppercase tracking-wider">
+              <th className="px-4 py-3 font-medium whitespace-nowrap">Time Slot</th>
+              <th className="px-4 py-3 font-medium whitespace-nowrap">Customer</th>
+              <th className="px-4 py-3 font-medium whitespace-nowrap">Phone & ID</th>
+              <th className="px-4 py-3 font-medium whitespace-nowrap">{isSub ? 'Paid' : 'Advance'}</th>
+              {!isSub && <th className="px-4 py-3 font-medium whitespace-nowrap">Total / Balance</th>}
+              {isSub && <th className="px-4 py-3 font-medium whitespace-nowrap">Date Range</th>}
+              <th className="px-4 py-3 font-medium whitespace-nowrap">Payment</th>
+              <th className="px-4 py-3 font-medium whitespace-nowrap text-right">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5 text-sm">
+            {data.map((booking) => {
+              const name = booking.userId?.fullName || booking.userId?.fullname || booking.fullname || 'Guest';
+              const phone = booking.userId?.phone || booking.phone || '—';
+              const status = booking.status || 'confirmed';
+              
+              let slots = [];
+              if (isSub) {
+                if (booking.slot) slots = [booking.slot];
+              } else {
+                slots = booking.originalSlots || booking.slots || [];
+              }
+              const slotText = slots.length > 0 
+                ? `${formatTime(slots[0].start)} - ${formatTime(slots[slots.length - 1].end)}`
+                : '—';
+
+              return (
+                <tr key={booking._id} className="hover:bg-white/[0.02] transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap text-lime-400 font-medium">
+                    {slotText}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-white">
+                    <div className="flex items-center gap-1.5">
+                      {name}
+                      {isSub && <Repeat size={12} className="text-indigo-400" title="Subscription" />}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-gray-300">{phone}</div>
+                    <div className="text-[10px] text-gray-500 font-mono mt-0.5">
+                      ID: {booking._id ? `...${booking._id.slice(-6)}` : '—'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-300">
+                    ₹{booking.amountPaid || 0}
+                  </td>
+                  
+                  {!isSub && (
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-gray-300">₹{booking.slotFees || 0}</div>
+                      <div className="text-[10px] text-red-400 mt-0.5">
+                        Due: ₹{Math.max(0, (booking.slotFees || 0) - (booking.amountPaid || 0))}
+                      </div>
+                    </td>
+                  )}
+                  
+                  {isSub && (
+                    <td className="px-4 py-3 whitespace-nowrap text-gray-400 text-xs">
+                      {new Date(booking.startDate).toLocaleDateString()} <br/>
+                      <span className="text-[10px] text-gray-600">to</span> {new Date(booking.endDate).toLocaleDateString()}
+                    </td>
+                  )}
+                  
+                  <td className="px-4 py-3 whitespace-nowrap text-gray-400">
+                    {booking.paymentType === 'Manual' || booking.paymentType === 'full' ? 'Manual/Cash' : 'Online'}
+                  </td>
+                  
+                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                    <span className={`text-[10px] border rounded px-2 py-1 uppercase tracking-wider font-semibold ${statusColors[status] || statusColors.confirmed}`}>
+                      {status}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
 
   return (
     <div className="p-5 min-h-screen bg-[#0a0a0a] text-white">
@@ -48,7 +170,7 @@ const TodaysBookings = () => {
         {/* Summary strip */}
         <div className="grid grid-cols-3 gap-3">
           {[
-            { label: 'Total Bookings', value: todayBookings.length, icon: CalendarX, color: 'text-blue-400', bg: 'bg-blue-500/10' },
+            { label: 'Total Visits Today', value: totalCount, icon: CalendarX, color: 'text-blue-400', bg: 'bg-blue-500/10' },
             { label: 'Confirmed',      value: confirmed,            icon: BadgeCheck, color: 'text-lime-400', bg: 'bg-lime-500/10' },
             { label: "Today's Revenue",value: `₹${totalToday.toLocaleString()}`, icon: IndianRupee, color: 'text-amber-400', bg: 'bg-amber-500/10' },
           ].map(({ label, value, icon: Icon, color, bg }) => (
@@ -62,129 +184,37 @@ const TodaysBookings = () => {
           ))}
         </div>
 
-        {/* Booking cards */}
-        {todayBookings.length === 0 ? (
-          <div className="bg-[#111] border border-white/5 rounded-2xl p-12 text-center">
+        {totalCount === 0 ? (
+          <div className="bg-[#111] border border-white/5 rounded-2xl p-12 text-center mt-8">
             <CalendarX size={40} className="text-gray-700 mx-auto mb-3" />
-            <p className="text-gray-400 font-medium">No bookings today</p>
+            <p className="text-gray-400 font-medium">No bookings or subscriptions today</p>
             <p className="text-gray-600 text-sm mt-1">Enjoy the quiet — or go add a manual booking!</p>
           </div>
         ) : (
-          <div className="space-y-2.5">
-            {todayBookings.map(booking => {
-              const isOpen = expanded === booking._id;
-              const name = booking.userId?.fullname || booking.fullname || 'Guest';
-              const slots = booking.originalSlots || booking.slots || [];
-              const status = booking.status || 'confirmed';
+          <div className="space-y-6 mt-6">
+            
+            {/* Regular Bookings */}
+            {todayBookings.length > 0 && (
+              <div>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-lime-400"></div>
+                  Regular Bookings
+                </h2>
+                {renderTable(todayBookings, false)}
+              </div>
+            )}
 
-              return (
-                <div
-                  key={booking._id}
-                  className={`bg-[#111] border rounded-2xl overflow-hidden transition-all
-                    ${isOpen ? 'border-lime-500/30' : 'border-white/5 hover:border-white/10'}`}
-                >
-                  {/* Card header — always visible */}
-                  <div
-                    className="flex items-center gap-3 p-4 cursor-pointer"
-                    onClick={() => setExpanded(isOpen ? null : booking._id)}
-                  >
-                    {/* Time column */}
-                    <div className="min-w-[90px]">
-                      <div className="flex items-center gap-1.5 text-lime-400 mb-0.5">
-                        <Clock size={12} />
-                        <span className="text-xs font-medium">
-                          {slots.length > 0 ? formatTime(slots[0].start) : '—'}
-                        </span>
-                      </div>
-                      {slots.length > 0 && (
-                        <p className="text-[10px] text-gray-600">
-                          → {formatTime(slots[slots.length - 1].end)}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Name */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <User size={13} className="text-gray-500 flex-shrink-0" />
-                        <span className="text-sm font-medium text-white truncate">{name}</span>
-                      </div>
-                      <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
-                        <Phone size={10} />
-                        {booking.userId?.phone || booking.phone || '—'}
-                      </p>
-                    </div>
-
-                    {/* Amount */}
-                    <div className="text-right mr-2">
-                      <div className="flex items-center gap-1 text-white font-semibold text-sm justify-end">
-                        <IndianRupee size={12} />
-                        {booking.amountPaid || 0}
-                      </div>
-                      <span className={`text-[10px] border rounded px-1.5 py-0.5 mt-1 inline-block ${statusColors[status] || statusColors.confirmed}`}>
-                        {status}
-                      </span>
-                    </div>
-
-                    {/* Expand chevron */}
-                    <div className="text-gray-600">
-                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-                    </div>
-                  </div>
-
-                  {/* Expanded details */}
-                  {isOpen && (
-                    <div className="border-t border-white/5 p-4 bg-white/[0.02] space-y-4">
-                      {/* Slots */}
-                      <div>
-                        <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-2">Slots</p>
-                        <div className="flex flex-wrap gap-2">
-                          {slots.map((s, i) => (
-                            <span key={i} className="text-xs bg-[#1a1a1a] border border-white/10 rounded-lg px-3 py-1.5 text-gray-300">
-                              {formatTime(s.start)} – {formatTime(s.end)}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Info grid */}
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {[
-                          { label: 'Email', value: booking.userId?.email || '—' },
-                          { label: 'Payment Type', value: booking.paymentType || '—' },
-                          { label: 'Slot Fees', value: `₹${booking.slotFees || 0}` },
-                          { label: 'Amount Paid', value: `₹${booking.amountPaid || 0}` },
-                          { label: 'Balance Due', value: `₹${Math.max(0, (booking.slotFees || 0) - (booking.amountPaid || 0))}` },
-                          { label: 'Payment ID', value: booking.razorpay_payment_id ? `...${booking.razorpay_payment_id.slice(-6)}` : 'Manual' },
-                        ].map(({ label, value }) => (
-                          <div key={label}>
-                            <p className="text-[10px] text-gray-600 mb-0.5">{label}</p>
-                            <p className="text-xs text-gray-300 font-medium truncate">{value}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Quick action */}
-                      {status !== 'cancelled' && (
-                        <div className="flex items-center gap-2 pt-1">
-                          <div className="flex items-center gap-1.5 text-xs text-lime-400">
-                            <CheckCircle2 size={14} />
-                            <span>Booking confirmed</span>
-                          </div>
-                          <span className="text-gray-700">·</span>
-                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
-                            <CreditCard size={13} />
-                            <span>
-                              {booking.paymentType === 'Manual' ? 'Cash/Manual' : 'Online payment'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {/* Subscriptions */}
+            {todaySubs.length > 0 && (
+              <div className={todayBookings.length > 0 ? "pt-6 border-t border-white/5 mt-6" : ""}>
+                <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                  Subscriptions Today
+                </h2>
+                {renderTable(todaySubs, true)}
+              </div>
+            )}
+            
           </div>
         )}
       </div>

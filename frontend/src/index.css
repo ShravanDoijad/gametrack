@@ -1,3 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @import "tailwindcss";
 
+body {
+  font-family: 'Outfit', sans-serif;
+  background-color: #030712; /* gray-950 */
+  background-image: radial-gradient(circle at top, #111827, #030712 100%);
+  color: #f9fafb;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #374151; /* gray-700 */
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #4b5563; /* gray-600 */
+}
+
+/* Selection Color */
+::selection {
+  background-color: rgba(132, 204, 22, 0.3); /* lime-500/30 */
+  color: #fff;
+}
+
+/* Global utility classes for glassmorphism and glows */
+.glass-panel {
+  background: rgba(31, 41, 55, 0.4); /* gray-800/40 */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.text-glow {
+  text-shadow: 0 0 15px rgba(163, 230, 53, 0.4);
+}

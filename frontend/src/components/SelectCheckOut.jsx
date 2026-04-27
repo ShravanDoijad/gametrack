@@ -72,7 +72,7 @@ const SelectCheckOut = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      <h3 className="text-2xl sora-font font-bold mb-6 text-white tracking-tight">
+      <h3 className="text-2xl font-extrabold mb-6 text-white tracking-tight">
         Select Check-out Time
       </h3>
 
@@ -84,25 +84,20 @@ const SelectCheckOut = ({
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleCheckOut(slot.display)}
-              className={`p-4 rounded-xl cursor-pointer transition-all border-2 ${selectedCheckOut === slot.display
-                  ? "bg-yellow-400 text-gray-900 border-yellow-500 shadow-lg"
-                  : "bg-gray-800 text-white flex items-center justify-between border-gray-700 hover:border-gray-600"
+              className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 border shadow-sm flex flex-col items-center justify-center ${selectedCheckOut === slot.display
+                  ? "bg-lime-400 text-gray-950 border-lime-400 shadow-[0_0_20px_rgba(163,230,53,0.4)] scale-105"
+                  : "bg-white/5 backdrop-blur-md text-gray-200 border-white/10 hover:bg-white/10 hover:border-white/20 hover:scale-[1.02]"
                 }`}
             >
-              <div className="flex-col items-center justify-between px-auto">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col items-center justify-center w-full">
+                <span className={`text-sm font-bold tracking-wide uppercase ${selectedCheckOut === slot.display ? 'text-gray-800' : 'text-lime-400'}`}>
+                  {slot.duration} hour{slot.duration > 1 ? "s" : ""}
+                </span>
+                
+                <div className={`mt-2 mb-2 w-12 h-[2px] rounded-full ${selectedCheckOut === slot.display ? 'bg-gray-950/20' : 'bg-white/10'}`}></div>
 
-                  <span className="text-md sora font-semibold  text-lime-300">
-                    {slot.duration} hour{slot.duration > 1 ? "s" : ""}
-
-                  </span>
-                </div>
-                <div className="text-center  mt-1.5 w-15 h-[0.5px] bg-gray-500"></div>
-
-                <div className="mt-1.5 text-sm text-gray-300 sora">
-                  <span className="font-medium ">
-                    {slot.display}
-                  </span>
+                <div className={`text-lg font-extrabold tracking-tight ${selectedCheckOut === slot.display ? 'text-gray-950' : 'text-white'}`}>
+                  {slot.display}
                 </div>
               </div>
             </motion.div>

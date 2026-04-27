@@ -10,7 +10,16 @@ const subscriptionSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true,
+    required: false,
+    default: null
+  },
+
+  fullname: {
+    type: String,
+  },
+
+  phone: {
+    type: String,
   },
 
   // ───────────── DATE RANGE ─────────────

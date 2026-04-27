@@ -15,28 +15,28 @@ const DatePick = ({next7Days, handleDateSelect, selectedDate, showCalendar, setS
                 key={idx}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => handleDateSelect(day.date)}
-                className={`min-w-[90px] p-3 rounded-xl text-center cursor-pointer border transition-all duration-200 ${selectedDate?.toDateString() === day.date.toDateString()
-                  ? "bg-lime-500 text-black border-lime-500"
-                  : "bg-[#1a1a1a] border-[#2a2a2a] text-white"
+                className={`min-w-[90px] p-3 rounded-2xl text-center cursor-pointer border transition-all duration-300 shadow-sm ${selectedDate?.toDateString() === day.date.toDateString()
+                  ? "bg-lime-400 text-gray-950 border-lime-400 shadow-[0_0_20px_rgba(163,230,53,0.3)] transform scale-105"
+                  : "bg-white/5 backdrop-blur-md border-white/10 text-gray-300 hover:bg-white/10 hover:border-white/20"
                   }`}
               >
-                <p className="text-sm font-semibold">{day.label.split(",")[0]}</p>
-                <p className="text-lg font-bold sora">{day.label.split(",")[1]}</p>
+                <p className={`text-xs font-medium mb-1 uppercase tracking-wider ${selectedDate?.toDateString() === day.date.toDateString() ? "text-gray-800" : "text-gray-400"}`}>{day.label.split(",")[0]}</p>
+                <p className="text-xl font-extrabold">{day.label.split(",")[1]}</p>
               </motion.div>
             ))}
     
             <motion.div
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowCalendar(true)}
-              className="min-w-[90px] p-3 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-center cursor-pointer"
+              className="min-w-[90px] p-3 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 hover:bg-white/10 hover:border-white/20 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center text-gray-300"
             >
-              <CalendarDays className="mx-auto mb-1" />
-              <p className="text-xs">Pick Date</p>
+              <CalendarDays className="mb-2 text-lime-400" size={24} />
+              <p className="text-xs font-semibold tracking-wide uppercase">Pick Date</p>
             </motion.div>
           </div>
     
           {showCalendar && (
-            <div className="my-4 bg-[#1a1a1a] p-4 rounded-xl border border-gray-700">
+            <div className="my-4 bg-gray-900/80 backdrop-blur-xl p-5 rounded-3xl border border-white/10 shadow-2xl flex justify-center">
               <DatePicker
                 selected={customDate}
                 onChange={(date) => handleDateSelect(date)}

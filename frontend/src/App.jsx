@@ -12,7 +12,6 @@ import { Turfs } from './pages/Turfs';
 import { BookContext } from './constexts/bookContext';
 import { Overview } from './pages/Overview';
 import axios from 'axios'
-import Favorite from './pages/Favorite';
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
@@ -165,7 +164,6 @@ useEffect(() => {
           <Route element={<PrivateRoute />}>
             <Route path="/booking" element={<BookingManager />} />
             <Route path="/notification" element={<Notifications />} />
-            <Route path="/favorite" element={<Favorite />} />
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />
           </Route>

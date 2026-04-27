@@ -17,8 +17,8 @@ const commonTabs = [
   { 
     id: 'home',
     icon: <Home size={22} />,
-    label: 'Explore',
-    path: '/',
+    label: 'Turfs',
+    path: userInfo?.role==='user'?'/': '/owner/dashboard',
     active: location.pathname === '/'
   },
   
@@ -48,13 +48,7 @@ if (userInfo?.role === 'owner') {
     active: location.pathname.includes('owner/turfTodaysbookings')
   }  )
 } else {
-  commonTabs.splice(2, 0, {
-    id: 'favorites',
-    icon: <Heart size={22} />,
-    label: 'Favorites',
-    path: '/favorite',
-    active: location.pathname.includes('favorites')
-  });
+
   commonTabs.splice(1, 0 ,{
     id: 'bookings',
     icon: <CalendarDays size={22} />,
@@ -70,24 +64,31 @@ if (userInfo?.role === 'owner') {
   return (
     <>
      
-      <nav className=" bottom-0 left-0 fixed right-0 bg-gray-900 border-t border-gray-800 z-50 shadow-2xl">
-        <div className="flex items-center justify-around h-16 px-2">
+      <nav className="fixed bottom-4 left-4 right-4 md:left-auto md:right-8 md:w-96 z-50">
+        <div className="flex items-center justify-around h-16 px-2 bg-gray-950/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
           {commonTabs.map((tab) => (
             <React.Fragment key={tab.id}>
               
                 <button
                   onClick={() => navigate(tab.path)}
-                  className={`flex flex-col items-center justify-center w-full h-full ${tab.active ? 'text-lime-400' : 'text-gray-400'}`}
+                  className={`flex flex-col items-center justify-center w-full h-full relative transition-all duration-300 ${tab.active ? 'text-lime-400 scale-110' : 'text-gray-500 hover:text-gray-300 hover:scale-105'}`}
                 >
                   <div className="relative">
                     {tab.icon}
+                    {tab.active && (
+                      <motion.div 
+                        layoutId="activeTabIndicator"
+                        className="absolute -inset-2 bg-lime-400/10 rounded-full z-[-1]"
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                      />
+                    )}
                     {tab.id === 'bookings' && userInfo?.pendingBookings > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center shadow-lg shadow-rose-500/40">
                         {userInfo.pendingBookings}
                       </span>
                     )}
                   </div>
-                  <span className="text-xs mt-1">{tab.label}</span>
+                  <span className={`text-[10px] mt-1 font-medium ${tab.active ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{tab.label}</span>
                 </button>
                 
             

@@ -27,11 +27,7 @@ const TurfCard = ({
           <Star size={14} className="text-yellow-400 fill-yellow-400 mr-1" />
           <span className="text-sm font-medium">{turf.rating || "New"}</span>
         </div>
-        {nearestSwitch && (
-          <div className="absolute top-2 right-2 bg-lime-500/10 text-lime-400 px-2 py-1 rounded-full text-xs font-bold">
-            {turf.distance?.toFixed(1)} km
-          </div>
-        )}
+
       </div>
 
       <div className="p-4 space-y-2">

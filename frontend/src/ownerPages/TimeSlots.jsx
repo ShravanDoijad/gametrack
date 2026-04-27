@@ -48,7 +48,9 @@ const TimeSlots = () => {
   const [lastName, setlastName] = useState("")
   const [phone, setPhone] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState("");
-  // const [selectedSport, setselectedSport] = useState("")
+  const [sport, setSport] = useState("");
+  const [bookingType, setBookingType] = useState("single");
+  const [durationDays, setDurationDays] = useState(30);
   const [turfInfo, setturfInfo] = useState()
   const next7Days = getNext7Days();
   const navigate = useNavigate()
@@ -149,26 +151,48 @@ const TimeSlots = () => {
   const handleManualBooking = async () => {
 
     try {
-      const response = await axios.post("/owner/addManualBooking", {
-        fullname:`${firstName} ${lastName}`,
-        phone: phone,
-        advanceAmount: advanceAmount,
-        date: formattedDate,
-
-        start: convertToMilitary(selectedCheckIn),
-        end: convertToMilitary(selectedCheckOut)
-        ,
-        turfId: selectedTurfId,
-        slotFees: calculateFee(),
-        newStatus: "booked"
-      })
-
-      toast.success(response.data.message || "Slot Booked Successfully")
-      navigate("/owner/turfTodaysbookings")
+      if (bookingType === "single") {
+        const response = await axios.post("/owner/addManualBooking", {
+          fullname: `${firstName} ${lastName}`,
+          phone: phone,
+          advanceAmount: advanceAmount,
+          date: formattedDate,
+          start: convertToMilitary(selectedCheckIn),
+          end: convertToMilitary(selectedCheckOut),
+          turfId: selectedTurfId,
+          slotFees: calculateFee(),
+          newStatus: "booked"
+        });
+        toast.success(response.data.message || "Slot Booked Successfully");
+      } else {
+        const response = await axios.post("/owner/addManualSubscription", {
+          fullname: `${firstName} ${lastName}`,
+          phone: phone,
+          advanceAmount: advanceAmount,
+          startDate: formattedDate,
+          durationDays: durationDays,
+          start: convertToMilitary(selectedCheckIn),
+          end: convertToMilitary(selectedCheckOut),
+          turfId: selectedTurfId,
+          slotFees: calculateFee() * durationDays, // Assuming fee is per day
+          sport: sport || "General",
+          newStatus: "booked"
+        });
+        toast.success(response.data.message || "Subscription Created Successfully");
+      }
+      
+      setConfirmingSlot(null);
+      setBookingType("single");
+      setfirstName("");
+      setlastName("");
+      setPhone("");
+      setAdvanceAmount("");
+      setSport("");
+      navigate("/owner/turfTodaysbookings");
     }
     catch (error) {
-      console.log(error)
-      toast.error(error.response?.data?.message || "Internal server Error")
+      console.log(error);
+      toast.error(error.response?.data?.message || "Internal server Error");
     }
 
   };
@@ -360,6 +384,22 @@ const TimeSlots = () => {
 
                 {/* Inputs for phone and advance */}
                 <div className="w-full mb-4 space-y-3">
+                  {/* Booking Type Toggle */}
+                  <div className="flex bg-neutral-800 p-1 rounded-lg">
+                    <button
+                      onClick={() => setBookingType("single")}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${bookingType === "single" ? "bg-lime-500 text-black shadow" : "text-neutral-400 hover:text-white"}`}
+                    >
+                      Single Booking
+                    </button>
+                    <button
+                      onClick={() => setBookingType("subscription")}
+                      className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${bookingType === "subscription" ? "bg-lime-500 text-black shadow" : "text-neutral-400 hover:text-white"}`}
+                    >
+                      Subscription
+                    </button>
+                  </div>
+
                   <div className="flex gap-1.5">
                     <input
                       type="text"
@@ -382,6 +422,30 @@ const TimeSlots = () => {
                     onChange={(e) => setPhone(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
                   />
+                  
+                  {bookingType === "subscription" && (
+                    <div className="flex gap-1.5">
+                      <select
+                        value={durationDays}
+                        onChange={(e) => setDurationDays(Number(e.target.value))}
+                        className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                      >
+                        <option value={7}>7 Days</option>
+                        <option value={15}>15 Days</option>
+                        <option value={30}>1 Month (30 Days)</option>
+                        <option value={60}>2 Months (60 Days)</option>
+                        <option value={90}>3 Months (90 Days)</option>
+                      </select>
+                      <input
+                        type="text"
+                        placeholder="Sport (e.g. Football)"
+                        value={sport}
+                        onChange={(e) => setSport(e.target.value)}
+                        className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
+                      />
+                    </div>
+                  )}
+
                   <input
                     type="number"
                     placeholder="Advance Amount (₹)"
@@ -389,6 +453,12 @@ const TimeSlots = () => {
                     onChange={(e) => setAdvanceAmount(e.target.value)}
                     className="w-full px-4 py-3 rounded-lg bg-neutral-800  text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
                   />
+                  
+                  {bookingType === "subscription" && (
+                    <div className="text-sm text-lime-400 font-medium text-left px-2">
+                      Total Fee: ₹{calculateFee() * durationDays}
+                    </div>
+                  )}
                   
                 </div>
 

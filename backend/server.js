@@ -45,6 +45,7 @@ const authCheckRouter = require('./routes/authCheck-route');
 const ownerRouter = require('./routes/owner-route');
 const adminRouter = require('./routes/admin-route');
 const turfRouter = require('./routes/turf-route');
+const botRouter = require('./routes/bot-routes');
 
 
 
@@ -65,6 +66,7 @@ app.use('/api/auth', authCheckRouter);
 app.use('/api/turfs', turfRouter);
 app.use('/owner', ownerRouter);
 app.use('/admin', adminRouter);
+app.use('/api/webhooks', botRouter);
 
 app.listen(PORT, () => {
   

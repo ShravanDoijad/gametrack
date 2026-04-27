@@ -12,6 +12,8 @@ turfRouter.delete("/delete-subscription", turfController.deleteSubscription)
 turfRouter.get("/get-reviews", turfController.getReviews)
 
 
+turfRouter.get('/getOwnerTurfs', turfController.getOwnerTurfs);
+
 // turfRouter.post('/book', userMiddleware, turfController.bookTurf);
 // turfRouter.post('/:id/review', userMiddleware, turfController.addReview);
 

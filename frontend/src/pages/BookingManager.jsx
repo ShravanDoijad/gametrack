@@ -516,10 +516,10 @@ const BookingManager = () => {
 
   return (
     <div className="px-6 pb-24 text-white font-sans">
-      <h2 className="font-bold text-2xl sora mb-4">Schedule Your Game</h2>
+      <h2 className="font-extrabold text-3xl mb-6 tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">Schedule Your Game</h2>
       {loading && (
         <div className="flex justify-center items-center min-h-[100px]">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-lime-400 border-t-transparent rounded-full animate-spin shadow-[0_0_15px_rgba(163,230,53,0.5)]"></div>
         </div>
       )}
       <DatePick next7Days={next7Days} selectedDate={selectedDate} handleDateSelect={handleDateSelect} showCalendar={showCalendar}

@@ -103,7 +103,11 @@ const Register = () => {
           setActiveTab('profile');
         } else {
           fetchToken();
-          setTimeout(() => navigate('/'), 500);
+          if (isOwnerLogin || res.data.role === 'owner') {
+            setTimeout(() => navigate('/owner/dashboard'), 500);
+          } else {
+            setTimeout(() => navigate('/'), 500);
+          }
         }
       } else {
         toast.error(res.data.message || 'Verification failed');
@@ -326,12 +330,12 @@ const Register = () => {
           name="otp"
           value={form.otp}
           onChange={handleChange}
-          placeholder="• • • • • •"
+          // placeholder="• • • • • •"
           maxLength="6"
           className="w-full px-4 py-4 rounded-lg border border-gray-300 
                    focus:border-orange-500 focus:ring-2 focus:ring-orange-200 
                    transition-all text-center text-2xl tracking-widest font-mono
-                   hover:border-gray-400"
+                   hover:border-gray-400 text-gray-900"
           style={{ borderRadius: '8px', letterSpacing: '8px' }}
         />
         {form.otp.length > 0 && form.otp.length < 6 && (

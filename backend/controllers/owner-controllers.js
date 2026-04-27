@@ -8,6 +8,7 @@ const bcrypt = require('bcryptjs');
 const Subscription = require("../models/subscription-model");
 const { sendMessage, OwnerUpdate } = require('../twilio/sendMessage');
 const PDFDocument = require('pdfkit');
+const twilio = require('twilio');
 
 const ownerRegister = async (req, res) => {
   try {
@@ -70,158 +71,158 @@ const ownerRegister = async (req, res) => {
 
 
 const turfAllBookings = async (req, res) => {
-    try {
-        const { turfId } = req.query
+  try {
+    const { turfId } = req.query
 
-        if (!turfId) {
-            return res.status(400).json({ success: false, message: "Turf ID is required" });
-        }
-
-        let bookings = await Booking.find({ turfId: turfId }).populate('userId', 'fullname email phone');
-
-        
-
-        res.status(200).json({ success: true, bookings });
-    } catch (error) {
-        console.error("Error fetching turf bookings:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+    if (!turfId) {
+      return res.status(400).json({ success: false, message: "Turf ID is required" });
     }
+
+    let bookings = await Booking.find({ turfId: turfId }).populate('userId', 'fullname email phone');
+
+
+
+    res.status(200).json({ success: true, bookings });
+  } catch (error) {
+    console.error("Error fetching turf bookings:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };
 
 
 const getCustomers = async (req, res) => {
-    try {
-        const { turfId } = req.query;
-        const turf = await Turf.findById(turfId)
-        if (!turf) {
-            return res.status(404).json({ success: false, message: "Turf not found" });
-        }
-        const bookings = await Booking.find({ turfId: turf._id }).populate('userId', 'name email phone');
-
-        if (!bookings || bookings.length === 0) {
-            return res.status(404).json({ success: false, message: "No bookings found for this turf" });
-        }
-
-
-        const customers = bookings
-            .filter((booking) => booking.userId !== null)
-            .map((booking) => ({
-                userId: booking.userId._id,
-                name: booking.userId.fullname || "Geust",
-                email: booking.userId.email || "N/A",
-                phone: booking.userId.phone || "N/A",
-                bookingDate: booking.date,
-                slots: booking.slots,
-                amountPaid: booking.amountPaid,
-                paymentType: booking.paymentType,
-                status: booking.status,
-                bookingCreatedAt: booking.createdAt,
-            }));
-
-
-        res.status(200).json({ success: true, customers });
-    } catch (error) {
-        console.error("Error fetching customers:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
-
+  try {
+    const { turfId } = req.query;
+    const turf = await Turf.findById(turfId)
+    if (!turf) {
+      return res.status(404).json({ success: false, message: "Turf not found" });
     }
+    const bookings = await Booking.find({ turfId: turf._id }).populate('userId', 'name email phone');
+
+    if (!bookings || bookings.length === 0) {
+      return res.status(404).json({ success: false, message: "No bookings found for this turf" });
+    }
+
+
+    const customers = bookings
+      .filter((booking) => booking.userId !== null)
+      .map((booking) => ({
+        userId: booking.userId._id,
+        name: booking.userId.fullname || "Geust",
+        email: booking.userId.email || "N/A",
+        phone: booking.userId.phone || "N/A",
+        bookingDate: booking.date,
+        slots: booking.slots,
+        amountPaid: booking.amountPaid,
+        paymentType: booking.paymentType,
+        status: booking.status,
+        bookingCreatedAt: booking.createdAt,
+      }));
+
+
+    res.status(200).json({ success: true, customers });
+  } catch (error) {
+    console.error("Error fetching customers:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+
+  }
 
 }
 
 const getTurfDetails = async (req, res) => {
-    try {
-        const { data: owner, role } = req.auth;
-        const {turfId} = req.query
-        const turf = await Turf.findById(turfId);
-        if (!turf) {
-            return res.status(404).json({ success: false, message: "Turf not found" });
-        }
-        res.status(200).json({ success: true, turf, owner });
-    } catch (error) {
-        console.error("Error fetching turf details:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+  try {
+    const { data: owner, role } = req.auth;
+    const { turfId } = req.query
+    const turf = await Turf.findById(turfId);
+    if (!turf) {
+      return res.status(404).json({ success: false, message: "Turf not found" });
     }
+    res.status(200).json({ success: true, turf, owner });
+  } catch (error) {
+    console.error("Error fetching turf details:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 };
 
 const updateTurfProfile = async (req, res) => {
-    try {
-        const { data: owner, role } = req.auth;
-        const {turfId} = req.query;
-        const turfData = req.body;
+  try {
+    const { data: owner, role } = req.auth;
+    const { turfId } = req.query;
+    const turfData = req.body;
 
-        const updatedTurf = await Turf.findByIdAndUpdate(turfId, turfData, { new: true });
-        if (!updatedTurf) {
-            return res.status(404).json({ success: false, message: "Turf not found" });
-        }
-
-        res.status(200).json({ success: true, turf: updatedTurf });
-    } catch (error) {
-        console.error("Error updating turf profile:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+    const updatedTurf = await Turf.findByIdAndUpdate(turfId, turfData, { new: true });
+    if (!updatedTurf) {
+      return res.status(404).json({ success: false, message: "Turf not found" });
     }
+
+    res.status(200).json({ success: true, turf: updatedTurf });
+  } catch (error) {
+    console.error("Error updating turf profile:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 }
 
 const getOwnedTurfs = async (req, res) => {
-    try {
-        const { data: owner, role } = req.auth;
-        if (!owner || !owner.turfIds.length>0) {
-            return res.status(400).json({ success: false, message: "Owner or Turf ID not found" });
-        }
-        const turfs = await Turf.find({ owner: owner._id });
-        if (!turfs || turfs.length === 0) {
-            return res.status(404).json({ success: false, message: "No turfs found" });
-        }
-        res.status(200).json({ success: true, turfs });
-    } catch (error) {
-        console.error("Error fetching turfs:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
+  try {
+    const { data: owner, role } = req.auth;
+    if (!owner || !owner.turfIds.length > 0) {
+      return res.status(400).json({ success: false, message: "Owner or Turf ID not found" });
     }
+    const turfs = await Turf.find({ owner: owner._id });
+    if (!turfs || turfs.length === 0) {
+      return res.status(404).json({ success: false, message: "No turfs found" });
+    }
+    res.status(200).json({ success: true, turfs });
+  } catch (error) {
+    console.error("Error fetching turfs:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 }
 
 const dashboardDetails = async (req, res) => {
-    try {
-        const { turfId } = req.query
-        if (!turfId) {
-            return res.status(400).json({ success: false, message: "Turf ID is required" });
-        }
-        const bookings = await Booking.find({ turfId: turfId })
-        const details = []
-        bookings.forEach((booking) => {
-            details.push({
-                userId: booking.userId,
-                date: booking.date,
-                slots: booking.slots,
-                slotFees: booking.slotFees,
-                amountPaid: booking.amountPaid,
-                paymentType: booking.paymentType,
-                status: booking.status,
-                createdAt: booking.createdAt
-            })
-        })
-        res.status(200).json({ success: true, details });
+  try {
+    const { turfId } = req.query
+    if (!turfId) {
+      return res.status(400).json({ success: false, message: "Turf ID is required" });
     }
-    catch {
-        console.error("Error fetching dashboard details:", error);
-        res.status(500).json({ success: false, message: "Internal server error" });
-    }
+    const bookings = await Booking.find({ turfId: turfId })
+    const details = []
+    bookings.forEach((booking) => {
+      details.push({
+        userId: booking.userId,
+        date: booking.date,
+        slots: booking.slots,
+        slotFees: booking.slotFees,
+        amountPaid: booking.amountPaid,
+        paymentType: booking.paymentType,
+        status: booking.status,
+        createdAt: booking.createdAt
+      })
+    })
+    res.status(200).json({ success: true, details });
+  }
+  catch {
+    console.error("Error fetching dashboard details:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
 }
 
 const updateOwner = async (req, res) => {
-    try {
-        const { ownerId, fcmToken } = req.body;
+  try {
+    const { ownerId, fcmToken } = req.body;
 
-        if (!ownerId || !fcmToken) {
-            return res.status(400).json({ success: false, message: "Missing data" });
-        }
-
-        await Owner.findByIdAndUpdate(ownerId, {
-            $addToSet: { fcmTokens: fcmToken },
-        });
-        res.json({ success: true });
-    } catch (error) {
-        console.error("🔥 Update Owner Error:", error);
-        res.status(500).json({ success: false, error: error.message });
+    if (!ownerId || !fcmToken) {
+      return res.status(400).json({ success: false, message: "Missing data" });
     }
+
+    await Owner.findByIdAndUpdate(ownerId, {
+      $addToSet: { fcmTokens: fcmToken },
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("🔥 Update Owner Error:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 
@@ -265,60 +266,60 @@ const getAvailableSlots = async (req, res) => {
 
 
 function generateSlots(openingTime, closingTime) {
-    const slots = [];
-    let [hour, minute] = openingTime.split(":").map(Number);
-    const [endHour, endMinute] = closingTime.split(":").map(Number);
+  const slots = [];
+  let [hour, minute] = openingTime.split(":").map(Number);
+  const [endHour, endMinute] = closingTime.split(":").map(Number);
 
-    while (hour < endHour || (hour === endHour && minute < endMinute)) {
-        const startHour = hour.toString().padStart(2, "0");
-        const startMin = minute.toString().padStart(2, "0");
+  while (hour < endHour || (hour === endHour && minute < endMinute)) {
+    const startHour = hour.toString().padStart(2, "0");
+    const startMin = minute.toString().padStart(2, "0");
 
-        hour += 1;
+    hour += 1;
 
-        const endHourStr = hour.toString().padStart(2, "0");
-        const endMin = startMin;
+    const endHourStr = hour.toString().padStart(2, "0");
+    const endMin = startMin;
 
-        slots.push({
-            start: `${startHour}:${startMin}`,
-            end: `${endHourStr}:${endMin}`,
-            _id: `${startHour}${startMin}-${endHourStr}${endMin}` // string ID
-        });
-    }
+    slots.push({
+      start: `${startHour}:${startMin}`,
+      end: `${endHourStr}:${endMin}`,
+      _id: `${startHour}${startMin}-${endHourStr}${endMin}` // string ID
+    });
+  }
 
-    return slots;
+  return slots;
 }
 
 const addManualBooking = async (req, res) => {
   try {
-    let {phone, fullname, advanceAmount ,date, start, end, turfId, slotFees, newStatus} = req.body
+    let { phone, fullname, advanceAmount, date, start, end, turfId, slotFees, newStatus } = req.body
 
-    if(!phone || !fullname ){
-      res.status(400).json({message:" All fields are Required"})
+    if (!phone || !fullname) {
+      res.status(400).json({ message: " All fields are Required" })
     }
-    if(!advanceAmount){
+    if (!advanceAmount) {
       advanceAmount = 0;
     }
     const turf = await Turf.findById(turfId).populate('owner', 'phone');
-   
+
     if (!turf) return res.status(404).json({ message: "Turf not found" });
 
     let day = turf.bookedSlots.find((d) => d.date === date);
 
-        if (newStatus === "booked") {
-      
+    if (newStatus === "booked") {
+
       if (day) {
         const hasOverlap = day.slots.some(
           (slot) =>
             (start >= slot.start && start < slot.end) ||
             (end > slot.start && end <= slot.end) ||
-            (start <= slot.start && end >= slot.end) 
+            (start <= slot.start && end >= slot.end)
         );
         if (hasOverlap) {
           return res.status(409).json({ message: "This slot overlaps with an already booked slot." });
         }
         day.slots.push({ start, end });
       } else {
-       
+
         turf.bookedSlots.push({
           date,
           slots: [{ start, end }],
@@ -353,77 +354,77 @@ const addManualBooking = async (req, res) => {
     }
 
     await turf.save();
-    
+
     const newManualBooking = await Booking.create({
-      turfId:turfId,
-      fullname:fullname,
-      phone:phone,
-      date:date,
-      amountPaid:advanceAmount,
-      slotFees:slotFees,
-      paymentType:"Manual"
-      
-    })
-    
+      turfId: turfId,
+      fullname: fullname,
+      phone: phone,
+      date: date,
+      amountPaid: advanceAmount,
+      slotFees: slotFees,
+      paymentType: "Manual"
 
-     newManualBooking.slots.push({
-      start:start,
-      end:end
     })
-    
+
+
+    newManualBooking.slots.push({
+      start: start,
+      end: end
+    })
+
     await newManualBooking.save()
-     const slotTimeText = `${start} - ${end}`;
+    const slotTimeText = `${start} - ${end}`;
 
-     const timeStringToMinutes = time => {
-    const [h, m] = time.split(':').map(Number);
-    return h * 60 + m;
-  };
-  
-     await sendMessage({
-            phoneNumber: phone,
-            notification_data: {
-              name: fullname.split(" ")[0],               
-              turfName: turf.name,                                 
-              date: new Date(date).toDateString(),                           
-              time: slotTimeText,                                  
-              location: turf.location.city,                        
-              amount:slotFees,                                  
-              advance:advanceAmount,              
-              remaining: slotFees - advanceAmount 
-            }
-          });
+    const timeStringToMinutes = time => {
+      const [h, m] = time.split(':').map(Number);
+      return h * 60 + m;
+    };
 
-     await OwnerUpdate({
-             phoneNumber: turf.owner.phone,
-             notification_data: {
-               user: fullname,
-               phone: phone,
-               date: new Date(date).toDateString(),
-               slotStart:start,
-               slotEnd: end,
-               duration: ((timeStringToMinutes(end)-timeStringToMinutes(start))/60).toFixed(1),
-               sport:"sport",
-               total: slotFees,             
-               advance: advanceAmount,            
-               remained: slotFees - advanceAmount
-              
-               
-             }
-           });     
+    await sendMessage({
+      phoneNumber: phone,
+      notification_data: {
+        name: fullname.split(" ")[0],
+        turfName: turf.name,
+        date: new Date(date).toDateString(),
+        time: slotTimeText,
+        location: turf.location.city,
+        amount: slotFees,
+        advance: advanceAmount,
+        remaining: slotFees - advanceAmount
+      }
+    });
+
+    await OwnerUpdate({
+      phoneNumber: turf.owner.phone,
+      notification_data: {
+        user: fullname,
+        phone: phone,
+        date: new Date(date).toDateString(),
+        slotStart: start,
+        slotEnd: end,
+        duration: ((timeStringToMinutes(end) - timeStringToMinutes(start)) / 60).toFixed(1),
+        sport: "sport",
+        total: slotFees,
+        advance: advanceAmount,
+        remained: slotFees - advanceAmount
+
+
+      }
+    });
 
     console.log("newManualBooking", newManualBooking)
     return res.status(200).json({ message: "Slot status updated successfully", booking: newManualBooking });
-    
+
   } catch (error) {
     console.log("Manual booking Error", error);
-    res.status(200).json({message:"Manual Booking Error"})
+    res.status(200).json({ message: "Manual Booking Error" })
   }
 }
 
 const cancelBooking = async (req, res) => {
   try {
-    const { bookingId, date, turfId, start ,end } = req.body;
-   
+    const { bookingId, date, turfId, start, end } = req.body;
+
 
     if (!bookingId || !date || !turfId) {
       return res.status(400).json({ success: false, message: "Booking ID, date, slot ID, and turf ID are required" });
@@ -464,13 +465,13 @@ const cancelBooking = async (req, res) => {
   }
 }
 
-const getSubscriptions = async (req, res) =>{
+const getSubscriptions = async (req, res) => {
   try {
     const { turfId } = req.query;
-    if(!turfId){
+    if (!turfId) {
       return res.status(400).json({ success: false, message: "Turf ID is required" });
     }
-    const subscription = await Subscription.find({turfId: turfId }).populate('userId', 'fullname, email, phone') || [];
+    const subscription = await Subscription.find({ turfId: turfId }).populate('userId', 'fullname, email, phone') || [];
     if (!subscription) {
       return res.status(404).json({ success: false, message: "subscription not found" });
     }
@@ -570,7 +571,7 @@ const generatePdf = async (req, res) => {
         if (currentY + rowHeight > doc.page.height - 50) {
           doc.addPage();
           currentY = 50;
-          
+
           // Redraw header on new page
           doc
             .fillColor(accentColor)
@@ -587,7 +588,7 @@ const generatePdf = async (req, res) => {
             .text('TOTAL', margin + 375, currentY + 8, { width: 60, align: 'right' })
             .text('BALANCE', margin + 445, currentY + 8, { width: 60, align: 'right' })
             .text('STATUS', margin + 515, currentY + 8, { width: 50, align: 'center' });
-          
+
           currentY += rowHeight;
         }
 
@@ -637,10 +638,10 @@ const generatePdf = async (req, res) => {
 
         // Status with color coding
         const status = booking.status || 'confirmed';
-        const statusColor = status === 'confirmed' ? '#059669' : 
-                           status === 'cancelled' ? '#dc2626' : 
-                           '#d97706';
-        
+        const statusColor = status === 'confirmed' ? '#059669' :
+          status === 'cancelled' ? '#dc2626' :
+            '#d97706';
+
         doc
           .fillColor(statusColor)
           .text(status.charAt(0).toUpperCase() + status.slice(1), margin + 515, currentY + 8, { width: 50, align: 'center' })
@@ -695,7 +696,7 @@ const updateSubscriptionSlot = async (req, res) => {
   try {
     const payload = req.body;
     const { id } = req.params;
-    if(!id){
+    if (!id) {
       return res.status(400).json({ success: false, message: "Subscription ID is required" });
     }
     const updatedSubscription = await Subscription.findByIdAndUpdate(id, payload, { new: true });
@@ -710,22 +711,188 @@ const updateSubscriptionSlot = async (req, res) => {
 
 }
 
+const addManualSubscription = async (req, res) => {
+  try {
+    let { phone, fullname, advanceAmount, startDate, durationDays, start, end, turfId, slotFees, sport, newStatus } = req.body;
+
+    if (!phone || !fullname || !startDate || !durationDays || !start || !end || !turfId || !sport) {
+      return res.status(400).json({ message: "All fields are required for subscription" });
+    }
+
+    if (!advanceAmount) {
+      advanceAmount = 0;
+    }
+
+    const turf = await Turf.findById(turfId).populate('owner', 'phone');
+    if (!turf) return res.status(404).json({ message: "Turf not found" });
+
+    // Calculate end date based on durationDays
+    const startDt = new Date(startDate);
+    const endDt = new Date(startDt);
+    endDt.setDate(endDt.getDate() + parseInt(durationDays) - 1);
+
+    const formattedEndDate = endDt.toISOString().split('T')[0];
+    const formattedStartDate = startDt.toISOString().split('T')[0];
+
+    if (newStatus === "booked") {
+      // Add to Turf's subscriptionSlots
+      turf.subscriptionSlots.push({
+        fromDate: formattedStartDate,
+        toDate: formattedEndDate,
+        slot: { start, end }
+      });
+
+      await turf.save();
+
+      // Create Subscription document
+      const newSubscription = await Subscription.create({
+        turfId: turfId,
+        fullname: fullname,
+        phone: phone,
+        startDate: startDt,
+        endDate: endDt,
+        durationDays: parseInt(durationDays),
+        slot: { start, end },
+        daysOfWeek: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], // Default to everyday
+        sport: sport,
+        amountPaid: advanceAmount,
+        totalAmount: slotFees,
+        paymentType: "full",
+        status: "active"
+      });
+
+      const slotTimeText = `${start} - ${end}`;
+      const timeStringToMinutes = time => {
+        const [h, m] = time.split(':').map(Number);
+        return h * 60 + m;
+      };
+
+      // Notify the user via SMS/WhatsApp
+      await sendMessage({
+        phoneNumber: phone,
+        notification_data: {
+          name: fullname.split(" ")[0],
+          turfName: turf.name,
+          date: `${formattedStartDate} to ${formattedEndDate}`,
+          time: slotTimeText,
+          location: turf.location.city || "City",
+          amount: slotFees,
+          advance: advanceAmount,
+          remaining: slotFees - advanceAmount
+        }
+      });
+
+      // Notify the owner
+      await OwnerUpdate({
+        phoneNumber: turf.owner.phone,
+        notification_data: {
+          user: fullname,
+          phone: phone,
+          date: `${formattedStartDate} to ${formattedEndDate} (Subscription)`,
+          slotStart: start,
+          slotEnd: end,
+          duration: ((timeStringToMinutes(end) - timeStringToMinutes(start)) / 60).toFixed(1),
+          sport: sport,
+          total: slotFees,
+          advance: advanceAmount,
+          remained: slotFees - advanceAmount
+        }
+      });
+
+      return res.status(200).json({ message: "Subscription created successfully", subscription: newSubscription });
+    } else {
+      return res.status(400).json({ message: "Invalid status for manual subscription creation" });
+    }
+  } catch (error) {
+    console.log("Manual Subscription Error", error);
+    res.status(500).json({ message: "Manual Subscription Error" });
+  }
+};
+
+const sendWhatsAppCampaign = async (req, res) => {
+  try {
+    const { targets, message, link } = req.body;
+    
+    if (!targets || !Array.isArray(targets) || targets.length === 0) {
+      return res.status(400).json({ success: false, message: "A list of targets is required." });
+    }
+    
+    if (!message || message.trim() === "") {
+      return res.status(400).json({ success: false, message: "Message content is required." });
+    }
+
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const contentSid = process.env.TWILIO_CAMPAIGN_SID;
+    let fromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_WHATSAPP_NUMBER || "whatsapp:+14155238886"; 
+
+    if (fromNumber && !fromNumber.startsWith('whatsapp:')) {
+      fromNumber = `whatsapp:${fromNumber}`;
+    }
+
+    if (!accountSid || !authToken || !contentSid) {
+      return res.status(500).json({ success: false, message: "Twilio credentials or TWILIO_CAMPAIGN_SID not configured on the server." });
+    }
+
+    const client = twilio(accountSid, authToken);
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const target of targets) {
+      if (!target.phone) continue;
+      try {
+        let formattedPhone = target.phone.trim();
+        if (formattedPhone.length === 10) {
+          formattedPhone = `+91${formattedPhone}`;
+        } else if (!formattedPhone.startsWith("+")) {
+           formattedPhone = `+${formattedPhone}`;
+        }
+        
+        await client.messages.create({
+          from: fromNumber,
+          to: `whatsapp:${formattedPhone}`,
+          contentSid: contentSid,
+          contentVariables: JSON.stringify({
+            '1': String(target.name ? target.name.split(" ")[0] : "Customer"),
+            '2': String(message),
+            '3': String(link || "https://gametrack.in")
+          })
+        });
+        sentCount++;
+      } catch (err) {
+        console.error(`Failed to send WhatsApp to ${target.phone}:`, err.message);
+        failedCount++;
+      }
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: `Campaign completed. Sent: ${sentCount}, Failed: ${failedCount}` 
+    });
+
+  } catch (error) {
+    console.error("Error in sendWhatsAppCampaign:", error);
+    return res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
 
 module.exports = {
 
-    turfAllBookings,
-    getCustomers,
-    getTurfDetails,
-    updateTurfProfile,
-    getOwnedTurfs,
-    ownerRegister,
-    dashboardDetails,
-    updateOwner,
-    getAvailableSlots,
-    addManualBooking,
-    cancelBooking,
-    getSubscriptions,
-    generatePdf,
-    updateSubscriptionSlot
+  turfAllBookings,
+  getCustomers,
+  getTurfDetails,
+  updateTurfProfile,
+  getOwnedTurfs,
+  ownerRegister,
+  dashboardDetails,
+  updateOwner,
+  getAvailableSlots,
+  addManualBooking,
+  cancelBooking,
+  getSubscriptions,
+  generatePdf,
+  updateSubscriptionSlot,
+  addManualSubscription,
+  sendWhatsAppCampaign
 
 };

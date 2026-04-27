@@ -15,16 +15,16 @@ const Navbar = () => {
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="sora px-6 py-4 relative text-white flex justify-between items-center border-b border-gray-800 bg-gradient-to-r from-gray-900/80 to-gray-950/80 backdrop-blur-lg z-50"
+      className="px-6 py-4 relative text-white flex justify-between items-center border-b border-white/5 bg-gray-950/60 backdrop-blur-xl z-50 shadow-[0_4px_30px_rgba(0,0,0,0.1)]"
     >
       <motion.div
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
         onClick={() => navigate('/')}
         className="cursor-pointer"
       >
-        <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-yellow-400 to-amber-500">
-          Game<span className="text-white">Track</span>
+        <h1 className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-lime-400 to-emerald-500 drop-shadow-sm">
+          Game<span className="text-white font-medium">Track</span>
         </h1>
       </motion.div>
 
@@ -35,9 +35,9 @@ const Navbar = () => {
         <div className="">
           <button
             onClick={() => token ? navigate('/notification') : navigate('/register')}
-            className="p-2 rounded-full hover:bg-gray-800 transition-colors relative"
+            className="p-2 rounded-full hover:bg-white/10 transition-all duration-300 relative group"
           >
-            <Bell className="text-gray-200" size={20} />
+            <Bell className="text-gray-300 group-hover:text-white transition-colors" size={20} />
             {token && userInfo?.unreadNotifications > 0 && (
               <motion.span
                 initial={{ scale: 0 }}
@@ -53,12 +53,11 @@ const Navbar = () => {
         <div className="">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-2  hover:bg-gray-800 rounded-full p-1  transition-colors"
+            className="flex items-center gap-2 hover:bg-white/5 rounded-full p-1 pr-3 transition-all duration-300 border border-transparent hover:border-white/10"
           >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-lime-500/20">
               {token ? (
-
-                <span className="font-medium text-white">
+                <span className="font-semibold text-gray-900">
                   {userInfo?.fullname?.charAt(0).toUpperCase()}
                 </span>
               ) : (
