@@ -7,7 +7,6 @@ const Turf = require('../models/turf-model');
 const Booking = require('../models/booking-model');
 const User = require('../models/user-model');
 const Payment = require('../models/payment-model');
-const { sendMessage } = require('../twilio/sendMessage');
 
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
@@ -38,7 +37,6 @@ function generateSlots(openingTime, closingTime) {
 const handleIncomingMessage = async (req, res) => {
   const twiml = new MessagingResponse();
   try {
-    console.log("message", req.body);
     const { From, Body } = req.body;
     const messageText = Body.trim();
 
@@ -54,11 +52,30 @@ const handleIncomingMessage = async (req, res) => {
 
     switch (session.step) {
       case 'IDLE': {
-        const turfs = await Turf.find({ isActive: true }).select('name location dayPrice nightPrice');
+        // Filter by Owner ID if provided in env
+        let query = { isActive: true };
+        if (process.env.OWNER_ID) {
+          query.owner = process.env.OWNER_ID;
+        }
+
+        const turfs = await Turf.find(query).select('name location dayPrice nightPrice');
         if (turfs.length === 0) {
           twiml.message("Sorry, no turfs are currently available.");
           break;
         }
+
+        // UX SUPER-IMPROVEMENT: If the owner only has 1 turf, skip the selection step entirely!
+        if (turfs.length === 1) {
+          session.data.turfId = turfs[0]._id;
+          session.data.turfName = turfs[0].name;
+          session.data.price = turfs[0].dayPrice;
+          session.step = 'SELECT_DATE';
+          
+          twiml.message(`Welcome to GameTrack! 🏟️\nBooking for *${turfs[0].name}*.\n\nWhen do you want to play?\nReply with:\n1️⃣ For Today\n2️⃣ For Tomorrow\n3️⃣ For Day After Tomorrow\n\n*(Or type a date like YYYY-MM-DD)*`);
+          break;
+        }
+
+        // If multiple turfs, show the list
         session.data.turfs = turfs.map(t => ({ id: t._id, name: t.name, price: t.dayPrice }));
         session.step = 'SELECT_TURF';
         
@@ -85,30 +102,40 @@ const handleIncomingMessage = async (req, res) => {
         session.data.price = selectedTurf.price;
         session.step = 'SELECT_DATE';
         
-        twiml.message(`You selected *${selectedTurf.name}*.\n\nPlease enter the date you want to play.\nFormat: YYYY-MM-DD (e.g. 2026-05-01) or type 'today' or 'tomorrow'.`);
+        twiml.message(`You selected *${selectedTurf.name}*.\n\nWhen do you want to play?\nReply with:\n1️⃣ For Today\n2️⃣ For Tomorrow\n3️⃣ For Day After Tomorrow\n\n*(Or type a date like YYYY-MM-DD)*`);
         break;
       }
 
       case 'SELECT_DATE': {
-        let selectedDate = messageText.toLowerCase();
         let dateObj;
+        const msgLower = messageText.toLowerCase();
         
-        if (selectedDate === 'today') {
+        if (msgLower === '1' || msgLower === 'today') {
           dateObj = new Date();
-        } else if (selectedDate === 'tomorrow') {
+        } else if (msgLower === '2' || msgLower === 'tomorrow') {
           dateObj = new Date();
           dateObj.setDate(dateObj.getDate() + 1);
+        } else if (msgLower === '3') {
+          dateObj = new Date();
+          dateObj.setDate(dateObj.getDate() + 2);
         } else {
-          dateObj = new Date(selectedDate);
+          dateObj = new Date(messageText);
         }
 
         if (isNaN(dateObj.getTime())) {
-          twiml.message("Invalid date format. Please use YYYY-MM-DD (e.g. 2026-05-01).");
+          twiml.message("Invalid format. Please reply with 1, 2, 3, or a valid date (YYYY-MM-DD).");
           break;
         }
 
         const formattedDate = dateObj.toISOString().split('T')[0];
+        
+        // BUG FIX: Ensure the turf actually exists to prevent 'null' crash
         const turf = await Turf.findById(session.data.turfId);
+        if (!turf) {
+           session.step = 'IDLE';
+           twiml.message("Sorry, the selected turf is no longer available. Please reply 'HI' to restart.");
+           break;
+        }
         
         const allSlots = generateSlots(turf.openingTime || "06:00", turf.closingTime || "22:00");
         
@@ -121,17 +148,18 @@ const handleIncomingMessage = async (req, res) => {
         });
 
         if (availableSlots.length === 0) {
-          twiml.message(`Sorry, no slots available on ${formattedDate}. Please try another date (YYYY-MM-DD).`);
+          twiml.message(`Sorry, no slots available on ${formattedDate}. Please try another date (e.g. Reply 1 for Today).`);
           break;
         }
 
         session.data.date = formattedDate;
         session.data.availableSlots = availableSlots;
-        session.step = 'SELECT_SLOT';
+        session.step = 'SELECT_SLOT'; // Skipping PLAYERS_COUNT completely!
 
         let msg = `Available slots for *${formattedDate}*:\n\n`;
+        // Make the slots look cleaner
         availableSlots.forEach((slot, i) => {
-          msg += `${i + 1}. ${slot.start} - ${slot.end}\n`;
+          msg += `${i + 1}. ⏱️ ${slot.start} - ${slot.end}\n`;
         });
         msg += `\nReply with the slot number.`;
         twiml.message(msg);
@@ -149,20 +177,9 @@ const handleIncomingMessage = async (req, res) => {
 
         const selectedSlot = availableSlots[selection - 1];
         session.data.slot = selectedSlot;
-        session.step = 'PLAYERS_COUNT';
-
-        twiml.message(`You selected *${selectedSlot.start} - ${selectedSlot.end}*.\n\nHow many players will be joining? (Enter a number)`);
-        break;
-      }
-
-      case 'PLAYERS_COUNT': {
-        const players = parseInt(messageText);
-        if (isNaN(players) || players < 1) {
-          twiml.message("Please enter a valid number of players.");
-          break;
-        }
-
-        session.data.playersCount = players;
+        
+        // UX SUPER-IMPROVEMENT: We skip "Players Count" entirely because Turf booking is a flat rate. 
+        // We jump straight to PAYMENT.
         session.step = 'PAYMENT';
 
         // Find or create user
@@ -274,9 +291,8 @@ const handleIncomingMessage = async (req, res) => {
         msg += `🏟️ Turf: ${session.data.turfName}\n`;
         msg += `📅 Date: ${date}\n`;
         msg += `⏰ Slot: ${slot.start} - ${slot.end}\n`;
-        msg += `👥 Players: ${players}\n`;
         msg += `💰 Total: ₹${slotFees}\n\n`;
-        msg += `Please complete your payment to confirm your booking:\n${shortUrl}\n\n`;
+        msg += `Please complete your payment to confirm your booking:\n👉 ${shortUrl}\n\n`;
         msg += `_Note: This slot is locked for 5 minutes. If unpaid, it will be automatically released._`;
 
         twiml.message(msg);
@@ -299,7 +315,7 @@ const handleIncomingMessage = async (req, res) => {
 
   } catch (error) {
     console.error("WhatsApp Webhook Error:", error);
-    twiml.message("Sorry, an error occurred. Please try again later.");
+    twiml.message("Sorry, an error occurred. Please try again later. Reply 'HI' to restart.");
     res.type('text/xml').send(twiml.toString());
   }
 };
