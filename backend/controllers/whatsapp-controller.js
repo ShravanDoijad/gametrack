@@ -38,10 +38,10 @@ function generateSlots(openingTime, closingTime) {
 const handleIncomingMessage = async (req, res) => {
   const twiml = new MessagingResponse();
   try {
+    console.log("message", req.body);
     const { From, Body } = req.body;
     const messageText = Body.trim();
 
-    console.log("message", messageText, From);
     let session = await WhatsAppSession.findOne({ phone: From });
     if (!session || messageText.toLowerCase() === 'hi' || messageText.toLowerCase() === 'hello') {
       if (!session) {
