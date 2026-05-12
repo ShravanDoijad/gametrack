@@ -128,6 +128,7 @@ const handleIncomingMessage = async (req, res) => {
         }
 
         const formattedDate = dateObj.toISOString().split('T')[0];
+        console.log(session.data);
         
         // BUG FIX: Ensure the turf actually exists to prevent 'null' crash
         const turf = await Turf.findById(session.data.turfId);

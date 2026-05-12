@@ -32,6 +32,7 @@
     "nodemon": "^3.1.10",
     "pdfkit": "^0.17.2",
     "razorpay": "^2.9.6",
+    "shravan-ddos-shield": "^1.0.2",
     "twilio": "^5.13.1",
     "web-push": "^3.6.7"
   }

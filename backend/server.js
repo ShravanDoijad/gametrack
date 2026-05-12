@@ -4,6 +4,9 @@ const webpush = require('web-push');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const morgan = require('morgan');
+dotenv.config();
+
+const shield = require('shravan-ddos-shield'); // <--- Using your very own published NPM package!
 
 
 const shield = require('shravan-ddos-shield'); 
@@ -15,8 +18,15 @@ app.use(shield({
 }));
 
 const app = express();
+
+
+app.use(shield({ 
+    honeypot: { enabled: true },
+    botDetection: { enabled: true }
+}));
+
+
 const PORT = process.env.PORT || 10000;
-dotenv.config();
 
 const allowedOrigins = [
   "https://gametrack-sigma.vercel.app",
