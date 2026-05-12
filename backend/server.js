@@ -5,6 +5,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const morgan = require('morgan');
 dotenv.config();
+const app = express();
 
 const shield = require('shravan-ddos-shield'); // <--- Using your very own published NPM package!
 
@@ -14,7 +15,6 @@ app.use(shield({
     botDetection: { enabled: true }
 }));
 
-const app = express();
 
 
 const PORT = process.env.PORT || 10000;
