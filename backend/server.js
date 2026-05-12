@@ -5,6 +5,15 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const morgan = require('morgan');
 
+
+const shield = require('shravan-ddos-shield'); 
+
+
+app.use(shield({ 
+    honeypot: { enabled: true },
+    botDetection: { enabled: true }
+}));
+
 const app = express();
 const PORT = process.env.PORT || 10000;
 dotenv.config();
