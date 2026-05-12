@@ -9,21 +9,12 @@ dotenv.config();
 const shield = require('shravan-ddos-shield'); // <--- Using your very own published NPM package!
 
 
-const shield = require('shravan-ddos-shield'); 
-
-
 app.use(shield({ 
     honeypot: { enabled: true },
     botDetection: { enabled: true }
 }));
 
 const app = express();
-
-
-app.use(shield({ 
-    honeypot: { enabled: true },
-    botDetection: { enabled: true }
-}));
 
 
 const PORT = process.env.PORT || 10000;
