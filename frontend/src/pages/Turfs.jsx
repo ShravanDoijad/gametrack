@@ -29,10 +29,10 @@ export const Turfs = () => {
         toast.error("Configuration error: Owner ID is missing.");
         return;
       }
-      const response = await axios.get(`/api/turfs/getOwnerTurfs?ownerId=${ownerId}`);
-      console.log(response.data);
-      const fetchedTurfs = response.data;
+      const response = await axios.get(`/api/turfs/getAllTurfs`);
       
+      const fetchedTurfs = response.data;
+      console.log("Fetched turfs:", fetchedTurfs);
       if (fetchedTurfs && fetchedTurfs.length === 1) {
         navigate(`/overview/${fetchedTurfs[0]._id}`, { replace: true });
       } else {

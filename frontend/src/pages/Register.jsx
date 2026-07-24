@@ -166,7 +166,7 @@ const Register = () => {
               onChange={handleChange}
               placeholder="Enter 10-digit mobile number"
               maxLength="10"
-              className="w-full pl-20 pr-4 py-4 rounded-lg border border-gray-300 
+              className="w-full text-black pl-20 pr-4 py-4 rounded-lg border border-gray-300 
                        focus:border-orange-500 focus:ring-2 focus:ring-orange-200 
                        transition-all text-lg tracking-wider
                        hover:border-gray-400"

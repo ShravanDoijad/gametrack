@@ -7,7 +7,7 @@ const morgan = require('morgan');
 dotenv.config();
 const app = express();
 
-const shield = require('shravan-ddos-shield'); // <--- Using your very own published NPM package!
+const shield = require('shravan-ddos-shield'); 
 
 
 app.use(shield({ 

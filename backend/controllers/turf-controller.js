@@ -1,17 +1,18 @@
-const Owner = require("../models/owner-model")
-const Turf = require("../models/turf-model")
-const cron = require("node-cron")
+const Owner = require("../models/owner-model");
+const Turf = require("../models/turf-model");
+const cron = require("node-cron");
 
 const fetchAllTurfs = async () => {
   let turfs = await Turf.find(
     {},
-    "name bookedSlots sportsAvailable createdAt averageRating images location dayPrice nightPrice openingTime closingTime"
+    "name bookedSlots sportsAvailable createdAt averageRating images location dayPrice nightPrice openingTime closingTime",
   );
 
   if (!turfs || turfs.length === 0) {
     return null;
   }
-
+  const admin_turfs = ["688a636a9b4de3cafe57ebd4", "6888b7fc0c7965c5e42f9ec3"];
+  turfs = turfs.filter((turf) => !admin_turfs.includes(turf._id.toString()));
   turfs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   return turfs;
 };
@@ -22,8 +23,11 @@ const getAllTurfs = async (req, res) => {
     if (!turfs) {
       return res.status(404).json({ message: "No turfs found" });
     }
+    // turfs = turfs.filter((turf)=> turf.name == "admin Turf" );
+    console.log("Filtered turfs:", turfs);
     res.status(200).json(turfs);
   } catch (error) {
+    console.error("Error fetching turfs:", error);
     res.status(500).json({ message: "Unable to load turfs", error });
   }
 };
@@ -41,33 +45,32 @@ cron.schedule("*/15 * * * *", async () => {
   }
 });
 
-const getSingleTurf = async (req, res)=>{
-    try {
-        const {id} = req.query 
-        
-        const turf = await Turf.findById(id);
-         res.status(200).json({turf:turf})       
-    } catch (error) {
-        console.log("can't get turf",error )
-        res.status(500).json({message:"Internal Server error", error: error})
-        
-    }
-}
-const getSiblingTurf = async (req,res) => {
+const getSingleTurf = async (req, res) => {
   try {
-    const {turfId} = req.query
-    const turf = await Turf.findById(turfId)
-    const owner = await Owner.findById(turf.owner).populate("turfIds")
-    if(!owner){
-        return res.status(400).json("Owner Not Found")
-    }
-   
-    res.status(200).json({turfs: owner.turfIds})
+    const { id } = req.query;
+
+    const turf = await Turf.findById(id);
+    res.status(200).json({ turf: turf });
   } catch (error) {
-    console.log("Can't fetch turfs", error)
-    res.status(500).json({message:"Can't fetch the Turfs"})
+    console.log("can't get turf", error);
+    res.status(500).json({ message: "Internal Server error", error: error });
   }
-}
+};
+const getSiblingTurf = async (req, res) => {
+  try {
+    const { turfId } = req.query;
+    const turf = await Turf.findById(turfId);
+    const owner = await Owner.findById(turf.owner).populate("turfIds");
+    if (!owner) {
+      return res.status(400).json("Owner Not Found");
+    }
+
+    res.status(200).json({ turfs: owner.turfIds });
+  } catch (error) {
+    console.log("Can't fetch turfs", error);
+    res.status(500).json({ message: "Can't fetch the Turfs" });
+  }
+};
 
 const addSubscriptionSlot = async (req, res) => {
   try {
@@ -83,7 +86,7 @@ const addSubscriptionSlot = async (req, res) => {
   } catch (error) {
     console.error("Error adding subscription slot:", error);
     res.status(500).json({ message: "Internal server error", error });
-  } 
+  }
 };
 
 const updateSubscription = async (req, res) => {
@@ -97,17 +100,16 @@ const updateSubscription = async (req, res) => {
     const subscription = turf.subscription.id(planId);
     if (!subscription) {
       return res.status(404).json({ message: "Subscription slot not found" });
-    } 
+    }
     subscription.days = days;
     subscription.amount = amount;
     subscription.desc = desc;
     await turf.save();
     res.status(200).json({ message: "Subscription slot updated successfully" });
-  }
-  catch (error) {
+  } catch (error) {
     console.error("Error updating subscription slot:", error);
     res.status(500).json({ message: "Internal server error", error });
-  } 
+  }
 };
 
 const deleteSubscription = async (req, res) => {
@@ -145,15 +147,13 @@ const getReviews = async (req, res) => {
   }
 };
 
-
-
 const getOwnerTurfs = async (req, res) => {
   try {
     const { ownerId } = req.query;
     if (!ownerId) {
       return res.status(400).json({ message: "Owner ID is required" });
     }
-    
+
     const owner = await Owner.findById(ownerId).populate("turfIds");
     if (!owner) {
       return res.status(404).json({ message: "Owner not found" });
@@ -166,13 +166,13 @@ const getOwnerTurfs = async (req, res) => {
   }
 };
 
-module.exports={
-    getAllTurfs,
-    getSingleTurf,
-    getSiblingTurf,
-    addSubscriptionSlot,
-    updateSubscription,
-    deleteSubscription,
-    getReviews,
-    getOwnerTurfs
-}
+module.exports = {
+  getAllTurfs,
+  getSingleTurf,
+  getSiblingTurf,
+  addSubscriptionSlot,
+  updateSubscription,
+  deleteSubscription,
+  getReviews,
+  getOwnerTurfs,
+};
