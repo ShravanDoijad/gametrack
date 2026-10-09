@@ -7,13 +7,13 @@ const morgan = require('morgan');
 dotenv.config();
 const app = express();
 
-// const shield = require('shravan-ddos-shield'); 
+const shield = require('shravan-ddos-shield'); 
 
 
-// app.use(shield({ 
-//     honeypot: { enabled: true },
-//     botDetection: { enabled: true }
-// }));
+app.use(shield({ 
+    honeypot: { enabled: true },
+    botDetection: { enabled: true }
+}));
 
 
 
