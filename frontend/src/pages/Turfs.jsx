@@ -1,81 +1,36 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import TurfCard from "../components/TurfCard";
 import SkeletonLoader from "../components/SkeletonLoader";
 
-import footballIcon from "../assets/football.png";
-import cricketIcon from "../assets/cricket.png";
-import badmintonIcon from "../assets/badminton.png";
-
-const SPORTS = [
-  { id: "football", name: "Football", icon: footballIcon, color: "bg-orange-500" },
-  { id: "cricket", name: "Cricket", icon: cricketIcon, color: "bg-blue-500" },
-  { id: "badminton", name: "Badminton", icon: badmintonIcon, color: "bg-green-500" },
-];
-
+// Single-turf mode: there is no turf list anymore.
+// "/" immediately sends the user to the one turf's page, where "Book Now" lives.
+//
+// The backend (TURF_ID in backend/.env) decides which turf this is, so
+// /api/turfs/getAllTurfs only ever returns that one turf.
 export const Turfs = () => {
   const navigate = useNavigate();
-  const [turfs, setTurfs] = useState([]);
-  const [isLoading, setisLoading] = useState(false);
-
-  const fetchTurfs = async () => {
-    try {
-      setisLoading(true);
-      const ownerId = import.meta.env.VITE_OWNER_ID;
-      if (!ownerId) {
-        console.error("Owner ID not found in environment variables.");
-        toast.error("Configuration error: Owner ID is missing.");
-        return;
-      }
-      const response = await axios.get(`/api/turfs/getAllTurfs`);
-      
-      const fetchedTurfs = response.data;
-      console.log("Fetched turfs:", fetchedTurfs);
-      if (fetchedTurfs && fetchedTurfs.length === 1) {
-        navigate(`/overview/${fetchedTurfs[0]._id}`, { replace: true });
-      } else {
-        setTurfs(fetchedTurfs);
-      }
-    } catch (error) {
-      console.error("Error fetching turfs:", error);
-      toast.error(error.response?.data?.message || "Something went wrong");
-    } finally {
-      setisLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchTurfs();
-  }, []);
+    const goToTurf = async () => {
+      try {
+        const response = await axios.get("/api/turfs/getAllTurfs");
+        const turfs = response.data;
 
-  if (isLoading || (turfs && turfs.length === 1)) return <SkeletonLoader />;
+        if (!turfs || turfs.length === 0) {
+          toast.error("No turf available for booking at the moment.");
+          return;
+        }
+        navigate(`/overview/${turfs[0]._id}`, { replace: true });
+      } catch (error) {
+        console.error("Error fetching turf:", error);
+        toast.error(error.response?.data?.message || "Something went wrong");
+      }
+    };
 
-  return (
-    <div className="w-full px-6 py-4 text-white bg-gradient-to-b from-gray-900 to-gray-950 min-h-screen">
-      <h2 className="font-bold text-2xl mb-6 bg-clip-text text-transparent bg-gradient-to-r from-lime-400 to-emerald-500">
-        Our Turf
-      </h2>
+    goToTurf();
+  }, [navigate]);
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {turfs.map((turf) => (
-          <TurfCard
-            key={turf._id}
-            sports={SPORTS}
-            turf={turf}
-            onClick={() =>
-              navigate(`/overview/${turf._id}`)
-            }
-          />
-        ))}
-      </div>
-      
-      {!isLoading && turfs.length === 0 && (
-        <div className="text-center text-gray-400 mt-10">
-          No turf available for booking at the moment.
-        </div>
-      )}
-    </div>
-  );
+  return <SkeletonLoader />;
 };

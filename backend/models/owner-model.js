@@ -38,11 +38,6 @@ turfIds: [
     type: Boolean,
     default: false,
   },
-  fcmTokens: {
-  type: [String],
-  default: [],
-},
-
   atcreated: {
     type: Date,
     default: Date.now,

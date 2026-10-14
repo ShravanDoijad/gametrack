@@ -1,25 +1,33 @@
-import React, { useContext, useState, useEffect, useRef } from 'react';
+import { useContext, useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { motion } from 'framer-motion';
 import { BookContext } from '../constexts/bookContext';
-import { Phone, Mail, Lock, X, UserPlus, LogIn, ArrowLeft, MessageCircle, User, ChevronRight } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, MessageCircle, User, ChevronRight, X } from 'lucide-react';
 
 const Register = () => {
-  const { settoken, userInfo, setloginPanel, fetchToken } = useContext(BookContext);
+  const { setloginPanel, fetchToken } = useContext(BookContext);
   const [isLoading, setisLoading] = useState(false)
-  const [form, setForm] = useState({ 
-    firstName: '', 
-    lastName: '', 
-    phone: '', 
-    email: '', 
-    otp: '' 
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    phone: '',
+    email: '',
+    otp: ''
   });
   const [activeTab, setActiveTab] = useState('phone');
   const [isOwnerLogin, setIsOwnerLogin] = useState(false);
   const panelRef = useRef();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setloginPanel(false);
+    };
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [setloginPanel]);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 20 },
@@ -29,28 +37,28 @@ const Register = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     // Phone number validation (only numbers and max 10 digits)
     if (name === 'phone') {
       const phoneValue = value.replace(/\D/g, '').slice(0, 10);
       setForm({ ...form, [name]: phoneValue });
       return;
     }
-    
+
     // OTP validation (only numbers and max 6 digits)
     if (name === 'otp') {
       const otpValue = value.replace(/\D/g, '').slice(0, 6);
       setForm({ ...form, [name]: otpValue });
       return;
     }
-    
+
     // Name validation (only letters and spaces)
     if (name === 'firstName' || name === 'lastName') {
       const nameValue = value.replace(/[^a-zA-Z\s]/g, '');
       setForm({ ...form, [name]: nameValue });
       return;
     }
-    
+
     setForm({ ...form, [name]: value });
   };
 
@@ -65,7 +73,7 @@ const Register = () => {
 
       setisLoading(true);
       const res = await axios.post('/api/users/login', { identifier: form.phone || form.email });
-      
+
       if (res.data.success) {
         toast.success('OTP sent to your mobile number');
         setActiveTab('otp');
@@ -74,7 +82,7 @@ const Register = () => {
       }
     } catch (err) {
       if(err.response?.status === 401) {
-        toast.error('Account not found. Please register first.');
+        toast.error('No account was found for that number or email. Check your details and try again.');
       } else {
         toast.error(err.response?.data?.message || 'Failed to send OTP');
       }
@@ -89,24 +97,24 @@ const Register = () => {
       if (!form.otp || form.otp.length !== 6) {
         return toast.error('Please enter a valid 6-digit OTP');
       }
-      
-      const res = await axios.post('/otp/verifyOtp', { 
-        identifier: form.phone || form.email, 
-        otp: form.otp 
+
+      const res = await axios.post('/otp/verifyOtp', {
+        identifier: form.phone || form.email,
+        otp: form.otp
       });
-      
+
       if (res.data.success) {
         toast.success('Login Successful!');
-        
+
         console.log("res_data:", res.data);
         if (!isOwnerLogin && (res.data.name=="" || res.data.name=="Guest" || res.data.name=='guest')) {
           setActiveTab('profile');
         } else {
           fetchToken();
           if (isOwnerLogin || res.data.role === 'owner') {
-            setTimeout(() => navigate('/owner/dashboard'), 500);
+            setTimeout(() => { setloginPanel(false); navigate('/owner/dashboard'); }, 500);
           } else {
-            setTimeout(() => navigate('/'), 500);
+            setTimeout(() => { setloginPanel(false); navigate('/'); }, 500);
           }
         }
       } else {
@@ -125,17 +133,17 @@ const Register = () => {
       if (!form.firstName || !form.lastName) {
         return toast.error('Please enter your full name');
       }
-      
+
       setisLoading(true);
       const res = await axios.post('/api/users/complete-profile', {
-       
+
         firstName: form.firstName,
         lastName: form.lastName
       });
-      
+
       if (res.data.success) {
         fetchToken();
-        setTimeout(() => navigate('/'), 500);
+        setTimeout(() => { setloginPanel(false); navigate('/'); }, 500);
       }
     } catch (err) {
       console.error(err);
@@ -143,6 +151,13 @@ const Register = () => {
     } finally {
       setisLoading(false);
     }
+  };
+
+  const handleHome = () => {
+    setloginPanel(false);
+    let turfId = null;
+    try { turfId = localStorage.getItem('selectedTurf'); } catch { /* Use the home route if storage is unavailable. */ }
+    navigate(turfId ? `/overview/${turfId}` : '/');
   };
 
   const renderPhoneTab = () => (
@@ -166,11 +181,11 @@ const Register = () => {
               onChange={handleChange}
               placeholder="Enter 10-digit mobile number"
               maxLength="10"
-              className="w-full text-black pl-20 pr-4 py-4 rounded-lg border border-gray-300 
-                       focus:border-orange-500 focus:ring-2 focus:ring-orange-200 
+              className="w-full text-black pl-20 pr-4 py-4 rounded-lg border border-gray-300
+                       focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
                        transition-all text-lg tracking-wider
                        hover:border-gray-400"
-              style={{ 
+              style={{
                 borderRadius: '8px',
                 borderWidth: '1px',
                 fontSize: '16px'
@@ -199,8 +214,8 @@ const Register = () => {
           onClick={sendOtp}
           disabled={form.phone.length !== 10 || isLoading}
           className={`w-full py-4 px-4 rounded-lg font-medium text-white transition-all
-                    ${form.phone.length === 10 
-                      ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-lg' 
+                    ${form.phone.length === 10
+                      ? 'bg-gradient-to-r from-emerald-600 to-lime-600 hover:shadow-lg'
                       : 'bg-gray-300 cursor-not-allowed'}`}
           style={{ borderRadius: '8px' }}
         >
@@ -214,7 +229,7 @@ const Register = () => {
             </span>
           ) : (
             <span className="flex items-center justify-center">
-              Continue
+              Send login code
               <ChevronRight className="ml-1" size={18} />
             </span>
           )}
@@ -234,7 +249,7 @@ const Register = () => {
             setIsOwnerLogin(true);
             setActiveTab('owner');
           }}
-          className="w-full py-4 px-4 rounded-lg border-2 border-gray-300 
+          className="w-full py-4 px-4 rounded-lg border-2 border-gray-300
                    font-medium text-gray-700 hover:bg-gray-50 transition-all
                    flex items-center justify-center gap-2"
           style={{ borderRadius: '8px' }}
@@ -268,8 +283,8 @@ const Register = () => {
           value={form.email}
           onChange={handleChange}
           placeholder="owner@example.com"
-          className="w-full px-4 py-4 rounded-lg border border-gray-300 
-                   focus:border-orange-500 focus:ring-2 focus:ring-orange-200 
+          className="w-full px-4 py-4 rounded-lg border border-gray-300
+                   focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
                    transition-all text-base
                    hover:border-gray-400"
           style={{ borderRadius: '8px' }}
@@ -278,8 +293,8 @@ const Register = () => {
 
       <button
         onClick={sendOtp}
-        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 
-                 text-white py-4 px-4 rounded-lg font-medium 
+        className="w-full bg-gradient-to-r from-emerald-600 to-lime-600
+                 text-white py-4 px-4 rounded-lg font-medium
                  hover:shadow-lg transition-all"
         style={{ borderRadius: '8px' }}
       >
@@ -291,23 +306,23 @@ const Register = () => {
   const renderOtpTab = () => (
     <div className="space-y-6">
       <button
-        onClick={() => setActiveTab('phone')}
+        onClick={() => setActiveTab(isOwnerLogin ? 'owner' : 'phone')}
         className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-2 transition-colors"
       >
         <ArrowLeft size={18} /> Back
       </button>
 
       <div className="flex flex-col items-center justify-center gap-4 mb-6">
-        <div className="p-4 bg-orange-100 rounded-full text-orange-600">
+        <div className="p-4 bg-lime-100 rounded-full text-emerald-700">
           <Lock size={28} />
         </div>
         <div className="text-center">
           <h3 className="text-xl font-semibold text-gray-800 mb-1">Enter OTP</h3>
           <p className="text-gray-600 text-sm">
-            Sent to +91 {form.phone}
+            Sent to {isOwnerLogin ? form.email : `+91 ${form.phone}`}
           </p>
         </div>
-        
+
         <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg">
           <div className="flex items-start gap-3">
             <MessageCircle size={20} className="text-green-600 mt-0.5" />
@@ -332,8 +347,8 @@ const Register = () => {
           onChange={handleChange}
           // placeholder="• • • • • •"
           maxLength="6"
-          className="w-full px-4 py-4 rounded-lg border border-gray-300 
-                   focus:border-orange-500 focus:ring-2 focus:ring-orange-200 
+          className="w-full px-4 py-4 rounded-lg border border-gray-300
+                   focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
                    transition-all text-center text-2xl tracking-widest font-mono
                    hover:border-gray-400 text-gray-900"
           style={{ borderRadius: '8px', letterSpacing: '8px' }}
@@ -347,8 +362,8 @@ const Register = () => {
         onClick={handleVerify}
         disabled={form.otp.length !== 6 || isLoading}
         className={`w-full py-4 px-4 rounded-lg font-medium text-white transition-all
-                  ${form.otp.length === 6 
-                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-lg' 
+                  ${form.otp.length === 6
+                    ? 'bg-gradient-to-r from-emerald-600 to-lime-600 hover:shadow-lg'
                     : 'bg-gray-300 cursor-not-allowed'}`}
         style={{ borderRadius: '8px' }}
       >
@@ -367,10 +382,10 @@ const Register = () => {
 
       <div className="text-center pt-4 border-t border-gray-200">
         <p className="text-sm text-gray-600">
-          Didn't receive OTP?{' '}
+          Didn&apos;t receive OTP?{' '}
           <button
             onClick={sendOtp}
-            className="text-orange-600 font-medium hover:underline focus:outline-none"
+            className="text-emerald-700 font-semibold hover:underline focus:outline-none"
           >
             Resend OTP
           </button>
@@ -393,7 +408,7 @@ const Register = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">First Name</label>
           <input
@@ -402,8 +417,8 @@ const Register = () => {
             value={form.firstName}
             onChange={handleChange}
             placeholder="John"
-            className="w-full px-4 py-4 rounded-lg border border-gray-300 
-                     focus:border-orange-500 focus:ring-2 focus:ring-orange-200 
+            className="w-full px-4 py-4 rounded-lg border border-gray-300
+                     focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
                      transition-all text-base
                      hover:border-gray-400"
             style={{ borderRadius: '8px' }}
@@ -417,8 +432,8 @@ const Register = () => {
             value={form.lastName}
             onChange={handleChange}
             placeholder="Doe"
-            className="w-full px-4 py-4 rounded-lg border border-gray-300 
-                     focus:border-orange-500 focus:ring-2 focus:ring-orange-200 
+            className="w-full px-4 py-4 rounded-lg border border-gray-300
+                     focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
                      transition-all text-base
                      hover:border-gray-400"
             style={{ borderRadius: '8px' }}
@@ -431,7 +446,7 @@ const Register = () => {
         disabled={!form.firstName || !form.lastName || isLoading}
         className={`w-full py-4 px-4 rounded-lg font-medium text-white transition-all
                   ${form.firstName && form.lastName
-                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-lg' 
+                    ? 'bg-gradient-to-r from-emerald-600 to-lime-600 hover:shadow-lg'
                     : 'bg-gray-300 cursor-not-allowed'}`}
         style={{ borderRadius: '8px' }}
       >
@@ -451,35 +466,36 @@ const Register = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br fixed inset-0 from-gray-50 to-gray-100 flex flex-col">
-      <div className="container mx-auto px-4 py-6 flex-1 flex flex-col">
-        <button
-          onClick={() => {
-            setloginPanel(false);
-            navigate('/');
-          }}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4 self-start transition-colors"
-        >
-          <ArrowLeft size={18} /> Back to home
-        </button>
-
-        <div className="flex-1 flex justify-center items-center">
+    <main
+      role="presentation"
+      onMouseDown={(event) => { if (!event.target.closest('[role="dialog"]')) setloginPanel(false); }}
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/65 p-3 backdrop-blur-sm sm:p-6"
+    >
+        <div className="flex w-full justify-center py-2 sm:py-4">
           <motion.div
             ref={panelRef}
-            className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="login-card-title"
+            className="max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-gray-200 bg-white shadow-2xl shadow-black/40"
             initial="hidden"
             animate="visible"
             exit="exit"
             variants={containerVariants}
-            style={{ 
-              borderRadius: '16px',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.08)'
-            }}
+            style={{ borderRadius: '16px' }}
           >
-            <div className="p-8">
-              <div className="text-center mb-8">
-                <h2 className="text-3xl font-bold text-gray-800 mb-2">
-                  {activeTab === 'phone' && 'Welcome'}
+            <div className="p-5 sm:p-8">
+              <div className="mb-5 flex items-center justify-between">
+                <button type="button" onClick={handleHome} className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-sm font-semibold text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+                  <ArrowLeft size={17} /> Home
+                </button>
+                <button type="button" onClick={() => setloginPanel(false)} aria-label="Close login" className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-gray-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
+                  <X size={19} />
+                </button>
+              </div>
+              <div className="mb-6 text-center sm:mb-8">
+                <h2 id="login-card-title" className="mb-2 text-2xl font-extrabold text-gray-900 sm:text-3xl">
+                  {activeTab === 'phone' && 'Welcome back'}
                   {activeTab === 'otp' && 'Verify OTP'}
                   {activeTab === 'owner' && 'Owner Login'}
                   {activeTab === 'profile' && 'Complete Profile'}
@@ -501,8 +517,7 @@ const Register = () => {
             </div>
           </motion.div>
         </div>
-      </div>
-    </div>
+    </main>
   );
 };
 

@@ -4,6 +4,7 @@ const Owner = require("../models/owner-model");
 const Booking = require("../models/booking-model");
 const User = require("../models/user-model");
 const Turf = require("../models/turf-model")
+const { getTurfId } = require("./single-turf");
 const bcrypt = require('bcryptjs');
 const Subscription = require("../models/subscription-model");
 const { sendMessage, OwnerUpdate } = require('../twilio/sendMessage');
@@ -168,7 +169,7 @@ const getOwnedTurfs = async (req, res) => {
     if (!owner || !owner.turfIds.length > 0) {
       return res.status(400).json({ success: false, message: "Owner or Turf ID not found" });
     }
-    const turfs = await Turf.find({ owner: owner._id });
+const turfs = await Turf.find({ _id: getTurfId(), owner: owner._id });
     if (!turfs || turfs.length === 0) {
       return res.status(404).json({ success: false, message: "No turfs found" });
     }
@@ -206,26 +207,6 @@ const dashboardDetails = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
-
-const updateOwner = async (req, res) => {
-  try {
-    const { ownerId, fcmToken } = req.body;
-
-    if (!ownerId || !fcmToken) {
-      return res.status(400).json({ success: false, message: "Missing data" });
-    }
-
-    await Owner.findByIdAndUpdate(ownerId, {
-      $addToSet: { fcmTokens: fcmToken },
-    });
-    res.json({ success: true });
-  } catch (error) {
-    console.error("🔥 Update Owner Error:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-
 
 const getAvailableSlots = async (req, res) => {
   try {
@@ -885,7 +866,6 @@ module.exports = {
   getOwnedTurfs,
   ownerRegister,
   dashboardDetails,
-  updateOwner,
   getAvailableSlots,
   addManualBooking,
   cancelBooking,

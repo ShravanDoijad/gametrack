@@ -26,7 +26,7 @@ const commonTabs = [
     id: 'profile',
     icon: <User size={22} />,
     label: 'Profile',
-    path: token ? '/profile' : '/register',
+    path: token ? '/profile' : '/login',
     active: location.pathname.includes('profile') || location.pathname.includes('login')
   },
 ];

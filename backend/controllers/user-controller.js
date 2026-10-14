@@ -7,7 +7,6 @@ const crypto = require("crypto");
 const Booking = require("../models/booking-model");
 const turfModel = require("../models/turf-model");
 const Owner = require("../models/owner-model");
-const admin = require("../firebase/firebase-admin");
 const Notification = require('../models/notification-model');
 const cron = require("node-cron");
 const { sendMessage, OwnerUpdate, UserSubscriptionUpdate, OwnerSubscriptionUpdate } = require("../twilio/sendMessage");
@@ -381,6 +380,72 @@ const updateTurfBookedSlots = async (turfId, bookingDetails) => {
   }
 };
 
+const confirmBookingWithoutAdvance = async (req, res) => {
+  try {
+    const { data: user, role } = req.auth;
+    if (role !== "user") {
+      return res.status(403).json({ success: false, message: "User account required" });
+    }
+    const { bookingDetails } = req.body;
+    const { turfId, date, slots, sport, slotFees } = bookingDetails || {};
+    const slot = slots?.[0];
+    if (!turfId || !date || !slot?.start || !slot?.end || !sport || !Number.isFinite(Number(slotFees)) || Number(slotFees) <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid booking details" });
+    }
+
+    const turf = await turfModel.findById(turfId).populate("owner", "turfname phone");
+    if (!turf) return res.status(404).json({ success: false, message: "Turf not found" });
+
+    const existingDate = turf.bookedSlots?.find((entry) => entry.date === date);
+    const overlaps = (existing) => existing.start < slot.end && existing.end > slot.start;
+    if (existingDate?.slots?.some(overlaps)) {
+      return res.status(409).json({ success: false, message: "This time slot is no longer available" });
+    }
+
+    const booking = await Booking.create({
+      turfId,
+      userId: user._id,
+      fullname: user.fullname || "Guest",
+      phone: user.phone,
+      date,
+      slots: [slot],
+      sport,
+      slotFees: Number(slotFees),
+      amountPaid: 0,
+      paymentType: "Manual",
+      status: "confirmed",
+    });
+    await updateTurfBookedSlots(turfId, { date, slots: [slot] });
+
+    const slotTimeText = `${slot.start} - ${slot.end}`;
+    await Promise.all([
+      Notification.create({
+        user: user._id,
+        owner: turf.owner?._id,
+        title: "Booking Confirmed",
+        message: `Your booking on ${date} at ${slotTimeText} is confirmed at ${turf.owner?.turfname || turf.name}`,
+        type: "booking",
+        role: "user",
+        date: new Date(),
+      }),
+      Notification.create({
+        user: user._id,
+        owner: turf.owner?._id,
+        title: "New Booking Alert",
+        message: `New booking on ${date} at ${slotTimeText} at ${turf.owner?.turfname || turf.name}`,
+        type: "booking",
+        role: "owner",
+        date: new Date(),
+      }),
+    ]);
+
+    return res.status(201).json({ success: true, booking });
+  } catch (error) {
+    console.error("Booking without advance failed:", error);
+    return res.status(500).json({ success: false, message: "Could not confirm booking" });
+  }
+};
+
 
 const verifyOrder = async (req, res) => {
   try {
@@ -405,7 +470,7 @@ const verifyOrder = async (req, res) => {
     const userData = await User.findById(userId);
     const turf = await turfModel
       .findById(details.turfId)
-      .populate("owner", "fcmTokens turfname phone");
+      .populate("owner", "turfname phone");
 
     const turfName = turf?.owner?.turfname || "your turf";
 
@@ -655,7 +720,7 @@ const getAllBookings = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { userId, email, isNotification, preferredTime, fcmToken } = req.body;
+    const { userId, email, isNotification, preferredTime } = req.body;
     if (!userId) {
       return res
         .status(400)
@@ -667,7 +732,6 @@ const updateUser = async (req, res) => {
     if (typeof isNotification !== "undefined")
       updateFields.isNotification = isNotification;
     if (preferredTime) updateFields.preferredTime = preferredTime;
-    if (fcmToken) updateFields.fcmToken = fcmToken;
 
     const updatedUser = await User.findByIdAndUpdate(userId, updateFields, {
       new: true,
@@ -1085,6 +1149,7 @@ module.exports = {
   userRegister,
   userLogout,
   createOrder,
+  confirmBookingWithoutAdvance,
   verifyOrder,
   getAllBookings,
   updateUser,

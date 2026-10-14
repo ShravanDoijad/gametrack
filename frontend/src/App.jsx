@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import './App.css';
 
 
@@ -15,7 +15,6 @@ import axios from 'axios'
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
-import PushNotifier from './components/PushNotifier';
 import Owner from './Owner';
 import OwnerPrivateRoute from './OwnerPrivateRoute';
 import { Error404 } from './components/Error404';
@@ -24,10 +23,23 @@ import TurfSwitcher from './components/TurfSwitcher';
 import { toast } from "react-toastify"
 
 import BookingManager from './pages/BookingManager';
+import BookingConfirmation from './pages/BookingConfirmation';
 import ContactUs from './pages/ContactUs';
 import { X } from 'lucide-react';
 
 import TurfReview from './pages/TurfReview';
+
+const LoginRoute = () => {
+  const { setloginPanel } = useContext(BookContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setloginPanel(true);
+    navigate('/', { replace: true });
+  }, [navigate, setloginPanel]);
+
+  return null;
+};
 
 
 function App() {
@@ -144,9 +156,6 @@ useEffect(() => {
       </button>
     </div>
       {loginPanel && <Register />}
-      {token && userInfo?.role === "user" && <PushNotifier userId={userInfo._id} type="user" />}
-      {token && userInfo?.role === "owner" && <PushNotifier ownerId={userInfo._id} type="owner" />}
-
       <Navbar />
 
 
@@ -155,14 +164,18 @@ useEffect(() => {
 
         <Routes>
           <Route path="/" element={<Turfs />} />
-          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<LoginRoute />} />
+          <Route path="/register" element={<Navigate to="/login" replace />} />
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
           <Route path='/contactUs' element={<ContactUs />} />
           <Route path="/review" element={<TurfReview/>} />
 
+          {/* Guests can choose a slot before verifying their phone. */}
+          <Route path="/booking" element={<BookingManager />} />
+
           <Route element={<PrivateRoute />}>
-            <Route path="/booking" element={<BookingManager />} />
+            <Route path="/booking/confirmation" element={<BookingConfirmation />} />
             <Route path="/notification" element={<Notifications />} />
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />

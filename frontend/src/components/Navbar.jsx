@@ -1,145 +1,127 @@
-import React, { useState, useContext } from 'react';
-import { Bell, LogOut, User, ChevronDown, Sun, Moon, Settings, Menu } from 'lucide-react';
+import { useEffect, useRef, useState, useContext } from 'react';
+import { Bell, LogOut, User, ChevronDown, Menu, Home, UserRound, ShieldCheck } from 'lucide-react';
 import { BookContext } from '../constexts/bookContext';
-import TurfSwitcher from './TurfSwitcher';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const { setmenuPanel, token, handleLogout, setloginPanel, userInfo, setShowPanel, toggleSidebar } = useContext(BookContext);
+  const { token, handleLogout, userInfo, toggleSidebar, setloginPanel } = useContext(BookContext);
   const [showDropdown, setShowDropdown] = useState(false);
+  const accountRef = useRef(null);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event) => {
+      if (!accountRef.current?.contains(event.target)) setShowDropdown(false);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setShowDropdown(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
+
+  const goTo = (path) => {
+    setShowDropdown(false);
+    navigate(path);
+  };
+  const goHome = () => {
+    let turfId = null;
+    try { turfId = localStorage.getItem('selectedTurf'); } catch { /* Use the home route if storage is unavailable. */ }
+    goTo(turfId ? `/overview/${turfId}` : '/');
+  };
 
   return (
     <motion.nav
       initial={{ y: -60, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.6, ease: 'easeOut' }}
-      className="px-6 py-4 relative text-white flex justify-between items-center border-b border-white/5 bg-gray-950/60 backdrop-blur-xl z-50 shadow-[0_4px_30px_rgba(0,0,0,0.1)]"
+      transition={{ duration: 0.35, ease: 'easeOut' }}
+      className="relative z-50 flex items-center justify-between border-b border-white/10 bg-gray-950/85 px-4 py-3 text-white shadow-lg shadow-black/10 backdrop-blur-xl sm:px-6 sm:py-4"
     >
-      <motion.div
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => navigate('/')}
-        className="cursor-pointer"
-      >
-        <h1 className="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-lime-400 to-emerald-500 drop-shadow-sm">
-          Game<span className="text-white font-medium">Track</span>
-        </h1>
-      </motion.div>
+      <button type="button" onClick={goHome} className="rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400" aria-label="GameTrack home">
+        <span className="bg-gradient-to-r from-lime-400 to-emerald-400 bg-clip-text text-xl font-extrabold tracking-tight text-transparent sm:text-2xl">
+          Game<span className="text-white">Track</span>
+        </span>
+      </button>
 
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button
+          type="button"
+          onClick={() => token ? navigate('/notification') : setloginPanel(true)}
+          className="relative flex h-11 w-11 items-center justify-center rounded-full text-gray-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"
+          aria-label={token ? 'Notifications' : 'Log in to view notifications'}
+        >
+          <Bell size={20} />
+          {token && userInfo?.unreadNotifications > 0 && (
+            <span className="absolute right-0.5 top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
+              {userInfo.unreadNotifications}
+            </span>
+          )}
+        </button>
 
-      <div className="flex items-center gap-4 md:gap-6">
-
-
-        <div className="">
+        <div className="relative" ref={accountRef}>
           <button
-            onClick={() => token ? navigate('/notification') : navigate('/register')}
-            className="p-2 rounded-full hover:bg-white/10 transition-all duration-300 relative group"
+            type="button"
+            onClick={() => setShowDropdown((open) => !open)}
+            aria-expanded={showDropdown}
+            aria-haspopup="menu"
+            aria-label={token ? 'Open account menu' : 'Open account and log in menu'}
+            className={`flex h-11 items-center gap-2 rounded-full border px-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 sm:pl-1.5 sm:pr-3 ${showDropdown ? 'border-lime-400/60 bg-white/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
           >
-            <Bell className="text-gray-300 group-hover:text-white transition-colors" size={20} />
-            {token && userInfo?.unreadNotifications > 0 && (
-              <motion.span
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
-              >
-                {userInfo.unreadNotifications}
-              </motion.span>
-            )}
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-lime-300 to-emerald-500 text-gray-950 shadow-md shadow-lime-500/20">
+              {token ? <span className="font-bold">{userInfo?.fullname?.charAt(0).toUpperCase() || <User size={17} />}</span> : <User size={17} />}
+            </span>
+            <ChevronDown className={`hidden text-gray-300 transition-transform sm:block ${showDropdown ? 'rotate-180' : ''}`} size={16} />
           </button>
-        </div>
 
-        <div className="">
-          <button
-            onClick={() => setShowDropdown(!showDropdown)}
-            className="flex items-center gap-2 hover:bg-white/5 rounded-full p-1 pr-3 transition-all duration-300 border border-transparent hover:border-white/10"
-          >
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-lime-500/20">
-              {token ? (
-                <span className="font-semibold text-gray-900">
-                  {userInfo?.fullname?.charAt(0).toUpperCase()}
-                </span>
-              ) : (
-                <User className="text-white" size={16} />
-              )}
-            </div>
-            {token && (
-              <ChevronDown
-                className={`text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
-                size={16}
-              />
-            )}
-          </button>
-          
-          
           <AnimatePresence>
             {showDropdown && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                className="absolute right-2 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 overflow-hidden z-100"
+                role="menu"
+                initial={{ opacity: 0, y: 8, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 8, scale: 0.98 }}
+                transition={{ duration: 0.16 }}
+                className="absolute right-0 top-[calc(100%+0.65rem)] z-[60] w-[min(20rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-white/10 bg-gray-900 shadow-2xl shadow-black/40 ring-1 ring-white/5"
               >
                 {token ? (
                   <>
-                    <div className="px-4 py-3 border-b  border-gray-700">
-                      <p className="text-sm font-medium text-white">{userInfo?.fullname}</p>
-                      <p className="text-xs text-gray-400 truncate">{userInfo?.email}</p>
-                      {userInfo?.role === "owner" && (
-                        <span className="text-[11px] text-amber-400 bg-amber-600/20 px-2 py-0.5 rounded mt-1 inline-block">
-                          Turf Owner
-                        </span>
-                      )}
+                    <div className="border-b border-white/10 bg-gradient-to-br from-lime-400/10 to-transparent px-5 py-4">
+                      <p className="truncate text-sm font-bold text-white">{userInfo?.fullname || 'GameTrack member'}</p>
+                      <p className="mt-0.5 truncate text-xs text-gray-400">{userInfo?.phone ? `+91 ${userInfo.phone}` : userInfo?.email}</p>
+                      {userInfo?.role === 'owner' && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-300"><ShieldCheck size={13} /> Turf owner</span>}
                     </div>
-                    <button
-                      onClick={() => navigate('/profile')}
-                      className="w-full px-4 py-2 text-left text-sm text-gray-200 hover:bg-gray-700 transition-colors flex items-center gap-2"
-                    >
-                      <User size={16} className="text-gray-400" />
-                      My Profile
-                    </button>
-                    {userInfo?.role === "owner" && (
-                      <button
-                        onClick={() =>{ navigate('/owner/dashboard'); setShowDropdown(false)}}
-                        className="w-full px-4 py-2 text-left text-sm text-lime-400 hover:bg-gray-700 transition-colors flex items-center gap-2"
-                      >
-                        Owner Dashboard
-                      </button>
-                    )}
-                    <button
-                      onClick={handleLogout}
-                      className="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-700 transition-colors flex items-center gap-2 border-t border-gray-700"
-                    >
-                      <LogOut size={16} className="text-red-400" />
-                      Sign Out
-                    </button>
+                    <button type="button" role="menuitem" onClick={goHome} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><Home size={17} className="text-gray-400" /> Home</button>
+                    <button type="button" role="menuitem" onClick={() => goTo('/profile')} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><UserRound size={17} className="text-gray-400" /> My profile</button>
+                    {userInfo?.role === 'owner' && <button type="button" role="menuitem" onClick={() => goTo('/owner/dashboard')} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><ShieldCheck size={17} className="text-lime-400" /> Owner dashboard</button>}
+                    <button type="button" role="menuitem" onClick={(event) => { setShowDropdown(false); handleLogout(event); }} className="flex min-h-12 w-full items-center gap-3 border-t border-white/10 px-5 text-left text-sm font-semibold text-rose-300 transition hover:bg-rose-400/10"><LogOut size={17} /> Log out</button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => {
-
-                      navigate('/register');
-                      setShowDropdown(false);
-                    }}
-                    className="w-full px-4 py-3 text-sm text-center text-white bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 transition-colors"
-                  >
-                    Sign In / Register
-                  </button>
+                  <>
+                    <div className="px-5 pb-3 pt-5">
+                      <p className="text-base font-bold text-white">Welcome to GameTrack</p>
+                      <p className="mt-1 text-sm leading-5 text-gray-400">Log in to manage your bookings and notifications.</p>
+                    </div>
+                    <button type="button" role="menuitem" onClick={goHome} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5"><Home size={17} className="text-gray-400" /> Home</button>
+                    <div className="p-3 pt-2">
+                      <button type="button" onClick={() => { setShowDropdown(false); setloginPanel(true); }} className="min-h-12 w-full rounded-xl bg-lime-400 px-4 text-sm font-extrabold text-gray-950 shadow-lg shadow-lime-500/10 transition hover:bg-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">Log in</button>
+                    </div>
+                  </>
                 )}
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-        {
-            token && userInfo.role==="owner"&&
-            <button
-              onClick={()=>{navigate('/owner/dashboard'); toggleSidebar()}}
-              className=" z-20  rounded-md  text-white lg:hidden"
-            >
-              <Menu size={24} />
-            </button>
-           }
+
+        {token && userInfo?.role === 'owner' && (
+          <button type="button" onClick={toggleSidebar} className="flex h-11 w-11 items-center justify-center rounded-full text-white transition hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 lg:hidden" aria-label="Open owner navigation">
+            <Menu size={23} />
+          </button>
+        )}
       </div>
     </motion.nav>
   );

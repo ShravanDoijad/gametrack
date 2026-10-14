@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import { useContext } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { BookContext } from './constexts/bookContext';
 
@@ -14,7 +14,7 @@ const OwnerPrivateRoute = () => {
     return <Navigate to="/forbidden" />;
   }
 
-  return token && userInfo.role === "owner"  ? <Outlet /> : <Navigate to="/register" replace />;
+  return token && userInfo?.role === "owner"  ? <Outlet /> : <Navigate to="/login" replace />;
 
 
 }

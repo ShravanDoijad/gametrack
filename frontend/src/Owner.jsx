@@ -1,24 +1,18 @@
 // src/Owner.jsx
 import React from "react";
 import { Routes, Route } from "react-router-dom";
-import { useContext } from "react";
-import { BookContext } from "./constexts/bookContext";
 import OwnerLayout from "./ownerComponents/OwnerLayout";
 import Dashboard from "./ownerPages/Dashboard";
 import Bookings from "./ownerPages/Bookings";
 import Revenue from "./ownerPages/Revenue";
 import TurfProfile from "./ownerPages/TurfProfile";
 import Customers from "./ownerPages/Customers";
-import PushNotifier from "./components/PushNotifier";
 import TodaysBookings from "./ownerPages/TodaysBookings";
 import OwnerPrivateRoute from "./OwnerPrivateRoute";
 import TimeSlots from "./ownerPages/TimeSlots";
 import SubscribedCustomer from "./ownerPages/SubcribedCustomer";
 import TournamentManager from "./ownerPages/TournamentManager";
 const Owner = () => {
-  const {userInfo, token} = useContext(BookContext)
-  
-  
   return (
     <div className="min-h-screen w-full text-white ">
       

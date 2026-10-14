@@ -53,10 +53,7 @@ const handleIncomingMessage = async (req, res) => {
     switch (session.step) {
       case 'IDLE': {
         // Filter by Owner ID if provided in env
-        let query = { isActive: true };
-        if (process.env.OWNER_ID) {
-          query.owner = process.env.OWNER_ID;
-        }
+         let query = { isActive: true, _id: process.env.TURF_ID };
 
         const turfs = await Turf.find(query).select('name location dayPrice nightPrice');
         if (turfs.length === 0) {

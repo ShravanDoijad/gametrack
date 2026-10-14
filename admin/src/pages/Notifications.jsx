@@ -9,7 +9,6 @@ import {
   BellRing,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { requestPermission } from "../firebase-messaging"
 
 export const Notifications = () => {
   const [notifications, setNotifications] = useState([]);

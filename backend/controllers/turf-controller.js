@@ -1,20 +1,16 @@
 const Owner = require("../models/owner-model");
 const Turf = require("../models/turf-model");
 const cron = require("node-cron");
+const { getTurfId } = require("./single-turf");
+
+const TURF_FIELDS =
+  "name bookedSlots sportsAvailable createdAt averageRating images location dayPrice nightPrice openingTime closingTime";
 
 const fetchAllTurfs = async () => {
-  let turfs = await Turf.find(
-    {},
-    "name bookedSlots sportsAvailable createdAt averageRating images location dayPrice nightPrice openingTime closingTime",
-  );
-
-  if (!turfs || turfs.length === 0) {
-    return null;
-  }
-  const admin_turfs = ["688a636a9b4de3cafe57ebd4", "6888b7fc0c7965c5e42f9ec3"];
-  turfs = turfs.filter((turf) => !admin_turfs.includes(turf._id.toString()));
-  turfs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  return turfs;
+  const turfId = getTurfId();
+  if (!turfId) return null;
+  const turf = await Turf.findById(turfId, TURF_FIELDS);
+  return turf ? [turf] : null;
 };
 
 const getAllTurfs = async (req, res) => {

@@ -7,15 +7,6 @@ const morgan = require('morgan');
 dotenv.config();
 const app = express();
 
-const shield = require('shravan-ddos-shield'); 
-
-
-app.use(shield({ 
-    honeypot: { enabled: true },
-    botDetection: { enabled: true }
-}));
-
-
 
 const PORT = process.env.PORT || 10000;
 
@@ -57,6 +48,7 @@ const ownerRouter = require('./routes/owner-route');
 const adminRouter = require('./routes/admin-route');
 const turfRouter = require('./routes/turf-route');
 const botRouter = require('./routes/bot-routes');
+const { assertTurfIdConfigured, forceSingleTurf } = require('./controllers/single-turf');
 
 
 
@@ -83,5 +75,5 @@ app.listen(PORT, () => {
   
   console.log(`🌐 Server running on http://localhost:${PORT}`);
 });
-
+assertTurfIdConfigured(); 
 connectDB();

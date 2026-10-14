@@ -1,723 +1,268 @@
-import React, { useState, useRef } from "react";
-import {
-  Heart,
-  Star,
-  MapPin,
-  Bookmark,
-  CalendarClock,
-  Dumbbell,
-  ShowerHead,
-  ShieldCheck,
-  Navigation,
-  Sun,
-  Moon,
-  Droplet,
-  Toilet,
-  Users,
-  Box,
-  DoorOpen,
-  ChevronRight,
-} from "lucide-react";
-import { useContext, useEffect } from "react";
-import { useLocation } from "react-router-dom";
-import { BookContext } from "../constexts/bookContext";
-import { Swiper, SwiperSlide } from "swiper/react";
-import "swiper/css";
-import "swiper/css/effect-fade";
-import { Autoplay, EffectFade } from "swiper/modules";
-import { useNavigate } from "react-router-dom";
-import footballIcon from "../assets/football.png";
-import cricketIcon from "../assets/cricket.png";
-import badmintonIcon from "../assets/badminton.png";
-
-import userAvatar from "../assets/user.png";
-import football from "../assets/football.png";
-import cricket from "../assets/cricket.png";
-import badminton from "../assets/badminton.png";
-import MapView from "../components/MapView";
-import useGeolocation from '../components/Geolocation';
-import { useParams } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import { toast } from "react-toastify";
-import { motion } from "framer-motion";
-import SkeletonLoader from "../components/SkeletonLoader"
-import axios from 'axios'
-import moment from 'moment';
+import { MapPin, Clock, Star, Navigation, ChevronRight, Check } from "lucide-react";
+import SkeletonLoader from "../components/SkeletonLoader";
 
-
-const ICON_MAP = {
-  "gym": Dumbbell,
-  "shower": ShowerHead,
-  "security": ShieldCheck,
-  "parking": Navigation,
-  "day": Sun,
-  "night": Moon,
-  "changing room": DoorOpen,
-  "water": Droplet,
-  "toilet": Toilet,
-  "washroom": Toilet,
-  "sports equipment": Box,
-  "equipment": Box,
-
-  "team": Users,
+// Turns "18:00" into "6 PM" and "06:30" into "6:30 AM". Leaves anything else untouched.
+const to12h = (time) => {
+  if (!time || !/^\d{1,2}:\d{2}/.test(time)) return time || "";
+  const [h, m] = time.split(":").map(Number);
+  const suffix = h >= 12 ? "PM" : "AM";
+  const hour = h % 12 === 0 ? 12 : h % 12;
+  return m === 0 ? `${hour} ${suffix}` : `${hour}:${String(m).padStart(2, "0")} ${suffix}`;
 };
 
-
-
-const SPORTS = [
-  {
-    id: "football",
-    name: "Football",
-    icon: footballIcon,
-    color: "bg-orange-500",
-  },
-  { id: "cricket", name: "cricket", icon: cricketIcon, color: "bg-blue-500" },
-  {
-    id: "badminton",
-    name: "Badminton",
-    icon: badmintonIcon,
-    color: "bg-green-500",
-  },
-];
-
-
-
-// const reviews = [
-//   {
-//     name: "mohan sudame",
-//     text: "Amazing turf! Great facilities and well-maintained.",
-//     rating: 5,
-//     timeAgo: "4 days ago",
-//   },
-//   {
-//     name: "santosh karadge",
-//     text: "Loved the experience! Highly recommend for football lovers.",
-//     rating: 5,
-//     timeAgo: "2 days ago",
-//   },
-//   {
-//     name: "hritik somanth",
-//     text: "Best turf in the area! Friendly staff and great atmosphere.",
-//     rating: 4,
-//     timeAgo: "6 days ago",
-//   },
-// ];
+const Section = ({ title, children }) => (
+  <section className="mt-8">
+    <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
+    {children}
+  </section>
+);
 
 export const Overview = () => {
-
-  const [turfInfo, setturfInfo] = useState("")
-  const [mapView, setmapView] = useState(false);
-  const [showSlots, setShowSlots] = useState(false);
-
-  const location = useLocation();
-  const { location: userCoords, error: locationError } = useGeolocation();
-  const today = new Date().toISOString().split("T")[0]
-  const [bookSlots, setbookSlots] = useState([]);
-  const [likes, setLikes] = useState(143);
-  const [liked, setLiked] = useState(false);
-  const [loading, setloading] = useState(false)
-  const [turfDistance, setTurfDistance] = useState(null);
-  const [editPlan, setEditPlan] = useState(null)
-  const [reviews, setReviews] = useState([])
-  const [editInput, setEditInput] = useState({
-    days: "",
-    amount: "",
-    description: ""
-  })
-
-
-  const { turfId } = useParams()
-  const { setfavorite, favorite, selectedSport, setloginPanel, userInfo, setSelectedSport, calculateDistance, token } = useContext(BookContext);
-
-  const lastTapRef = useRef(0);
+  const { turfId } = useParams();
   const navigate = useNavigate();
-
-  const handleLike = () => {
-    if (!liked) {
-      setLiked(true);
-      setLikes((prev) => prev + 1);
-    }
-  };
+  const [turf, setTurf] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (locationError) {
-      toast.error(locationError);
-    }
-  }, [locationError]);
-
-  useEffect(() => {
-    if (
-      turfInfo?.location?.coordinates &&
-      userCoords?.latitude &&
-      userCoords?.longitude
-    ) {
-      const [turfLng, turfLat] = turfInfo.location.coordinates;
-      const dist = calculateDistance(
-        userCoords.latitude,
-        userCoords.longitude,
-        turfLng,
-        turfLat
-      );
-      setTurfDistance(dist);
-    }
-  }, [turfInfo, userCoords]);
-
-  if (selectedSport == "football") {
-
-  }
-  const getReviews = async() => {
-    try {
-      const res =await  axios.get("/api/turfs/get-reviews", {
-        params: { turfId: turfId }
-      });
-      console.log(res.data.reviews)
-      setReviews(res.data.reviews);
-    } catch (err) {
-      console.log(err)
-    }
-  }
-  useEffect(() => {
-    getReviews();
-  }, [turfId])
-
-
-  const handleDoubleTap = () => {
-    const now = Date.now();
-    if (now - lastTapRef.current < 300) {
-      handleLike();
-    }
-    lastTapRef.current = now;
-  };
-
-  const toggleFavorite = (id) => {
-    setfavorite(id);
-  };
-
-  const handleUpdatePlan = async () => {
-    try {
-      const res = await axios.put("/api/turfs/update-subscription", {
-        turfId: turfInfo._id,
-        planId: editPlan,
-        ...editInput
-      });
-
-      toast.success("Plan updated");
-      console.log(res.data);
-      setturfInfo(res.data.updatedTurf);
-      setEditPlan(null);
-
-    } catch (err) {
-      console.log(err);
-      toast.error("Update failed");
-    }
-  };
-
-  const handleDeletePlan = async (id) => {
-    try {
-      const res = await axios.delete("/api/turfs/delete-subscription", {
-        data: { turfId: turfInfo._id, planId: id }
-      });
-
-      toast.success("Plan deleted");
-      setturfInfo(res.data.updatedTurf);
-
-    } catch (err) {
-      toast.error("Delete failed");
-    }
-  };
-
-
-
-  const getSingleTurf = async () => {
-    try {
-      setloading(true)
-      const res = await axios.get("/api/turfs/getSingleTurf", {
-        params: { id: turfId }
-      });
-
-      setturfInfo(res.data.turf)
-
-    } catch (error) {
-      toast.error(res.data.message || "Internal server Error")
-    }
-    finally {
-      setloading(false)
-    }
-  }
-
-  useEffect(() => {
-    getSingleTurf()
-  }, [turfId])
-
-
-
-  useEffect(() => {
-    if (turfInfo) {
-      localStorage.setItem("selectedTurf", turfInfo._id);
-    }
-  }, [turfInfo]);
-
-  const handleFavorite = async () => {
-    if (!token) {
-      toast.warn("Login to add Favorite");
-      return setloginPanel(true);
-    }
-
-    try {
-      const response = await axios.post("/api/users/addFavorite", {
-        userId: userInfo._id,
-        turfId: turfInfo._id,
-      });
-
-      toast.success(response.data.message);
-      setfavorite(true);
-    } catch (error) {
-      if (error.response?.status === 409) {
-        toast.info("Already added to favorites.");
-      } else {
-        console.log(error);
-        toast.error(error.response?.data?.message || "Something went wrong");
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await axios.get("/api/turfs/getSingleTurf", { params: { id: turfId } });
+        setTurf(res.data.turf);
+        console.log(res.data.turf)
+        if (res.data.turf?._id) localStorage.setItem("selectedTurf", res.data.turf._id);
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Could not load the turf. Please try again.");
+      } finally {
+        setLoading(false);
       }
-    }
-  };
+    };
 
-  if (loading) {
-    return <SkeletonLoader />;
-  }
+    const loadReviews = async () => {
+      try {
+        const res = await axios.get("/api/turfs/get-reviews", { params: { turfId } });
+        setReviews(res.data.reviews || []);
+      } catch (error) {
+        console.log(error);
+      }
+    };
 
-  if (!turfInfo) {
+    load();
+    loadReviews();
+  }, [turfId]);
+
+  if (loading) return <SkeletonLoader />;
+
+  if (!turf) {
     return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="w-full mt-30 flex items-center justify-center text-white"
-      >
-        Turf not found
-      </motion.div>
+      <div className="w-full mt-24 text-center text-white px-6">
+        <p className="text-xl font-semibold">Turf not found</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-4 px-6 py-3 rounded-xl bg-lime-400 text-gray-950 font-bold"
+        >
+          Try again
+        </button>
+      </div>
     );
   }
 
-  const sports = SPORTS.filter((sport) =>
-    turfInfo.sportsAvailable.some((available) =>
-      available.toLowerCase() === sport.name.toLowerCase()
-    )
-  );
+  const goBook = (plan) => navigate("/booking", { state: { turfId: turf._id, plan } });
 
-  const formatedTime = (date) => {
-    const now = moment();
-    const reviewDate = moment(date);
-    return reviewDate.from(now);
-  }
+  const [lat, lng] = turf.location?.coordinates || [];
+  const directionsUrl =
+    lat && lng
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${turf.name} ${turf.location?.address || ""} ${turf.location?.city || ""}`
+        )}`;
 
+  const samePrice = turf.dayPrice === turf.nightPrice || !turf.nightPrice;
+  const address = [turf.location?.address, turf.location?.city, turf.location?.pincode]
+    .filter(Boolean)
+    .join(", ");
 
   return (
-    <div className="w-full pb-10  text-white relative animate-fadeIn">
-      {mapView && <MapView longitude={turfInfo.location.coordinates[0]}
-        latitude={turfInfo.location.coordinates[1]}
-        userLat={userCoords.latitude}
-        userLng={userCoords.longitude}
-        setmapView={setmapView} />}
-
-      <div className="px-6 pt-6  bg-gradient-to-b from-gray-900 to-transparent sticky top-0 z-10 backdrop-blur-sm">
-        <div className="flex items-start justify-between w-full">
-          <div>
-            <h2 className="font-bold text-3xl bg-clip-text text-transparent bg-gradient-to-r from-lime-400 to-emerald-500">
-              {turfInfo.name}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-              <div className="flex items-center gap-1 text-yellow-400 text-sm">
-                <Star size={14} fill="yellow" /> {turfInfo.avarageRating}
-              </div>
-              <span className="text-gray-400">•</span>
-              <p className="text-sm flex items-center gap-1 text-gray-300">
-                <MapPin size={14} /> {turfInfo.location.city}
-              </p>
-
-
-            </div>
-          </div>
-
-        </div>
+    <div className="w-full text-white pb-44">
+      {/* Photos: swipe sideways, no library needed */}
+      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 px-4 pt-4 [scrollbar-width:none]">
+        {turf.images?.map((src, i) => (
+          <img
+            key={i}
+            src={src}
+            alt={`${turf.name} photo ${i + 1}`}
+            className="snap-center shrink-0 w-full max-w-2xl h-64 sm:h-80 object-cover rounded-3xl"
+          />
+        ))}
       </div>
 
+      <div className="px-5 max-w-2xl mx-auto">
+        {/* Name + rating */}
+        <h1 className="mt-5 text-3xl font-extrabold text-lime-400">{turf.name}</h1>
+        {turf.averageRating > 0 && (
+          <p className="mt-1 flex items-center gap-1 text-lg text-yellow-400">
+            <Star size={18} fill="currentColor" /> {Number(turf.averageRating).toFixed(1)}
+            <span className="text-gray-400 text-base ml-1">({reviews.length} reviews)</span>
+          </p>
+        )}
 
-      <div className="px-6 ">
-
-        <div
-          onClick={handleDoubleTap}
-          onDoubleClick={handleLike}
-          className="relative w-full h-80 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] group cursor-pointer border border-white/10"
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-900/40 to-transparent z-10" />
-          <img
-            src={turfInfo.images[0]}
-            alt="Turf"
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
-          <div className="absolute bottom-0 left-0 right-0 z-20 p-5">
-            <div className="flex justify-between items-end">
-              <div>
-                <div className="flex items-center gap-2 text-white/90 mb-2">
-                  <div className="p-1.5 bg-white/10 backdrop-blur-md rounded-full">
-                    <MapPin size={16} className="text-lime-400" />
-                  </div>
-                  <span className="font-medium text-shadow-sm">{turfInfo.location.address}, {turfInfo.location.pincode}</span>
-                </div>
-                <button
-                  onClick={() => setmapView(true)}
-                  className="flex items-center gap-1 text-lime-400 hover:text-lime-300 transition-colors font-medium hover:underline decoration-lime-400/50 underline-offset-4"
-                >
-                  <Navigation size={16} /> View on Map
-                </button>
+        {/* Price: the most important thing, in plain words */}
+        <div className="mt-5 rounded-2xl bg-white/5 border border-white/10 p-5">
+          {samePrice ? (
+            <p className="text-4xl font-extrabold">
+              ₹{turf.dayPrice}
+              <span className="text-lg font-medium text-gray-300"> per hour</span>
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-baseline justify-between">
+                <span className="text-lg text-gray-200">
+                  Day
+                  <span className="text-sm text-gray-400">
+                    {" "}({to12h(turf.openingTime)} – {to12h(turf.nightPriceStart)})
+                  </span>
+                </span>
+                <span className="text-2xl font-extrabold">₹{turf.dayPrice}<span className="text-base font-medium text-gray-300"> /hour</span></span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-white/10 backdrop-blur-md border border-white/10 rounded-full px-4 py-2 flex items-center gap-1.5 shadow-lg">
-                  <Heart
-                    size={18}
-                    className={`transition-colors duration-300 ${liked ? "fill-pink-500 text-pink-500" : "text-white group-hover:text-pink-300"}`}
-                  />
-                  <span className="text-sm font-semibold">{turfInfo.likes}</span>
-                </div>
+              <div className="flex items-baseline justify-between">
+                <span className="text-lg text-gray-200">
+                  Night
+                  <span className="text-sm text-gray-400">
+                    {" "}({to12h(turf.nightPriceStart)} – {to12h(turf.closingTime)})
+                  </span>
+                </span>
+                <span className="text-2xl font-extrabold">₹{turf.nightPrice}<span className="text-base font-medium text-gray-300"> /hour</span></span>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
-
-        <div className="mt-8 bg-gray-900/40 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl overflow-hidden relative">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-lime-500/5 rounded-full blur-3xl pointer-events-none"></div>
-
-          <div className="flex justify-between items-center mb-6 relative z-10">
-            <h3 className="text-2xl font-bold text-white tracking-tight">Turf Booking Rates</h3>
-            <button
-              onClick={() => navigate("/booking",
-                {
-                  state: turfInfo._id
-                }
-              )}
-              className="bg-lime-400 hover:bg-lime-300 text-gray-950 font-bold px-6 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-2 shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:shadow-[0_0_30px_rgba(163,230,53,0.5)] active:scale-95"
-            >
-              Book Now <ChevronRight size={18} className="stroke-[3]" />
-            </button>
-          </div>
-
-          <div className="flex flex-col md:flex-row gap-4 relative z-10">
-            {turfInfo.dayPrice === turfInfo.nightPrice ? (
-              <div className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 transition-colors rounded-xl p-5 relative overflow-hidden group">
-                <div className="absolute -right-10 -top-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl group-hover:bg-blue-500/20 transition-all"></div>
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-1.5 bg-amber-500/20 rounded-md"><Sun size={18} className="text-amber-400" /></div>
-                    <div className="p-1.5 bg-indigo-500/20 rounded-md"><Moon size={18} className="text-indigo-400" /></div>
-                    <span className="text-gray-200 font-semibold ml-2">Standard Rate</span>
-                    <span className="text-xs font-bold text-gray-400 bg-white/5 px-2 py-1 rounded-full ml-auto">All Day</span>
-                  </div>
-                  <p className="font-extrabold text-4xl text-white mt-4 mb-1">₹{turfInfo.dayPrice}<span className="text-gray-400 text-lg font-medium">/hour</span></p>
-                  <p className="text-gray-400 text-sm">Consistent rate for both day and night</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 hover:border-white/20 transition-colors rounded-xl p-5 relative overflow-hidden group">
-                  <div className="absolute -right-10 -top-10 w-32 h-32 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="p-1.5 bg-amber-500/20 rounded-md"><Sun size={18} className="text-amber-400" /></div>
-                      <span className="text-gray-200 font-semibold">Day Rate</span>
-                      <span className="text-xs font-bold text-gray-400 bg-white/5 px-2 py-1 rounded-full ml-auto">{turfInfo.openingTime}-{turfInfo.nightPriceStart}</span>
-                    </div>
-                    <p className="font-extrabold text-4xl text-white mt-4 mb-1">₹{turfInfo.dayPrice}<span className="text-gray-400 text-lg font-medium">/hour</span></p>
-                    <p className="text-gray-400 text-sm">Perfect for morning matches and practice</p>
-                  </div>
-                </div>
-
-                <div className="flex-1 bg-white/5 backdrop-blur-md border border-indigo-500/20 hover:border-indigo-400/40 transition-colors rounded-xl p-5 relative overflow-hidden group">
-                  <div className="absolute -right-10 -top-10 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl group-hover:bg-indigo-500/20 transition-all"></div>
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="p-1.5 bg-indigo-500/20 rounded-md"><Moon size={18} className="text-indigo-400" /></div>
-                      <span className="text-indigo-100 font-semibold">Night Rate</span>
-                      <span className="text-xs font-bold text-indigo-300 bg-indigo-500/20 px-2 py-1 rounded-full ml-auto">{turfInfo.nightPriceStart}-{turfInfo.closingTime}</span>
-                    </div>
-                    <p className="font-extrabold text-4xl text-white mt-4 mb-1">₹{turfInfo.nightPrice}<span className="text-indigo-200 text-lg font-medium">/hour</span></p>
-                    <p className="text-indigo-200 text-sm">Floodlit turf for cooler evening games</p>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
-
-
-          <p className="text-gray-400 text-xs mt-4 text-center">
-            * Rates include standard equipment. Premium sports may have additional charges.
-          </p>
+        {/* Timings + address + directions */}
+        <div className="mt-4 space-y-3 text-lg text-gray-200">
+          {turf.openingTime && turf.closingTime && (
+            <p className="flex items-start gap-3">
+              <Clock className="mt-1 shrink-0 text-lime-400" size={22} />
+              Open every day, {to12h(turf.openingTime)} to {to12h(turf.closingTime)}
+            </p>
+          )}
+          {address && (
+            <p className="flex items-start gap-3">
+              <MapPin className="mt-1 shrink-0 text-lime-400" size={22} />
+              {address}
+            </p>
+          )}
         </div>
+        <a
+          href={directionsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 flex items-center justify-center gap-2 w-full py-4 rounded-2xl border-2 border-lime-400 text-lime-400 text-lg font-bold active:scale-95 transition"
+        >
+          <Navigation size={22} /> Get Directions
+        </a>
 
-        {
-          turfInfo.subscription && turfInfo.subscription.length > 0 ? (
-            <div className="mt-8">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
-                Subscription Plans
-              </h3>
-              <div className="space-y-3">
-                {turfInfo.subscription.map((plan, index) => (
-                  <div
-                    key={plan._id}
-                    
-                    className="bg-white/5 backdrop-blur-md border border-white/10 hover:border-lime-500/30 rounded-2xl p-5 shadow-lg transition-all duration-300 group cursor-pointer"
-                  >
-                    <div onClick={()=> navigate("/booking",
-                      {
-                       state:{
-                        plan        
-                       }
-                      }
-                    )} className="flex justify-between items-start">
-                      <div>
-                        <h4 className="text-lime-400 font-bold text-lg mb-1 group-hover:text-glow transition-all">
-                          {plan.days} Days Plan
-                        </h4>
+        {/* Sports */}
+        {turf.sportsAvailable?.length > 0 && (
+          <Section title="Games you can play">
+            <div className="flex flex-wrap gap-2">
+              {turf.sportsAvailable.map((sport) => (
+                <span
+                  key={sport}
+                  className="px-4 py-2 rounded-full bg-white/10 text-lg capitalize"
+                >
+                  {sport}
+                </span>
+              ))}
+            </div>
+          </Section>
+        )}
 
-                        <p className="text-gray-400 text-sm leading-relaxed">{plan.description}</p>
-                      </div>
+        {/* Facilities */}
+        {turf.amenities?.length > 0 && (
+          <Section title="Facilities">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {turf.amenities.map((item, i) => (
+                <li key={i} className="flex items-center gap-3 text-lg text-gray-200">
+                  <Check size={20} className="text-lime-400 shrink-0" /> {item}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
-                      <span className="bg-lime-400/10 border border-lime-400/20 text-lime-400 px-4 py-1.5 rounded-full text-sm font-bold shadow-sm">
-                        ₹{plan.amount}
-                      </span>
-                    </div>
-
-                    {/* OWNER CONTROLS */}
-                    {userInfo?.role === "owner" && (
-                      <div className="flex gap-3 mt-4">
-                        <button
-                          onClick={() => {
-                            setEditPlan(plan._id)
-                            setEditInput(plan)
-                          }}
-                          className="text-xs px-4 py-2 rounded-md z-20 bg-blue-600 hover:bg-blue-500"
-                        >
-                          EDIT
-                        </button>
-
-                        <button
-                          onClick={() => handleDeletePlan(plan._id)}
-                          className="text-xs px-4 py-2 rounded-md bg-red-600 z-20  hover:bg-red-500"
-                        >
-                          DELETE
-                        </button>
-                      </div>
+        {/* Monthly plans (only if the owner has added some) */}
+        {turf.subscription?.length > 0 && (
+          <Section title="Monthly plans">
+            <div className="space-y-3">
+              {turf.subscription.map((plan) => (
+                <button
+                  key={plan._id}
+                  onClick={() => goBook(plan)}
+                  className="w-full text-left rounded-2xl bg-white/5 border border-white/10 p-4 flex items-center justify-between active:scale-95 transition"
+                >
+                  <span>
+                    <span className="block text-lg font-bold text-lime-400">{plan.days} days</span>
+                    {plan.description && (
+                      <span className="block text-gray-300">{plan.description}</span>
                     )}
+                  </span>
+                  <span className="text-xl font-extrabold">₹{plan.amount}</span>
+                </button>
+              ))}
+            </div>
+          </Section>
+        )}
+
+        {/* Rules */}
+        {turf.onSitePolicies?.length > 0 && (
+          <Section title="Rules">
+            <ul className="space-y-2 text-lg text-gray-300">
+              {turf.onSitePolicies.map((rule, i) => (
+                <li key={i} className="flex gap-2">
+                  <span className="text-lime-400">•</span> {rule}
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {/* Reviews: just the latest 3, no slider */}
+        {reviews.length > 0 && (
+          <Section title="What players say">
+            <div className="space-y-3">
+              {[...reviews]
+                .reverse()
+                .slice(0, 3)
+                .map((r, i) => (
+                  <div key={i} className="rounded-2xl bg-white/5 border border-white/10 p-4">
+                    <p className="font-semibold text-lg">
+                      {r.name || "Player"}{" "}
+                      <span className="text-yellow-400 text-base">
+                        {"★".repeat(r.rating || 0)}
+                      </span>
+                    </p>
+                    {r.comment && <p className="text-gray-300 mt-1">{r.comment}</p>}
                   </div>
                 ))}
-              </div>
             </div>
-          ) : null
-        }
-
-        {/* Sports Section */}
-        <div className="mt-8">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
-            Sports Available
-          </h3>
-          <div className="flex gap-2">
-            {sports.map((sport) => (
-                <button
-                  key={sport.id}
-                  onClick={() => { selectedSport == sport.id ? setSelectedSport("") : setSelectedSport(sport.id) }}
-                  className={`flex flex-col items-center p-3 rounded-2xl transition-all duration-300 ${selectedSport === sport.id
-                    ? `${sport.color} border border-white/20 shadow-[0_10px_20px_rgba(0,0,0,0.3)] transform scale-105`
-                    : "bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10"
-                    }`}
-                >
-                  <div
-                    className={`p-3 rounded-full transition-colors ${selectedSport === sport.id
-                      ? "bg-white/20 shadow-inner"
-                      : "bg-black/30"
-                      }`}
-                  >
-                  <img
-                    src={sport.icon}
-                    alt={sport.name}
-                    className="w-8 h-8 object-contain filter drop-shadow-lg"
-                  />
-                </div>
-                <span
-                  className={`text-xs mt-1 ${selectedSport === sport.id
-                    ? "font-bold text-white"
-                    : "text-gray-300"
-                    }`}
-                >
-                  {sport.name}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Facilities Section */}
-        <div className="mt-8">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
-            Facilities
-          </h3>
-
-          <div className="grid grid-cols-2 gap-3">
-            {
-              turfInfo.amenities.map((amenity, idx) => {
-                const Icon = Object.keys(ICON_MAP).find(k => amenity.toLowerCase().includes(k)) ?
-                  ICON_MAP[Object.keys(ICON_MAP).find(k => amenity.toLowerCase().includes(k))] : ShieldCheck;
-                return (<div key={idx} className="bg-white/5 backdrop-blur-sm border border-white/5 hover:border-white/10 hover:bg-white/10 transition-all rounded-2xl p-4 flex items-center gap-4 shadow-sm group">
-                  <div className="bg-lime-400/10 border border-lime-400/20 p-2.5 rounded-xl group-hover:scale-110 transition-transform">
-                    {Icon && <Icon className="w-5 h-5 text-lime-400" />}
-                  </div>
-                  <span className="text-sm font-medium text-gray-200">{amenity}</span>
-                </div>)
-              }
-              )}
-          </div>
-        </div>
-
-        {
-          !turfInfo.subscription == "free" ?
-            <div className="mt-8">
-              <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-                <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
-                Subscription Plans
-              </h3>
-              <div className="space-y-3">
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-lime-400 font-bold">Weekly Pass</h4>
-                      <p className="text-gray-300 text-sm">Play anytime 7 days a week</p>
-                    </div>
-                    <span className="bg-lime-500/10 text-lime-400 px-3 py-1 rounded-full text-sm font-medium">₹499/week</span>
-                  </div>
-                </div>
-                <div className="bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 rounded-xl p-4 shadow-lg">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="text-yellow-400 font-bold">Monthly Pro</h4>
-                      <p className="text-gray-300 text-sm">Unlimited bookings + 1 guest free</p>
-                    </div>
-                    <span className="bg-yellow-500/10 text-yellow-400 px-3 py-1 rounded-full text-sm font-medium">₹1799/month</span>
-                  </div>
-                </div>
-              </div>
-            </div> : ""
-        }
-        {/* Reviews Section */}
-        <div className="mt-8">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
-            Customer Reviews
-          </h3>
-          <Swiper
-            spaceBetween={15}
-            slidesPerView={1}
-            loop={true}
-            autoplay={{ delay: 5000, disableOnInteraction: false }}
-            effect="fade"
-            fadeEffect={{ crossFade: true }}
-            modules={[Autoplay, EffectFade]}
-            className="rounded-xl overflow-hidden"
-          >
-            {reviews.map((review, index) => (
-              <SwiperSlide key={index}>
-                <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-                  <div className="flex items-center gap-3 mb-3">
-                    <img
-                      src={userAvatar}
-                      alt="User Avatar"
-                      className="w-10 h-10 rounded-full border-2 border-lime-500/50"
-                    />
-                    <div>
-                      <div className="font-semibold">{review.name}</div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-0.5">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              size={14}
-                              className={i < review.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-500"}
-                            />
-                          ))}
-                        </div>
-                        <span className="text-gray-400 text-sm">{formatedTime(review.date)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-300 text-sm">"{review.comment}"</p>
-                </div>
-              </SwiperSlide>
-            ))}
-          </Swiper>
-        </div>
-
-        <div className="mt-8">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <span className="bg-lime-500 w-1.5 h-1.5 rounded-full"></span>
-            Terms & Conditions
-          </h3>
-          <div className="bg-gray-800/50 border border-gray-700 rounded-xl p-4">
-            <ul className="space-y-2 text-sm text-gray-300">
-              {turfInfo.onSitePolicies.map((policy, idx) =>
-                <li key={idx} className="flex items-start gap-2">
-                  <span className="text-lime-400">•</span>{policy}
-                </li>
-              )}
-            </ul>
-          </div>
-        </div>
+          </Section>
+        )}
       </div>
-      {editPlan && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-gray-900 p-6 rounded-xl w-96 border border-gray-700">
-            <h2 className="text-lg font-bold mb-4">Edit Subscription</h2>
 
-            <input
-              type="number"
-              placeholder="Days"
-              value={editInput.days}
-              onChange={(e) => setEditInput({ ...editInput, days: e.target.value })}
-              className="w-full p-2 mb-3 bg-gray-800 border border-gray-600 rounded"
-            />
-
-            <input
-              type="number"
-              placeholder="Amount"
-              value={editInput.amount}
-              onChange={(e) => setEditInput({ ...editInput, amount: e.target.value })}
-              className="w-full p-2 mb-3 bg-gray-800 border border-gray-600 rounded"
-            />
-
-            <textarea
-              placeholder="Description"
-              value={editInput.description}
-              onChange={(e) => setEditInput({ ...editInput, description: e.target.value })}
-              className="w-full p-2 mb-3 bg-gray-800 border border-gray-600 rounded"
-            />
-
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setEditPlan(null)}
-                className="px-4 py-1 bg-gray-700 rounded"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleUpdatePlan}
-                className="px-4 py-1 bg-lime-500 text-black rounded"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* One big button, always visible, sitting above the bottom menu */}
+      <div className="fixed left-0 right-0 bottom-24 z-40 px-5 pointer-events-none">
+        <button
+          onClick={() => goBook()}
+          className="pointer-events-auto mx-auto flex items-center justify-center gap-2 w-full max-w-2xl py-4 rounded-2xl bg-lime-400 text-gray-950 text-xl font-extrabold shadow-[0_10px_30px_rgba(163,230,53,0.35)] active:scale-95 transition"
+        >
+          Book Now <ChevronRight size={24} className="stroke-[3]" />
+        </button>
+      </div>
     </div>
   );
 };
-
