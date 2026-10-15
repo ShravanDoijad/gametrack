@@ -56,6 +56,7 @@ const razorpayWebhook = async (req, res) => {
           phoneNumber: user.phone,
           notification_data: {
             name: user.fullname.split(" ")[0],
+            bookingReference: String(booking._id).slice(-8).toUpperCase(),
             turfName: turf.name,
             date: new Date(booking.date).toDateString(),
             time: slotTimeText,

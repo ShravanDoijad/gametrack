@@ -1,8 +1,7 @@
-import React from 'react'
 import { motion } from 'framer-motion'
 import DatePicker from 'react-datepicker'
 import "react-datepicker/dist/react-datepicker.css";
-import { CalendarDays, Calendar, Clock3 } from "lucide-react";
+import { CalendarDays } from "lucide-react";
 
 const DatePick = ({next7Days, handleDateSelect, selectedDate, showCalendar, setShowCalendar, customDate }) => {
   const maxDate = new Date();

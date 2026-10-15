@@ -411,7 +411,7 @@ const TournamentManager = () => {
               {formStep === 1 && (
                 <div>
                   <label className="text-[11px] text-gray-500 uppercase tracking-wider mb-3 block">
-                    When does <span className="text-amber-400">"{name}"</span> run? Tap start then end
+                    When does <span className="text-amber-400">&quot;{name}&quot;</span> run? Tap start then end
                   </label>
                   <TimeRangePicker
                     startTime={startTime}

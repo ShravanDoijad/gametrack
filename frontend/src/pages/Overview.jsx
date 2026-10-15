@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+/* eslint-disable react/prop-types */
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { toast } from "react-toastify";
 import { MapPin, Clock, Star, Navigation, ChevronRight, Check } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
 
@@ -27,17 +27,19 @@ export const Overview = () => {
   const [turf, setTurf] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
+        setLoadError("");
         const res = await axios.get("/api/turfs/getSingleTurf", { params: { id: turfId } });
         setTurf(res.data.turf);
-        console.log(res.data.turf)
-        if (res.data.turf?._id) localStorage.setItem("selectedTurf", res.data.turf._id);
+        if (!res.data.turf) setLoadError("This turf could not be found.");
       } catch (error) {
-        toast.error(error.response?.data?.message || "Could not load the turf. Please try again.");
+        setLoadError(error.response?.status === 404 ? "This turf could not be found." : "Could not load the turf. Check your connection and try again.");
       } finally {
         setLoading(false);
       }
@@ -54,16 +56,16 @@ export const Overview = () => {
 
     load();
     loadReviews();
-  }, [turfId]);
+  }, [turfId, retryCount]);
 
   if (loading) return <SkeletonLoader />;
 
   if (!turf) {
     return (
       <div className="w-full mt-24 text-center text-white px-6">
-        <p className="text-xl font-semibold">Turf not found</p>
+        <p className="text-xl font-semibold">{loadError || "This turf could not be found."}</p>
         <button
-          onClick={() => window.location.reload()}
+          onClick={() => setRetryCount((count) => count + 1)}
           className="mt-4 px-6 py-3 rounded-xl bg-lime-400 text-gray-950 font-bold"
         >
           Try again
@@ -72,7 +74,7 @@ export const Overview = () => {
     );
   }
 
-  const goBook = (plan) => navigate("/booking", { state: { turfId: turf._id, plan } });
+  const goBook = (plan) => navigate(`/booking/${turf._id}${plan?._id ? `?planId=${encodeURIComponent(plan._id)}` : ""}`);
 
   const [lat, lng] = turf.location?.coordinates || [];
   const directionsUrl =
@@ -88,22 +90,23 @@ export const Overview = () => {
     .join(", ");
 
   return (
-    <div className="w-full text-white pb-44">
+    <div className="w-full overflow-x-clip pb-32 text-white sm:pb-36 lg:pb-16">
       {/* Photos: swipe sideways, no library needed */}
-      <div className="flex overflow-x-auto snap-x snap-mandatory gap-2 px-4 pt-4 [scrollbar-width:none]">
+      <div className="mx-auto flex w-full snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-4 [scrollbar-width:none] sm:px-6 lg:grid lg:max-w-7xl lg:grid-cols-3 lg:grid-flow-row lg:overflow-visible lg:px-8">
         {turf.images?.map((src, i) => (
           <img
             key={i}
             src={src}
             alt={`${turf.name} photo ${i + 1}`}
-            className="snap-center shrink-0 w-full max-w-2xl h-64 sm:h-80 object-cover rounded-3xl"
+            className={`h-56 w-full shrink-0 snap-center rounded-2xl object-cover sm:h-80 lg:h-[248px] ${i === 0 && turf.images.length > 1 ? "lg:col-span-2 lg:row-span-2 lg:h-[508px]" : ""} ${turf.images.length === 1 ? "lg:col-span-3 lg:h-[508px]" : ""}`}
           />
         ))}
       </div>
 
-      <div className="px-5 max-w-2xl mx-auto">
+      <div className="mx-auto grid w-full max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:px-8">
+      <div className="min-w-0">
         {/* Name + rating */}
-        <h1 className="mt-5 text-3xl font-extrabold text-lime-400">{turf.name}</h1>
+        <h1 className="mt-5 break-words text-3xl font-extrabold text-lime-400 sm:text-4xl">{turf.name}</h1>
         {turf.averageRating > 0 && (
           <p className="mt-1 flex items-center gap-1 text-lg text-yellow-400">
             <Star size={18} fill="currentColor" /> {Number(turf.averageRating).toFixed(1)}
@@ -112,7 +115,7 @@ export const Overview = () => {
         )}
 
         {/* Price: the most important thing, in plain words */}
-        <div className="mt-5 rounded-2xl bg-white/5 border border-white/10 p-5">
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5 lg:hidden">
           {samePrice ? (
             <p className="text-4xl font-extrabold">
               ₹{turf.dayPrice}
@@ -254,11 +257,34 @@ export const Overview = () => {
         )}
       </div>
 
+      <aside className="hidden lg:block">
+        <div className="sticky top-24 mt-5 rounded-3xl border border-white/10 bg-gray-900/80 p-6 shadow-2xl shadow-black/20">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-lime-400">Booking details</p>
+          <h2 className="mt-2 text-xl font-bold text-white">{turf.name}</h2>
+          {samePrice ? (
+            <p className="mt-5 text-3xl font-extrabold">{"\u20b9"}{turf.dayPrice}<span className="ml-1 text-sm font-medium text-gray-400">/ hour</span></p>
+          ) : (
+            <div className="mt-5 space-y-3">
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-gray-300">Day</span><span className="font-bold">{"\u20b9"}{turf.dayPrice}<span className="font-normal text-gray-400"> /hr</span></span></div>
+              <div className="flex items-center justify-between gap-3"><span className="text-sm text-gray-300">Night</span><span className="font-bold">{"\u20b9"}{turf.nightPrice}<span className="font-normal text-gray-400"> /hr</span></span></div>
+            </div>
+          )}
+          {turf.openingTime && turf.closingTime && (
+            <p className="mt-4 border-t border-white/10 pt-4 text-sm text-gray-300">Open daily, {to12h(turf.openingTime)} to {to12h(turf.closingTime)}</p>
+          )}
+          <button onClick={() => goBook()} className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-lime-400 px-4 text-base font-extrabold text-gray-950 shadow-lg shadow-lime-500/15 transition hover:bg-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+            Book Now <ChevronRight size={20} />
+          </button>
+          <p className="mt-3 text-center text-xs text-gray-500">Choose your date and time next</p>
+        </div>
+      </aside>
+      </div>
+
       {/* One big button, always visible, sitting above the bottom menu */}
-      <div className="fixed left-0 right-0 bottom-24 z-40 px-5 pointer-events-none">
+      <div className="pointer-events-none fixed bottom-[calc(env(safe-area-inset-bottom)+6rem)] left-0 right-0 z-40 px-4 sm:px-5 lg:hidden">
         <button
           onClick={() => goBook()}
-          className="pointer-events-auto mx-auto flex items-center justify-center gap-2 w-full max-w-2xl py-4 rounded-2xl bg-lime-400 text-gray-950 text-xl font-extrabold shadow-[0_10px_30px_rgba(163,230,53,0.35)] active:scale-95 transition"
+          className="pointer-events-auto mx-auto flex min-h-12 w-full max-w-3xl items-center justify-center gap-2 rounded-xl bg-lime-400 py-3 text-lg font-extrabold text-gray-950 shadow-[0_10px_30px_rgba(163,230,53,0.35)] transition active:scale-[0.99]"
         >
           Book Now <ChevronRight size={24} className="stroke-[3]" />
         </button>

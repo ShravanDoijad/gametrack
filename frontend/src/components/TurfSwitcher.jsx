@@ -10,24 +10,28 @@ const TurfSwitcher = () => {
   return (
     <>
       {/* Bottom Icon Button */}
-      <div className=" z-50 border-l-2 border-t-2 rounded-2xl border-lime-200">
+      <div className="z-50 rounded-2xl border border-white/10">
         <button
+          type="button"
           onClick={() => setOpen(true)}
-          className="p-3 bg-gray-900 text-white rounded-full shadow-xl hover:bg-gray-700 transition-all"
+          aria-label="Switch active turf"
+          className="flex h-11 w-11 items-center justify-center rounded-full bg-gray-900 text-white shadow-xl transition hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"
         >
-          <SquareStack size={24} />
+          <SquareStack size={20} />
         </button>
       </div>
 
       {/* Bottom Sheet */}
       {open && (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/40">
-          <div className="w-full max-h-[50vh] overflow-y-auto bg-gray-900 rounded-t-2xl p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-white">Select a Turf</h3>
+        <div className="fixed inset-0 z-[70] flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center sm:p-4" onClick={() => setOpen(false)}>
+          <div role="dialog" aria-modal="true" aria-labelledby="switch-turf-title" className="max-h-[80dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-gray-900 p-4 shadow-2xl sm:rounded-3xl sm:p-6" onClick={(event) => event.stopPropagation()}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 id="switch-turf-title" className="text-lg font-semibold text-white">Select a Turf</h3>
               <button
+                type="button"
                 onClick={() => setOpen(false)}
-                className="text-gray-400 hover:text-white transition"
+                aria-label="Close turf selection"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-gray-400 transition hover:bg-white/10 hover:text-white"
               >
                 <ChevronDown size={20} className="rotate-180" />
               </button>
@@ -35,23 +39,24 @@ const TurfSwitcher = () => {
 
             <div className="space-y-3">
               {turfs.map((turf) => (
-                <div
+                <button
+                  type="button"
                   key={turf._id}
                   onClick={() => {
                     setSelectedTurfId(turf._id);
                     setOpen(false);
                   }}
-                  className={`flex items-center gap-4 p-3 rounded-xl cursor-pointer transition hover:bg-gray-800 ${
+                  className={`flex min-h-14 w-full items-center gap-4 rounded-xl p-3 text-left transition hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 ${
                     turf._id === selectedTurfId ? 'bg-gray-800 border border-amber-500' : ''
                   }`}
                 >
                   <img
-                    src={turf.images[0] || '/placeholder.jpg'}
+                    src={turf.images?.[0] || '/placeholder.jpg'}
                     alt={turf.name}
-                    className="w-12 h-12 rounded-lg object-cover"
+                    className="h-12 w-12 shrink-0 rounded-lg object-cover"
                   />
                   <span className="text-white font-medium truncate">{turf.name}</span>
-                </div>
+                </button>
               ))}
             </div>
           </div>

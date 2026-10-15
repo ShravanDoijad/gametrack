@@ -1,8 +1,8 @@
-import React, { useContext, useState } from "react";
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { useContext } from "react";
+import { Outlet, NavLink, useLocation, Link } from "react-router-dom";
 import {
   LayoutDashboard, CalendarDays, IndianRupee, Users,
-  Settings, X, Clock, ChevronRight, ListChecks, Bell, LogOut, Trophy
+  Settings, X, Clock, ChevronRight, ListChecks, Bell, LogOut, Trophy, CalendarPlus
 } from "lucide-react";
 import { BookContext } from "../constexts/bookContext";
 
@@ -20,13 +20,13 @@ const navItems = [
 ];
 
 const OwnerLayout = () => {
-  const { sidebarOpen, closeSidebar, turfs, selectedTurfId, setSelectedTurfId } = useContext(BookContext);
+  const { sidebarOpen, closeSidebar, turfs, selectedTurfId, setSelectedTurfId, userInfo, handleLogout } = useContext(BookContext);
   const location = useLocation();
 
   const currentPage = navItems.find(i => location.pathname.startsWith(i.path))?.label || "Dashboard";
 
   return (
-    <div className="flex min-h-screen bg-[#0a0a0a] text-white font-sora">
+    <div className="flex min-h-screen min-h-[100dvh] w-full overflow-x-clip bg-[#0a0a0a] font-sora text-white">
 
       {/* Overlay */}
       {sidebarOpen && (
@@ -39,9 +39,9 @@ const OwnerLayout = () => {
       {/* Sidebar */}
       <aside
         className={`
-          fixed right-0 top-0 bottom-0 z-40 w-64 bg-[#111] border-l border-white/5
+          fixed right-0 top-0 bottom-0 z-40 w-[min(18rem,88vw)] bg-[#111] border-l border-white/5
           flex flex-col transition-transform duration-300 ease-in-out
-          md:static md:translate-x-0 md:border-r md:border-l-0
+          md:sticky md:top-0 md:h-screen md:w-60 md:shrink-0 md:translate-x-0 md:border-r md:border-l-0 lg:w-64
           ${sidebarOpen ? "translate-x-0" : "translate-x-full"}
         `}
       >
@@ -105,32 +105,35 @@ const OwnerLayout = () => {
 
         {/* Footer */}
         <div className="px-4 py-4 border-t border-white/5">
-          <div className="flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-white/5 cursor-pointer transition">
+          <button type="button" onClick={handleLogout} className="flex min-h-12 w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500">
             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-lime-400 to-emerald-600 flex items-center justify-center text-black text-xs font-bold">
               O
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">Owner</p>
-              <p className="text-[10px] text-gray-500">Turf Manager</p>
+              <p className="truncate text-sm font-medium text-white">{userInfo?.fullname || "Owner"}</p>
+              <p className="truncate text-[10px] text-gray-500">{userInfo?.email || "Turf Manager"}</p>
             </div>
             <LogOut size={15} className="text-gray-500 hover:text-red-400 transition" />
-          </div>
+          </button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <main className="flex min-h-screen min-h-[100dvh] min-w-0 flex-1 flex-col overflow-x-clip">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 bg-[#0a0a0a]/80 backdrop-blur-md border-b border-white/5 px-5 py-3.5 flex items-center gap-3">
-          <div className="flex-1">
-            <h1 className="text-sm font-semibold text-white">{currentPage}</h1>
-            <p className="text-[11px] text-gray-500">
+        <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-white/5 bg-[#0a0a0a]/80 px-4 py-3 backdrop-blur-md sm:px-6 sm:py-3.5">
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-sm font-semibold text-white sm:text-base">{currentPage}</h1>
+            <p className="truncate text-[11px] text-gray-500 sm:text-xs">
               {new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
             </p>
           </div>
+          <Link to="/owner/time-slots" className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-700 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0a0a] sm:px-4">
+            <CalendarPlus size={17} /> <span>Add booking</span>
+          </Link>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <div className="min-w-0 flex-1 overflow-x-clip overflow-y-auto">
           <Outlet />
         </div>
       </main>

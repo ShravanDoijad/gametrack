@@ -7,9 +7,9 @@ const Turf = require("../models/turf-model")
 const { getTurfId } = require("./single-turf");
 const bcrypt = require('bcryptjs');
 const Subscription = require("../models/subscription-model");
-const { sendMessage, OwnerUpdate } = require('../twilio/sendMessage');
+const { calculateBookingTotal } = require("../utils/booking-pricing");
+const { sendMessage, OwnerUpdate, UserSubscriptionUpdate, OwnerSubscriptionUpdate, sendWhatsAppTemplate } = require('../twilio/sendMessage');
 const PDFDocument = require('pdfkit');
-const twilio = require('twilio');
 
 const ownerRegister = async (req, res) => {
   try {
@@ -166,14 +166,14 @@ const updateTurfProfile = async (req, res) => {
 const getOwnedTurfs = async (req, res) => {
   try {
     const { data: owner, role } = req.auth;
-    if (!owner || !owner.turfIds.length > 0) {
-      return res.status(400).json({ success: false, message: "Owner or Turf ID not found" });
+    if (!owner) {
+      return res.status(401).json({ success: false, message: "Owner account not found" });
     }
-const turfs = await Turf.find({ _id: getTurfId(), owner: owner._id });
-    if (!turfs || turfs.length === 0) {
-      return res.status(404).json({ success: false, message: "No turfs found" });
-    }
-    res.status(200).json({ success: true, turfs });
+    const turfIds = owner.turfIds || [];
+    const turfs = turfIds.length
+      ? await Turf.find({ _id: { $in: turfIds }, owner: owner._id })
+      : [];
+    return res.status(200).json({ success: true, turfs });
   } catch (error) {
     console.error("Error fetching turfs:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
@@ -270,137 +270,163 @@ function generateSlots(openingTime, closingTime) {
   return slots;
 }
 
-const addManualBooking = async (req, res) => {
-  try {
-    let { phone, fullname, advanceAmount, date, start, end, turfId, slotFees, newStatus } = req.body
-
-    if (!phone || !fullname) {
-      res.status(400).json({ message: " All fields are Required" })
-    }
-    if (!advanceAmount) {
-      advanceAmount = 0;
-    }
-    const turf = await Turf.findById(turfId).populate('owner', 'phone');
-
-    if (!turf) return res.status(404).json({ message: "Turf not found" });
-
-    let day = turf.bookedSlots.find((d) => d.date === date);
-
-    if (newStatus === "booked") {
-
-      if (day) {
-        const hasOverlap = day.slots.some(
-          (slot) =>
-            (start >= slot.start && start < slot.end) ||
-            (end > slot.start && end <= slot.end) ||
-            (start <= slot.start && end >= slot.end)
-        );
-        if (hasOverlap) {
-          return res.status(409).json({ message: "This slot overlaps with an already booked slot." });
-        }
-        day.slots.push({ start, end });
-      } else {
-
-        turf.bookedSlots.push({
-          date,
-          slots: [{ start, end }],
-        });
-
-
-      }
-    } else if (newStatus === "available") {
-      // Make available: remove from turf.bookedSlots and update booking collection status
-      if (!day) return res.status(404).json({ message: "No booked slots for this date" });
-
-      const index = day.slots.findIndex((s) => s.start === start && s.end === end);
-      if (index === -1) return res.status(404).json({ message: "Slot not found" });
-
-      // Remove from turf's booked slots
-      day.slots.splice(index, 1);
-      if (day.slots.length === 0) {
-        turf.bookedSlots = turf.bookedSlots.filter((d) => d.date !== date);
-      }
-
-      // Also update booking document status to "cancelled"
-      await Booking.updateOne(
-        {
-          turfId,
-          date,
-          "slots.start": start,
-          "slots.end": end,
-          status: "confirmed"
+const reserveOwnerBookingSlot = async (turfId, date, slot) => {
+  const overlap = { start: { $lt: slot.end }, end: { $gt: slot.start } };
+  const existingDate = await Turf.updateOne(
+    {
+      _id: turfId,
+      $nor: [{
+        subscriptionSlots: {
+          $elemMatch: {
+            fromDate: { $lte: date },
+            toDate: { $gte: date },
+            "slot.start": { $lt: slot.end },
+            "slot.end": { $gt: slot.start },
+          },
         },
-        { $set: { status: "cancelled" } }
-      );
+      }],
+      bookedSlots: {
+        $elemMatch: {
+          date,
+          status: { $ne: "unavailable" },
+          slots: { $not: { $elemMatch: overlap } },
+        },
+      },
+    },
+    { $push: { "bookedSlots.$.slots": slot } }
+  );
+  if (existingDate.modifiedCount === 1) return true;
+
+  const newDate = await Turf.updateOne(
+    {
+      _id: turfId,
+      $nor: [{
+        subscriptionSlots: {
+          $elemMatch: {
+            fromDate: { $lte: date },
+            toDate: { $gte: date },
+            "slot.start": { $lt: slot.end },
+            "slot.end": { $gt: slot.start },
+          },
+        },
+      }],
+      bookedSlots: { $not: { $elemMatch: { date } } },
+    },
+    { $push: { bookedSlots: { date, slots: [slot], status: "booked" } } }
+  );
+  return newDate.modifiedCount === 1;
+};
+
+const addManualBooking = async (req, res) => {
+  let reserved = false;
+  let booking = null;
+  try {
+    const {
+      phone, fullname, date, start, end, turfId, advanceAmount = 0,
+      paymentMethod = "cash", sport = "General", notes = "",
+    } = req.body;
+    const cleanName = String(fullname || "").trim();
+    const cleanPhone = String(phone || "").replace(/[^+0-9]/g, "");
+    if (!cleanName || !cleanPhone || cleanName.length > 100 || cleanPhone.replace(/\D/g, "").length < 8 || cleanPhone.length > 16) {
+      return res.status(400).json({ success: false, message: "Enter the customer&#39;s name and a valid mobile number." });
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date || "") || !/^\d{2}:\d{2}$/.test(start || "") || !/^\d{2}:\d{2}$/.test(end || "")) {
+      return res.status(400).json({ success: false, message: "Choose a valid date and time slot." });
+    }
+    const startMinute = Number(start.slice(0, 2)) * 60 + Number(start.slice(3, 5));
+    const endMinute = Number(end.slice(0, 2)) * 60 + Number(end.slice(3, 5));
+    if (startMinute >= 1440 || endMinute > 1440 || endMinute <= startMinute) {
+      return res.status(400).json({ success: false, message: "The end time must be after the start time." });
+    }
+    if (!["cash", "upi", "other"].includes(paymentMethod)) {
+      return res.status(400).json({ success: false, message: "Choose a supported payment method." });
     }
 
-    await turf.save();
+    const turf = await Turf.findById(turfId).populate("owner", "phone");
+    if (!turf) return res.status(404).json({ success: false, message: "Turf not found." });
+    const total = calculateBookingTotal({ ...turf.toObject(), start, end });
+    const received = Number(advanceAmount);
+    if (total === null || total <= 0 || !Number.isFinite(received) || received < 0 || received > total) {
+      return res.status(400).json({ success: false, message: "The received amount must be between 0 and the booking total." });
+    }
 
-    const newManualBooking = await Booking.create({
-      turfId: turfId,
-      fullname: fullname,
-      phone: phone,
-      date: date,
-      amountPaid: advanceAmount,
-      slotFees: slotFees,
-      paymentType: "Manual"
+    reserved = await reserveOwnerBookingSlot(turf._id, date, { start, end });
+    if (!reserved) return res.status(409).json({ success: false, message: "That slot was just booked or blocked. Refresh the schedule and choose another time." });
 
-    })
+    const ownerId = req.auth?.data?._id;
+    booking = await Booking.create({
+      turfId: turf._id,
+      fullname: cleanName,
+      phone: cleanPhone,
+      date: new Date(`${date}T00:00:00.000Z`),
+      slots: [{ start, end }],
+      slotFees: total,
+      amountPaid: received,
+      paymentType: "Manual",
+      status: "confirmed",
+      sport: String(sport || "General").slice(0, 40),
+      notes: String(notes || "").slice(0, 500),
+      paymentHistory: received > 0 ? [{ amount: received, method: paymentMethod, receivedAt: new Date(), recordedBy: ownerId }] : [],
+    });
 
-
-    newManualBooking.slots.push({
-      start: start,
-      end: end
-    })
-
-    await newManualBooking.save()
-    const slotTimeText = `${start} - ${end}`;
-
-    const timeStringToMinutes = time => {
-      const [h, m] = time.split(':').map(Number);
-      return h * 60 + m;
-    };
-
+    // Customer and owner notifications are best-effort after the booking is safely stored.
     await sendMessage({
-      phoneNumber: phone,
+      phoneNumber: cleanPhone,
       notification_data: {
-        name: fullname.split(" ")[0],
+        customerName: cleanName,
         turfName: turf.name,
-        date: new Date(date).toDateString(),
-        time: slotTimeText,
-        location: turf.location.city,
-        amount: slotFees,
-        advance: advanceAmount,
-        remaining: slotFees - advanceAmount
-      }
+        date: new Date(`${date}T00:00:00.000Z`).toLocaleDateString("en-IN", {
+          dateStyle: "long",
+          timeZone: "UTC",
+        }),
+        startTime: start,
+        endTime: end,
+        bookingReference: String(booking._id).slice(-8).toUpperCase(),
+        totalAmount: total,
+        advancePaid: received,
+        remainingAmount: total - received,
+        contactPhone: turf.owner?.phone,
+        website: "https://gametrack.in",
+      },
     });
 
-    await OwnerUpdate({
-      phoneNumber: turf.owner.phone,
-      notification_data: {
-        user: fullname,
-        phone: phone,
-        date: new Date(date).toDateString(),
-        slotStart: start,
-        slotEnd: end,
-        duration: ((timeStringToMinutes(end) - timeStringToMinutes(start)) / 60).toFixed(1),
-        sport: "sport",
-        total: slotFees,
-        advance: advanceAmount,
-        remained: slotFees - advanceAmount
-
-
+    try {
+      if (turf.owner?.phone) {
+        await OwnerUpdate({
+          phoneNumber: turf.owner.phone,
+          notification_data: {
+            user: cleanName,
+            phone: cleanPhone,
+            bookingReference: String(booking._id).slice(-8).toUpperCase(),
+            date: new Date(`${date}T00:00:00.000Z`).toDateString(),
+            slotStart: start,
+            slotEnd: end,
+            duration: ((endMinute - startMinute) / 60).toFixed(1),
+            sport,
+            total,
+            advance: received,
+            remained: total - received,
+          },
+        });
       }
-    });
+    } catch (notificationError) {
+      console.error("Manual booking saved, but owner notification failed:", notificationError.message);
+    }
 
-    console.log("newManualBooking", newManualBooking)
-    return res.status(200).json({ message: "Slot status updated successfully", booking: newManualBooking });
-
+    return res.status(201).json({ success: true, message: "Booking confirmed.", booking });
   } catch (error) {
-    console.log("Manual booking Error", error);
-    res.status(200).json({ message: "Manual Booking Error" })
+    if (booking?._id) await Booking.deleteOne({ _id: booking._id }).catch(() => {});
+    if (reserved && req.body?.turfId && req.body?.date) {
+      await Turf.updateOne(
+        { _id: req.body.turfId },
+        { $pull: { "bookedSlots.$[day].slots": { start: req.body.start, end: req.body.end } } },
+        { arrayFilters: [{ "day.date": req.body.date }] }
+      ).catch(() => {});
+    }
+    console.error("Manual booking failed:", error.message);
+    return res.status(500).json({ success: false, message: "We could not save this booking. Please check your connection and try again." });
   }
-}
+};
 
 const cancelBooking = async (req, res) => {
   try {
@@ -410,6 +436,15 @@ const cancelBooking = async (req, res) => {
     if (!bookingId || !date || !turfId) {
       return res.status(400).json({ success: false, message: "Booking ID, date, slot ID, and turf ID are required" });
     }
+
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    const bookingDate = booking.date instanceof Date ? booking.date.toISOString().slice(0, 10) : String(booking.date).slice(0, 10);
+    if (String(booking.turfId) !== String(turfId) || bookingDate !== date ||
+        !booking.slots?.some((slot) => slot.start === start && slot.end === end)) {
+      return res.status(403).json({ success: false, message: "Booking does not belong to this turf or slot" });
+    }
+    if (booking.status === "cancelled") return res.status(409).json({ success: false, message: "Booking is already cancelled" });
 
     const turf = await Turf.findById(turfId);
     if (!turf) {
@@ -431,11 +466,6 @@ const cancelBooking = async (req, res) => {
     }
     await turf.save();
 
-    const booking = await Booking.findById(bookingId);
-    if (!booking) {
-      return res.status(404).json({ success: false, message: "Booking not found" });
-    }
-
     booking.status = 'cancelled';
     await booking.save();
 
@@ -445,6 +475,53 @@ const cancelBooking = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 }
+
+const recordBookingPayment = async (req, res) => {
+  try {
+    const { turfId, amount, method, reference } = req.body;
+    const receivedAmount = Number(amount);
+    if (!turfId || !Number.isFinite(receivedAmount) || receivedAmount <= 0 || !["cash", "upi", "other"].includes(method)) {
+      return res.status(400).json({ success: false, message: "Enter a valid amount and payment method." });
+    }
+
+    const result = await Booking.updateOne(
+      {
+        _id: req.params.bookingId,
+        turfId,
+        status: { $ne: "cancelled" },
+        $expr: {
+          $lte: [
+            { $add: [{ $ifNull: ["$amountPaid", 0] }, receivedAmount] },
+            "$slotFees",
+          ],
+        },
+      },
+      {
+        $inc: { amountPaid: receivedAmount },
+        $push: {
+          paymentHistory: {
+            amount: receivedAmount,
+            method,
+            receivedAt: new Date(),
+            recordedBy: req.auth.data._id,
+            reference: String(reference || "").trim().slice(0, 100),
+          },
+        },
+      }
+    );
+    if (result.modifiedCount !== 1) {
+      const booking = await Booking.findOne({ _id: req.params.bookingId, turfId });
+      if (!booking) return res.status(404).json({ success: false, message: "Booking not found." });
+      if (booking.status === "cancelled") return res.status(409).json({ success: false, message: "A cancelled booking cannot receive a payment." });
+      return res.status(400).json({ success: false, message: "The payment is greater than the remaining balance." });
+    }
+    const booking = await Booking.findById(req.params.bookingId).populate("userId", "fullname phone");
+    return res.status(200).json({ success: true, booking, message: "Payment recorded." });
+  } catch (error) {
+    console.error("Could not record booking payment:", error.message);
+    return res.status(500).json({ success: false, message: "We couldn’t record that payment. Please try again." });
+  }
+};
 
 const getSubscriptions = async (req, res) => {
   try {
@@ -467,211 +544,208 @@ const getSubscriptions = async (req, res) => {
 const generatePdf = async (req, res) => {
   try {
     const { turfId, month, year } = req.query;
-    if (!turfId || !month || !year) {
-      return res.status(400).json({ success: false, message: "Turf ID, month, and year are required" });
+    const monthNumber = Number(month);
+    const yearNumber = Number(year);
+    if (!turfId || !Number.isInteger(monthNumber) || monthNumber < 1 || monthNumber > 12 ||
+        !Number.isInteger(yearNumber) || yearNumber < 2000 || yearNumber > 9999) {
+      return res.status(400).json({ success: false, message: "Choose a valid turf and report month." });
     }
 
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+    const turf = await Turf.findById(turfId).select("name location");
+    if (!turf) return res.status(404).json({ success: false, message: "Turf not found." });
 
-    console.log("startDate", startDate);
-    console.log("endDate", endDate);
-
+    // Booking dates are saved at UTC midnight, so use a UTC half-open month range.
+    const startDate = new Date(Date.UTC(yearNumber, monthNumber - 1, 1));
+    const endDate = new Date(Date.UTC(yearNumber, monthNumber, 1));
     const bookings = await Booking.find({
-      turfId: turfId,
-      date: { $gte: startDate, $lte: endDate }
-    }).populate('userId', 'fullname email phone');
-    console.log("bookings", bookings);
+      turfId,
+      date: { $gte: startDate, $lt: endDate },
+    }).populate("userId", "fullname email phone").sort({ date: 1, _id: 1 });
 
-    const doc = new PDFDocument({ margin: 30, size: 'A4' });
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="bookings_${month}_${year}.pdf"`);
+    const reportMonth = startDate.toLocaleDateString("en-IN", {
+      month: "long", year: "numeric", timeZone: "UTC",
+    });
+    const money = (value) => `INR ${(Number(value) || 0).toLocaleString("en-IN", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+    const activeBookings = bookings.filter((booking) => booking.status !== "cancelled");
+    const collected = activeBookings.reduce((sum, booking) => sum + (Number(booking.amountPaid) || 0), 0);
+    const outstanding = activeBookings.reduce((sum, booking) =>
+      sum + Math.max(0, (Number(booking.slotFees) || 0) - (Number(booking.amountPaid) || 0)), 0);
+    const confirmedCount = bookings.filter((booking) => booking.status === "confirmed").length;
+    const cancelledCount = bookings.filter((booking) => booking.status === "cancelled").length;
 
+    const doc = new PDFDocument({
+      size: "A4",
+      layout: "landscape",
+      margins: { top: 34, bottom: 36, left: 40, right: 40 },
+      bufferPages: true,
+      info: {
+        Title: `${turf.name} bookings - ${reportMonth}`,
+        Author: "GameTrack",
+        Subject: "Monthly booking and payment report",
+      },
+    });
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `attachment; filename="gametrack-bookings-${yearNumber}-${String(monthNumber).padStart(2, "0")}.pdf"`);
     doc.pipe(res);
 
-    // Colors
-    const primaryColor = '#1f2937';
-    const secondaryColor = '#4b5563';
-    const accentColor = '#059669';
-    const lightGray = '#f3f4f6';
-    const borderColor = '#d1d5db';
+    const colors = {
+      ink: "#17212B",
+      muted: "#64748B",
+      green: "#176B50",
+      greenLight: "#EAF5EF",
+      border: "#DCE4E8",
+      row: "#F5F8F8",
+      white: "#FFFFFF",
+      red: "#B42318",
+    };
+    const pageWidth = doc.page.width;
+    const margin = 40;
+    const contentWidth = pageWidth - margin * 2;
 
-    // Header Section
-    doc
-      .fillColor(primaryColor)
-      .fontSize(20)
-      .font('Helvetica-Bold')
-      .text('MONTHLY BOOKINGS REPORT', 50, 50, { align: 'center' });
+    doc.rect(0, 0, pageWidth, 8).fill(colors.green);
+    doc.fillColor(colors.green).font("Helvetica-Bold").fontSize(10)
+      .text("GAMETRACK  /  OWNER REPORT", margin, 28, { characterSpacing: 0.7 });
+    doc.fillColor(colors.ink).fontSize(23)
+      .text("Monthly bookings", margin, 48, { width: contentWidth * 0.65 });
+    doc.fillColor(colors.muted).font("Helvetica").fontSize(10)
+      .text(`${turf.name}${turf.location?.city ? `  |  ${turf.location.city}` : ""}`, margin, 78, { width: contentWidth * 0.65 });
+    doc.fillColor(colors.muted).fontSize(9)
+      .text(`${reportMonth}  |  Generated ${new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short" })}`, margin, 94, { width: contentWidth });
 
-    // Report Details
-    doc
-      .fillColor(secondaryColor)
-      .fontSize(10)
-      .font('Helvetica')
-      .text(`Report Period: ${new Date(year, month - 1).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}`, 50, 80)
-      .text(`Generated On: ${new Date().toLocaleDateString('en-IN')}`, 50, 95)
-      .text(`Total Bookings: ${bookings.length}`, 400, 80)
-      .text(`Total Revenue: ₹${bookings.reduce((sum, b) => sum + (b.amountPaid || 0), 0)}`, 400, 95);
+    const cardY = 119;
+    const gap = 10;
+    const cardWidth = (contentWidth - gap * 3) / 4;
+    const stats = [
+      { label: "TOTAL BOOKINGS", value: String(bookings.length), note: `${cancelledCount} cancelled` },
+      { label: "CONFIRMED", value: String(confirmedCount), note: "Confirmed reservations" },
+      { label: "COLLECTED", value: money(collected), note: "Active bookings only" },
+      { label: "OUTSTANDING", value: money(outstanding), note: "Remaining active balance" },
+    ];
+    stats.forEach((stat, index) => {
+      const x = margin + index * (cardWidth + gap);
+      doc.roundedRect(x, cardY, cardWidth, 62, 8).fill(index === 2 ? colors.greenLight : colors.row);
+      doc.fillColor(colors.muted).font("Helvetica-Bold").fontSize(7.5)
+        .text(stat.label, x + 12, cardY + 10, { width: cardWidth - 24 });
+      doc.fillColor(index === 2 ? colors.green : colors.ink).font("Helvetica-Bold").fontSize(14)
+        .text(stat.value, x + 12, cardY + 25, { width: cardWidth - 24, ellipsis: true, lineBreak: false });
+      doc.fillColor(colors.muted).font("Helvetica").fontSize(7.5)
+        .text(stat.note, x + 12, cardY + 46, { width: cardWidth - 24, ellipsis: true, lineBreak: false });
+    });
 
-    // Table Setup
-    const startY = 120;
-    const rowHeight = 25;
-    const margin = 50;
-    const pageWidth = doc.page.width - (margin * 2);
+    const columns = [
+      { label: "BOOKING", width: 68 },
+      { label: "DATE & TIME", width: 142 },
+      { label: "CUSTOMER", width: 184 },
+      { label: "TOTAL", width: 96, align: "right" },
+      { label: "PAID", width: 96, align: "right" },
+      { label: "DUE", width: 96, align: "right" },
+      { label: "STATUS", width: 80, align: "center" },
+    ];
+    const tableWidth = columns.reduce((sum, column) => sum + column.width, 0);
+    const tableX = margin + (contentWidth - tableWidth) / 2;
+    const headerHeight = 28;
+    const rowHeight = 39;
+    let y = 198;
 
-    // Table Header
-    doc
-      .fillColor(accentColor)
-      .rect(margin, startY, pageWidth, rowHeight)
-      .fill();
-
-    doc
-      .fillColor('#ffffff')
-      .fontSize(9)
-      .font('Helvetica-Bold')
-      .text('#', margin + 5, startY + 8, { width: 25, align: 'center' })
-      .text('CUSTOMER', margin + 35, startY + 8, { width: 80, align: 'left' })
-      .text('DATE', margin + 125, startY + 8, { width: 70, align: 'center' })
-      .text('SLOTS', margin + 205, startY + 8, { width: 90, align: 'center' })
-      .text('ADVANCE', margin + 305, startY + 8, { width: 60, align: 'right' })
-      .text('TOTAL', margin + 375, startY + 8, { width: 60, align: 'right' })
-      .text('BALANCE', margin + 445, startY + 8, { width: 60, align: 'right' })
-      .text('STATUS', margin + 515, startY + 8, { width: 50, align: 'center' });
-
-    let currentY = startY + rowHeight;
+    const drawTableHeader = () => {
+      doc.roundedRect(tableX, y, tableWidth, headerHeight, 5).fill(colors.ink);
+      let x = tableX;
+      columns.forEach((column) => {
+        doc.fillColor(colors.white).font("Helvetica-Bold").fontSize(7.5)
+          .text(column.label, x + 8, y + 10, {
+            width: column.width - 16,
+            align: column.align || "left",
+            lineBreak: false,
+          });
+        x += column.width;
+      });
+      y += headerHeight;
+    };
+    const drawFooter = (page, pages) => {
+      doc.moveTo(margin, doc.page.height - 27).lineTo(pageWidth - margin, doc.page.height - 27)
+        .strokeColor(colors.border).lineWidth(0.6).stroke();
+      doc.fillColor(colors.muted).font("Helvetica").fontSize(8)
+        .text("GameTrack  |  Booking and payment report", margin, doc.page.height - 19, { lineBreak: false });
+      doc.text(`Page ${page} of ${pages}`, pageWidth - margin - 100, doc.page.height - 19, {
+        width: 100, align: "right", lineBreak: false,
+      });
+    };
+    drawTableHeader();
 
     if (bookings.length === 0) {
-      doc
-        .fillColor(secondaryColor)
-        .fontSize(12)
-        .text('No bookings found for this period.', margin, currentY + 20, { align: 'center' });
+      doc.roundedRect(tableX, y + 8, tableWidth, 72, 7).fill(colors.row);
+      doc.fillColor(colors.ink).font("Helvetica-Bold").fontSize(12)
+        .text("No bookings for this month", tableX + 14, y + 29, { width: tableWidth - 28, align: "center" });
+      doc.fillColor(colors.muted).font("Helvetica").fontSize(9)
+        .text("Choose another month to export its booking activity.", tableX + 14, y + 49, { width: tableWidth - 28, align: "center" });
     } else {
-      // Table Rows
       bookings.forEach((booking, index) => {
-        // Check for page break
-        if (currentY + rowHeight > doc.page.height - 50) {
+        if (y + rowHeight > doc.page.height - 44) {
           doc.addPage();
-          currentY = 50;
-
-          // Redraw header on new page
-          doc
-            .fillColor(accentColor)
-            .rect(margin, currentY, pageWidth, rowHeight)
-            .fill()
-            .fillColor('#ffffff')
-            .fontSize(9)
-            .font('Helvetica-Bold')
-            .text('#', margin + 5, currentY + 8, { width: 25, align: 'center' })
-            .text('CUSTOMER', margin + 35, currentY + 8, { width: 80, align: 'left' })
-            .text('DATE', margin + 125, currentY + 8, { width: 70, align: 'center' })
-            .text('SLOTS', margin + 205, currentY + 8, { width: 90, align: 'center' })
-            .text('ADVANCE', margin + 305, currentY + 8, { width: 60, align: 'right' })
-            .text('TOTAL', margin + 375, currentY + 8, { width: 60, align: 'right' })
-            .text('BALANCE', margin + 445, currentY + 8, { width: 60, align: 'right' })
-            .text('STATUS', margin + 515, currentY + 8, { width: 50, align: 'center' });
-
-          currentY += rowHeight;
+          y = 38;
+          doc.fillColor(colors.green).font("Helvetica-Bold").fontSize(9)
+            .text(`MONTHLY BOOKINGS  |  ${turf.name}  |  ${reportMonth}`, margin, y, { width: contentWidth, lineBreak: false });
+          y += 22;
+          drawTableHeader();
         }
 
-        // Alternate row background
-        if (index % 2 === 0) {
-          doc
-            .fillColor(lightGray)
-            .rect(margin, currentY, pageWidth, rowHeight)
-            .fill();
-        }
+        if (index % 2 === 0) doc.rect(tableX, y, tableWidth, rowHeight).fill(colors.row);
+        doc.moveTo(tableX, y + rowHeight).lineTo(tableX + tableWidth, y + rowHeight)
+          .strokeColor(colors.border).lineWidth(0.4).stroke();
 
-        // Reset text color
-        doc.fillColor(primaryColor).font('Helvetica');
-
-        // Row number
-        doc
-          .fontSize(8)
-          .text((index + 1).toString(), margin + 5, currentY + 8, { width: 25, align: 'center' });
-
-        // Customer name (using fullname from populate)
-        const customerName = booking.userId?.fullname || 'Guest User';
-        doc
-          .text(customerName, margin + 35, currentY + 8, { width: 80, align: 'left' });
-
-        // Date
-        const bookingDate = new Date(booking.date).toLocaleDateString('en-IN');
-        doc
-          .text(bookingDate, margin + 125, currentY + 8, { width: 70, align: 'center' });
-
-        // Slot timings
-        const slotText = booking.slots.map(s => `${s.start}-${s.end}`).join(", ");
-        doc
-          .text(slotText, margin + 205, currentY + 8, { width: 90, align: 'center' });
-
-        // Amount paid
-        doc
-          .text(`₹${booking.amountPaid || 0}`, margin + 305, currentY + 8, { width: 60, align: 'right' });
-
-        // Slot fees (Total)
-        doc
-          .text(`₹${booking.slotFees || 0}`, margin + 375, currentY + 8, { width: 60, align: 'right' });
-
-        // Balance amount
-        const balance = (booking.slotFees || 0) - (booking.amountPaid || 0);
-        doc
-          .text(`₹${balance}`, margin + 445, currentY + 8, { width: 60, align: 'right' });
-
-        // Status with color coding
-        const status = booking.status || 'confirmed';
-        const statusColor = status === 'confirmed' ? '#059669' :
-          status === 'cancelled' ? '#dc2626' :
-            '#d97706';
-
-        doc
-          .fillColor(statusColor)
-          .text(status.charAt(0).toUpperCase() + status.slice(1), margin + 515, currentY + 8, { width: 50, align: 'center' })
-          .fillColor(primaryColor);
-
-        // Draw row border
-        doc
-          .strokeColor(borderColor)
-          .lineWidth(0.3)
-          .moveTo(margin, currentY + rowHeight)
-          .lineTo(margin + pageWidth, currentY + rowHeight)
-          .stroke();
-
-        currentY += rowHeight;
+        const customerName = booking.userId?.fullname || booking.fullname || "Guest";
+        const phone = booking.userId?.phone || booking.phone || "Phone not provided";
+        const bookingDate = new Date(booking.date).toLocaleDateString("en-IN", {
+          day: "2-digit", month: "short", year: "numeric", timeZone: "Asia/Kolkata",
+        });
+        const slots = (booking.slots || []).map((slot) => `${slot.start || ""}-${slot.end || ""}`).filter(Boolean).join(", ") || "Time not set";
+        const total = Number(booking.slotFees) || 0;
+        const paid = Number(booking.amountPaid) || 0;
+        const due = booking.status === "cancelled" ? 0 : Math.max(0, total - paid);
+        const values = [
+          { main: String(booking._id || "").slice(-7).toUpperCase(), sub: "Reference" },
+          { main: bookingDate, sub: slots },
+          { main: customerName, sub: phone },
+          { main: money(total), sub: "" },
+          { main: money(paid), sub: booking.paymentType === "Manual" ? "Manual payment" : "Received" },
+          { main: money(due), sub: "" },
+          { main: booking.status || "pending", sub: "" },
+        ];
+        let x = tableX;
+        values.forEach((value, columnIndex) => {
+          const column = columns[columnIndex];
+          const align = column.align || "left";
+          const textX = x + (align === "right" ? 4 : 8);
+          const textWidth = column.width - (align === "right" ? 12 : 16);
+          const isStatus = columnIndex === 6;
+          doc.fillColor(isStatus && booking.status === "cancelled" ? colors.red : colors.ink)
+            .font(isStatus ? "Helvetica-Bold" : "Helvetica-Bold").fontSize(isStatus ? 8 : 8.5)
+            .text(value.main, textX, y + 8, { width: textWidth, align, ellipsis: true, lineBreak: false });
+          if (value.sub) {
+            doc.fillColor(colors.muted).font("Helvetica").fontSize(7.2)
+              .text(value.sub, textX, y + 22, { width: textWidth, align, ellipsis: true, lineBreak: false });
+          }
+          x += column.width;
+        });
+        y += rowHeight;
       });
-
-      // Summary Section at the end
-      const totalRevenue = bookings.reduce((sum, b) => sum + (b.amountPaid || 0), 0);
-      const totalBookings = bookings.length;
-      const confirmedBookings = bookings.filter(b => b.status === 'confirmed').length;
-      const cancelledBookings = bookings.filter(b => b.status === 'cancelled').length;
-
-      doc
-        .fillColor(primaryColor)
-        .fontSize(9)
-        .font('Helvetica-Bold')
-        .text('SUMMARY', margin, currentY + 20)
-        .strokeColor(accentColor)
-        .lineWidth(1)
-        .moveTo(margin, currentY + 25)
-        .lineTo(margin + 100, currentY + 25)
-        .stroke();
-
-      doc
-        .fontSize(8)
-        .font('Helvetica')
-        .text(`Total Bookings: ${totalBookings}`, margin, currentY + 40)
-        .text(`Confirmed: ${confirmedBookings}`, margin + 120, currentY + 40)
-        .text(`Cancelled: ${cancelledBookings}`, margin + 240, currentY + 40)
-        .text(`Total Revenue: ₹${totalRevenue}`, margin + 360, currentY + 40);
     }
 
+    const range = doc.bufferedPageRange();
+    for (let index = range.start; index < range.start + range.count; index += 1) {
+      doc.switchToPage(index);
+      drawFooter(index + 1, range.count);
+    }
     doc.end();
-
   } catch (error) {
     console.error("Error generating PDF:", error);
-    res.status(500).json({ success: false, message: "Internal server error" });
+    if (!res.headersSent) return res.status(500).json({ success: false, message: "Could not generate the bookings report." });
+    res.end();
   }
-}
+};
 
 const updateSubscriptionSlot = async (req, res) => {
   try {
@@ -742,42 +816,45 @@ const addManualSubscription = async (req, res) => {
         status: "active"
       });
 
-      const slotTimeText = `${start} - ${end}`;
       const timeStringToMinutes = time => {
         const [h, m] = time.split(':').map(Number);
         return h * 60 + m;
       };
 
-      // Notify the user via SMS/WhatsApp
-      await sendMessage({
+      // Use the approved subscription templates for both subscription notifications.
+      await UserSubscriptionUpdate({
         phoneNumber: phone,
         notification_data: {
-          name: fullname.split(" ")[0],
+          name: fullname,
           turfName: turf.name,
-          date: `${formattedStartDate} to ${formattedEndDate}`,
-          time: slotTimeText,
-          location: turf.location.city || "City",
-          amount: slotFees,
-          advance: advanceAmount,
-          remaining: slotFees - advanceAmount
-        }
-      });
-
-      // Notify the owner
-      await OwnerUpdate({
-        phoneNumber: turf.owner.phone,
-        notification_data: {
-          user: fullname,
-          phone: phone,
-          date: `${formattedStartDate} to ${formattedEndDate} (Subscription)`,
+          fromDate: formattedStartDate,
+          toDate: formattedEndDate,
+          totalDays: durationDays,
           slotStart: start,
           slotEnd: end,
           duration: ((timeStringToMinutes(end) - timeStringToMinutes(start)) / 60).toFixed(1),
-          sport: sport,
+          sport,
           total: slotFees,
           advance: advanceAmount,
-          remained: slotFees - advanceAmount
-        }
+          remaining: slotFees - advanceAmount,
+        },
+      });
+
+      await OwnerSubscriptionUpdate({
+        phoneNumber: turf.owner.phone,
+        notification_data: {
+          user: fullname,
+          userPhone: phone,
+          fromDate: formattedStartDate,
+          toDate: formattedEndDate,
+          totalDays: durationDays,
+          slotStart: start,
+          slotEnd: end,
+          duration: ((timeStringToMinutes(end) - timeStringToMinutes(start)) / 60).toFixed(1),
+          total: slotFees,
+          advance: advanceAmount,
+          remaining: slotFees - advanceAmount,
+        },
       });
 
       return res.status(200).json({ message: "Subscription created successfully", subscription: newSubscription });
@@ -802,42 +879,27 @@ const sendWhatsAppCampaign = async (req, res) => {
       return res.status(400).json({ success: false, message: "Message content is required." });
     }
 
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
     const contentSid = process.env.TWILIO_CAMPAIGN_SID;
-    let fromNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_WHATSAPP_NUMBER || "whatsapp:+14155238886"; 
-
-    if (fromNumber && !fromNumber.startsWith('whatsapp:')) {
-      fromNumber = `whatsapp:${fromNumber}`;
+    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN ||
+        !(process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER) || !contentSid) {
+      return res.status(500).json({ success: false, message: "Twilio credentials, WhatsApp sender, or TWILIO_CAMPAIGN_SID are not configured." });
     }
 
-    if (!accountSid || !authToken || !contentSid) {
-      return res.status(500).json({ success: false, message: "Twilio credentials or TWILIO_CAMPAIGN_SID not configured on the server." });
-    }
-
-    const client = twilio(accountSid, authToken);
     let sentCount = 0;
     let failedCount = 0;
 
     for (const target of targets) {
       if (!target.phone) continue;
       try {
-        let formattedPhone = target.phone.trim();
-        if (formattedPhone.length === 10) {
-          formattedPhone = `+91${formattedPhone}`;
-        } else if (!formattedPhone.startsWith("+")) {
-           formattedPhone = `+${formattedPhone}`;
-        }
-        
-        await client.messages.create({
-          from: fromNumber,
-          to: `whatsapp:${formattedPhone}`,
-          contentSid: contentSid,
-          contentVariables: JSON.stringify({
-            '1': String(target.name ? target.name.split(" ")[0] : "Customer"),
-            '2': String(message),
-            '3': String(link || "https://gametrack.in")
-          })
+        await sendWhatsAppTemplate({
+          phoneNumber: target.phone,
+          contentSid,
+          templateName: "TWILIO_CAMPAIGN_SID",
+          variables: {
+            1: String(target.name ? target.name.split(" ")[0] : "Customer"),
+            2: String(message),
+            3: String(link || "https://gametrack.in"),
+          },
         });
         sentCount++;
       } catch (err) {
@@ -869,6 +931,7 @@ module.exports = {
   getAvailableSlots,
   addManualBooking,
   cancelBooking,
+  recordBookingPayment,
   getSubscriptions,
   generatePdf,
   updateSubscriptionSlot,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Star, ChevronRight, Bookmark } from 'lucide-react';
 import { BookContext } from '../constexts/bookContext';

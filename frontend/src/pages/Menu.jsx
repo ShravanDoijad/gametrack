@@ -1,9 +1,12 @@
 import React, { useContext, useState } from "react";
-import { Home, CalendarDays, Heart, User, Plus, CalendarClock  } from "lucide-react";
+import { Home, CalendarDays, User, Plus, Wallet, CalendarPlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useLocation } from "react-router-dom";
 import { BookContext } from "../constexts/bookContext";
 import TurfSwitcher from "../components/TurfSwitcher";
+import footballIcon from "../assets/football.png";
+import cricketIcon from "../assets/cricket.png";
+import badmintonIcon from "../assets/badminton.png";
 
 const MobileNav = () => {
   const navigate = useNavigate();
@@ -13,65 +16,34 @@ const MobileNav = () => {
 
 
   
-const commonTabs = [
-  { 
-    id: 'home',
-    icon: <Home size={22} />,
-    label: 'Turfs',
-    path: userInfo?.role==='user'?'/': '/owner/dashboard',
-    active: location.pathname === '/'
-  },
-  
-  { 
-    id: 'profile',
-    icon: <User size={22} />,
-    label: 'Profile',
-    path: token ? '/profile' : '/login',
-    active: location.pathname.includes('profile') || location.pathname.includes('login')
-  },
+const isOwner = userInfo?.role === "owner";
+const commonTabs = isOwner ? [
+  { id: "home", icon: <Home size={21} />, label: "Overview", path: "/owner/dashboard", active: location.pathname === "/owner" || location.pathname.includes("/owner/dashboard") },
+  { id: "bookings", icon: <CalendarDays size={21} />, label: "Bookings", path: "/owner/bookings", active: location.pathname.includes("/owner/bookings") || location.pathname.includes("turfTodaysbookings") },
+  { id: "add", icon: <CalendarPlus size={22} />, label: "Add booking", path: "/owner/time-slots", active: false, primary: true },
+  { id: "payments", icon: <Wallet size={21} />, label: "Payments", path: "/owner/revenue", active: location.pathname.includes("/owner/revenue") },
+  { id: "profile", icon: <User size={21} />, label: "Turf", path: "/owner/turf-profile", active: location.pathname.includes("/owner/turf-profile") },
+] : [
+  { id: "home", icon: <Home size={22} />, label: "Turfs", path: "/", active: location.pathname === "/" || location.pathname.startsWith("/overview/") },
+  { id: "bookings", icon: <CalendarDays size={22} />, label: "Bookings", path: "/userBookings", active: location.pathname.toLowerCase().includes("userbookings") },
+  { id: "profile", icon: <User size={22} />, label: "Profile", path: token ? "/profile" : "/login", active: location.pathname.includes("profile") || location.pathname.includes("login") },
 ];
-
-
-if (userInfo?.role === 'owner') {
-  commonTabs.splice(2, 0, {
-    id: 'timeSlots',
-    icon: <CalendarClock size={22} />,
-    label: 'Time Manager',
-    path: '/owner/time-slots',
-    active: location.pathname.includes('owner/time-slots')
-  });
-  commonTabs.splice(1, 0 ,{
-    id: 'bookings',
-    icon: <CalendarDays size={22} />,
-    label: 'Bookings',
-    path: '/owner/turfTodaysbookings',
-    active: location.pathname.includes('owner/turfTodaysbookings')
-  }  )
-} else {
-
-  commonTabs.splice(1, 0 ,{
-    id: 'bookings',
-    icon: <CalendarDays size={22} />,
-    label: 'Bookings',
-    path: '/userbookings',
-    active: location.pathname.includes('userbookings')
-  }  )
-
-}
 
 
 
   return (
     <>
      
-      <nav className="fixed bottom-4 left-4 right-4 md:left-auto md:right-8 md:w-96 z-50">
-        <div className="flex items-center justify-around h-16 px-2 bg-gray-950/80 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)]">
+      <nav className="fixed bottom-[max(env(safe-area-inset-bottom),0.75rem)] left-3 right-3 z-50 sm:left-5 sm:right-5 md:left-auto md:right-6 md:w-[26rem]">
+        <div className="flex h-[4.25rem] items-stretch justify-around rounded-2xl border border-white/10 bg-gray-950/90 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl sm:px-2">
           {commonTabs.map((tab) => (
             <React.Fragment key={tab.id}>
               
                 <button
                   onClick={() => navigate(tab.path)}
-                  className={`flex flex-col items-center justify-center w-full h-full relative transition-all duration-300 ${tab.active ? 'text-lime-400 scale-110' : 'text-gray-500 hover:text-gray-300 hover:scale-105'}`}
+                  aria-current={tab.active ? 'page' : undefined}
+                  aria-label={tab.label}
+                  className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 ${tab.primary ? "-translate-y-2 rounded-2xl bg-emerald-700 text-white shadow-lg shadow-black/30" : tab.active ? 'text-lime-300' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
                 >
                   <div className="relative">
                     {tab.icon}
@@ -88,13 +60,13 @@ if (userInfo?.role === 'owner') {
                       </span>
                     )}
                   </div>
-                  <span className={`text-[10px] mt-1 font-medium ${tab.active ? 'opacity-100' : 'opacity-0 h-0 overflow-hidden'}`}>{tab.label}</span>
+                  <span className="max-w-full truncate text-[10px] font-medium leading-3 sm:text-[11px]">{tab.label}</span>
                 </button>
                 
             
             </React.Fragment>
           ))}
-          {token && userInfo.role ==="owner" && turfs.length> 1&& <TurfSwitcher/>}
+          {token && userInfo?.role === "owner" && turfs.length > 1 && <TurfSwitcher />}
         </div>
       </nav>
 
@@ -122,7 +94,7 @@ if (userInfo?.role === 'owner') {
               <div className="grid grid-cols-2 gap-3">
                 <button 
                   onClick={() => {
-                    navigate('/booking', { state: { sport: 'football' } });
+                    navigate('/');
                     setShowBookingModal(false);
                   }}
                   className="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl flex flex-col items-center"
@@ -133,7 +105,7 @@ if (userInfo?.role === 'owner') {
                 
                 <button 
                   onClick={() => {
-                    navigate('/booking', { state: { sport: 'cricket' } });
+                    navigate('/');
                     setShowBookingModal(false);
                   }}
                   className="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl flex flex-col items-center"
@@ -144,7 +116,7 @@ if (userInfo?.role === 'owner') {
                 
                 <button 
                   onClick={() => {
-                    navigate('/booking', { state: { sport: 'badminton' } });
+                    navigate('/');
                     setShowBookingModal(false);
                   }}
                   className="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl flex flex-col items-center"
@@ -155,7 +127,7 @@ if (userInfo?.role === 'owner') {
                 
                 <button 
                   onClick={() => {
-                    navigate('/booking');
+                    navigate('/');
                     setShowBookingModal(false);
                   }}
                   className="bg-gray-800 hover:bg-gray-700 p-4 rounded-xl flex flex-col items-center"

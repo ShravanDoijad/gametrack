@@ -1,6 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
-const { turfAllBookings, getCustomers, getTurfDetails, updateTurfProfile, getOwnedTurfs, ownerRegister, dashboardDetails, deleteSlot, getSlots, addSlot, updateSlotStatus, getAvailableSlots, addManualBooking, cancelBooking, getSubscriptions, generatePdf, updateSubscriptionSlot, addManualSubscription, sendWhatsAppCampaign } = require('../controllers/owner-controllers');
+const { turfAllBookings, getCustomers, getTurfDetails, updateTurfProfile, getOwnedTurfs, ownerRegister, dashboardDetails, deleteSlot, getSlots, addSlot, updateSlotStatus, getAvailableSlots, addManualBooking, cancelBooking, recordBookingPayment, getSubscriptions, generatePdf, updateSubscriptionSlot, addManualSubscription, sendWhatsAppCampaign } = require('../controllers/owner-controllers');
 const { createTournament, updateTournament, deleteTournament, getTournaments } = require('../controllers/tournament-controller');
 const { ownerMiddleware } = require("../middleware/ownerMiddleware")
 const ownerRouter = express.Router();
@@ -17,6 +17,7 @@ ownerRouter.get("/availableSlots", ownerMiddleware, getAvailableSlots)
 ownerRouter.post("/addManualBooking", ownerMiddleware, addManualBooking)
 ownerRouter.post("/addManualSubscription", ownerMiddleware, addManualSubscription)
 ownerRouter.post('/cancelBooking', ownerMiddleware, cancelBooking);
+ownerRouter.post('/bookings/:bookingId/payments', ownerMiddleware, recordBookingPayment);
 ownerRouter.get('/subscriptions', ownerMiddleware, getSubscriptions);
 ownerRouter.get('/generate-bookings-pdf', ownerMiddleware, generatePdf);
 ownerRouter.put('/subscriptions/:id', ownerMiddleware, updateSubscriptionSlot);

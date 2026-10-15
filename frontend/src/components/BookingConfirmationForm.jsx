@@ -13,14 +13,12 @@ const BookingConfirmationForm = ({
   setShowCalendar,
   setShowSlotPopup,
   setSelectedCheckOut,
-  paymentOption,
   setPaymentOption,
   handlePayment,
   selectedSport,
   calculateFee,
   isSubscription,
   plan,
-  addSubscription,
   
   dateRange
 }) => {
@@ -57,7 +55,7 @@ const BookingConfirmationForm = ({
 
   useEffect(() => {
     setPaymentOption("advance");
-  }, []);
+  }, [setPaymentOption]);
 
   return (
     <motion.div

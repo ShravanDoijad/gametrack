@@ -155,9 +155,7 @@ const Register = () => {
 
   const handleHome = () => {
     setloginPanel(false);
-    let turfId = null;
-    try { turfId = localStorage.getItem('selectedTurf'); } catch { /* Use the home route if storage is unavailable. */ }
-    navigate(turfId ? `/overview/${turfId}` : '/');
+    navigate('/');
   };
 
   const renderPhoneTab = () => (
@@ -283,7 +281,7 @@ const Register = () => {
           value={form.email}
           onChange={handleChange}
           placeholder="owner@example.com"
-          className="w-full px-4 py-4 rounded-lg border border-gray-300
+          className="w-full px-4 py-4 rounded-lg border text-gray-950 border-gray-300
                    focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100
                    transition-all text-base
                    hover:border-gray-400"
@@ -469,9 +467,9 @@ const Register = () => {
     <main
       role="presentation"
       onMouseDown={(event) => { if (!event.target.closest('[role="dialog"]')) setloginPanel(false); }}
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/65 p-3 backdrop-blur-sm sm:p-6"
+      className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/65 p-3 backdrop-blur-sm sm:items-center sm:p-6"
     >
-        <div className="flex w-full justify-center py-2 sm:py-4">
+        <div className="my-auto flex w-full justify-center py-2 sm:py-4">
           <motion.div
             ref={panelRef}
             role="dialog"

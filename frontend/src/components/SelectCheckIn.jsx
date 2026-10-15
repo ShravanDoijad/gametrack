@@ -1,7 +1,6 @@
-import React, { useState, useContext, useEffect } from "react";
-import { motion, time } from "framer-motion";
-import {toast} from "react-toastify"
-import axios from 'axios'
+/* eslint-disable react/prop-types */
+import { useState } from "react";
+import { motion } from "framer-motion";
 import { Sunrise, Sun, Moon } from "lucide-react";
 const SelectCheckIn = ({
   filteredCheckinTimes,
@@ -9,34 +8,10 @@ const SelectCheckIn = ({
   selectedCheckIn,
   handleCheckIn,
   availableTimes,
+  turfInfo,
 }) => {
-  const [turfInfo, setturfInfo] = useState();
-  const [loading, setloading] = useState(false);
   const [activeZone, setActiveZone] = useState("morning");
 
-
-
-  const getSingleTurf = async (turfId) => {
-    try {
-      setloading(true);
-      const res = await axios.get("/api/turfs/getSingleTurf", {
-        params: { id: turfId },
-      });
-      setturfInfo(res.data.turf);
-    } catch (error) {
-      
-      toast.error(error.response?.data?.message || "Internal server Error");
-    } finally {
-      setloading(false);
-    }
-  };
-
-  useEffect(() => {
-    const savedTurf = localStorage.getItem("selectedTurf");
-    if (savedTurf) {
-      getSingleTurf(savedTurf);
-    }
-  }, []);
 
 
   const timeStringToMinutes = time => {
@@ -64,8 +39,6 @@ const SelectCheckIn = ({
   });
 };
 
-console.log("turfInfo", turfInfo)
-
 const visibleSlots = turfInfo ? getSlotsByTimeZone(activeZone) : [];
 
 const TimeZoneButton = ({ zone, icon, gradient }) => (
@@ -86,7 +59,6 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
     </motion.button>
   );
   
-  console.log("visibleSlot", visibleSlots)
   return (
     <motion.div
       className="mt-6"
@@ -116,14 +88,6 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
           gradient="bg-gradient-to-r from-purple-500 to-indigo-600"
         />
       </div>
-      {loading && (
-        <div className="flex justify-center items-center min-h-[100px]">
-          <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      )}
-
-      
-
       <div className="grid grid-cols-2 gap-3 z-50">
         {visibleSlots?.map((slot, idx) => {
           const isBooked = turfInfo?.bookedSlots

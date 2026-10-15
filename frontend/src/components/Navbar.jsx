@@ -29,11 +29,7 @@ const Navbar = () => {
     setShowDropdown(false);
     navigate(path);
   };
-  const goHome = () => {
-    let turfId = null;
-    try { turfId = localStorage.getItem('selectedTurf'); } catch { /* Use the home route if storage is unavailable. */ }
-    goTo(turfId ? `/overview/${turfId}` : '/');
-  };
+  const goHome = () => goTo('/');
 
   return (
     <motion.nav

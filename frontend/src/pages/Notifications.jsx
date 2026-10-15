@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import axios from "axios";
 import { BookContext } from "../constexts/bookContext";
 import {
@@ -20,9 +20,12 @@ export const Notifications = () => {
     const fetchNotifications = async () => {
       try {
         const response = await axios.get("/api/users/getNotfications");
-        setNotifications(response.data.notifications);
+        if(response.data && response.data.notifications){
+          setNotifications(response.data.notifications);
+        }
+        
       } catch (error) {
-        console.error("Error fetching notifications:", error);
+        console.error("Error fetching notifications:", error.message);
       }
     };
 
@@ -81,7 +84,7 @@ export const Notifications = () => {
           <div className="flex flex-col items-center justify-center mt-20">
             <BellRing className="w-12 h-12 text-gray-500 mb-4" />
             <p className="text-gray-400 text-center text-sm font-medium">
-              You're all caught up!<br />No new notifications right now.
+              You&apos;re all caught up!<br />No new notifications right now.
             </p>
           </div>
         ) : (

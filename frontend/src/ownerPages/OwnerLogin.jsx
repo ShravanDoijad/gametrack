@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, X } from 'lucide-react';
 
 const OwnerLogin = ({ setShowLoginPopup }) => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
   const [error, setError] = useState('');
 
   const handleSendOtp = async () => {

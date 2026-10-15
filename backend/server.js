@@ -64,8 +64,12 @@ app.get("/", (req, res) => {
 app.get("/api/ping", (req, res) => res.status(200).send("pong"));
 
 app.use('/otp', verifyRouter);
+// Keep customer and public turf requests pinned to this deployment's configured turf.
+// A host/slug-based resolver can replace this single-tenant guard when tenant domains are configured.
+app.use('/api/users', forceSingleTurf);
 app.use('/api/users', userRouter);
 app.use('/api/auth', authCheckRouter);
+app.use('/api/turfs', forceSingleTurf);
 app.use('/api/turfs', turfRouter);
 app.use('/owner', ownerRouter);
 app.use('/admin', adminRouter);

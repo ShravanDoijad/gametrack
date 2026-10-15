@@ -18,6 +18,8 @@ const bookingSchema = new mongoose.Schema({
   phone: {
     type: String,
   },
+  sport: { type: String, default: "General" },
+  notes: { type: String, maxlength: 500 },
   date: {
     type: Date,
     required: true,
@@ -33,6 +35,15 @@ const bookingSchema = new mongoose.Schema({
     }
   ],
   amountPaid: Number,
+  paymentHistory: [
+    {
+      amount: { type: Number, required: true, min: 0 },
+      method: { type: String, enum: ["cash", "upi", "online", "other"], required: true },
+      receivedAt: { type: Date, default: Date.now },
+      recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Owner", default: null },
+      reference: String,
+    },
+  ],
 
   originalPrice:Number,
   finalPrice:Number,

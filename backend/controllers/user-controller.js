@@ -13,6 +13,8 @@ const { sendMessage, OwnerUpdate, UserSubscriptionUpdate, OwnerSubscriptionUpdat
 const bookingModel = require("../models/booking-model");
 const subscriptionModel = require('../models/subscription-model')
 const Payment = require("../models/payment-model");
+const { calculateBookingTotal, calculateAdvance } = require("../utils/booking-pricing");
+const { getBookingInterval, isCancellationEligible } = require("../utils/booking-time");
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
@@ -90,7 +92,6 @@ const login = async (req, res) => {
     }
     const { identifier } = req.body;
 
-    console.log(identifier);
     if (!identifier) {
       return res.status(400).json({
         success: false,
@@ -151,17 +152,92 @@ const userLogout = async (req, res) => {
 //create order for booking and subscription
 
 const createOrder = async (req, res) => {
-  const { amount, receipt, bookingDetails, subscriptionDetails } = req.body;
+  let { amount, receipt, bookingDetails, subscriptionDetails } = req.body;
+  const { data: authenticatedUser, role } = req.auth || {};
+  if (role !== "user" || !authenticatedUser?._id) {
+    return res.status(403).json({ success: false, message: "User account required" });
+  }
+  if (!bookingDetails && !subscriptionDetails) {
+    return res.status(400).json({ success: false, message: "Booking details are required" });
+  }
 
+  if (bookingDetails) {
+    const slot = bookingDetails.slots?.[0];
+    if (!bookingDetails.turfId || !/^\d{4}-\d{2}-\d{2}$/.test(bookingDetails.date || "") ||
+        !slot?.start || !slot?.end || !bookingDetails.sport) {
+      return res.status(400).json({ success: false, message: "Invalid booking details" });
+    }
+    const turf = await turfModel.findById(bookingDetails.turfId);
+    if (!turf || turf.isActive === false) {
+      return res.status(404).json({ success: false, message: "Turf not found" });
+    }
+    const total = calculateBookingTotal({ ...turf.toObject(), start: slot.start, end: slot.end });
+    if (total === null || total <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid booking time or price" });
+    }
+    const advance = calculateAdvance(total);
+    if (!advance) {
+      return res.status(400).json({ success: false, message: "Booking advance must be greater than zero" });
+    }
+    bookingDetails = {
+      turfId: turf._id,
+      userId: authenticatedUser._id,
+      date: bookingDetails.date,
+      slots: [slot],
+      sport: bookingDetails.sport,
+      duration: bookingDetails.duration,
+      slotFees: total,
+      amount: advance,
+      paymentType: "advance",
+    };
+    const dateSlots = turf.bookedSlots?.find((entry) => entry.date === bookingDetails.date)?.slots || [];
+    if (dateSlots.some((booked) => booked.start < slot.end && booked.end > slot.start)) {
+      return res.status(409).json({ success: false, message: "This time slot is no longer available" });
+    }
+    amount = advance;
+  } else {
+    const { turfId, planId, fromDate, toDate, slot } = subscriptionDetails;
+    if (!turfId || !planId || !/^\d{4}-\d{2}-\d{2}$/.test(fromDate || "") ||
+        !/^\d{4}-\d{2}-\d{2}$/.test(toDate || "") || !slot?.start || !slot?.end || !subscriptionDetails.sport) {
+      return res.status(400).json({ success: false, message: "Invalid subscription details" });
+    }
+    const turf = await turfModel.findById(turfId);
+    if (!turf || turf.isActive === false) return res.status(404).json({ success: false, message: "Turf not found" });
+    const plan = turf.subscription.id(planId);
+    const durationDays = Number(plan?.days);
+    const durationHours = Number(subscriptionDetails.duration);
+    const startDate = new Date(`${fromDate}T00:00:00.000Z`);
+    const endDate = new Date(`${toDate}T00:00:00.000Z`);
+    const dayCount = Math.round((endDate - startDate) / 86400000) + 1;
+    const startMinutes = Number(slot.start.slice(0, 2)) * 60 + Number(slot.start.slice(3, 5));
+    const endMinutes = Number(slot.end.slice(0, 2)) * 60 + Number(slot.end.slice(3, 5));
+    if (!plan || !Number.isInteger(durationDays) || durationDays !== dayCount ||
+        ![7, 15, 30, 60, 90].includes(durationDays) || !Number.isFinite(durationHours) || durationHours <= 0 ||
+        !/^\d{2}:\d{2}$/.test(slot.start) || !/^\d{2}:\d{2}$/.test(slot.end) ||
+        startMinutes >= 1440 || endMinutes >= 1440 || (endMinutes <= startMinutes && endMinutes + 1440 - startMinutes !== durationHours * 60)) {
+      return res.status(400).json({ success: false, message: "Invalid subscription plan, dates, or time" });
+    }
+    const totalAmount = Math.round(durationHours * Number(plan.amount) * 100) / 100;
+    const advanceAmount = Math.round(totalAmount * 0.2);
+    const platformFee = Math.round(advanceAmount * 0.0218);
+    if (!(totalAmount > 0) || !(advanceAmount > 0)) return res.status(400).json({ success: false, message: "Invalid subscription price" });
+    subscriptionDetails = {
+      turfId: turf._id, planId: plan._id, userId: authenticatedUser._id,
+      fromDate, toDate, durationDays, slot: { start: slot.start, end: slot.end },
+      duration: durationHours.toFixed(1), sport: subscriptionDetails.sport,
+      totalAmount, advanceAmount, platformFee, paymentType: "advance",
+    };
+    amount = advanceAmount + platformFee;
+  }
 
-  console.log("Create order called with:", { amount, receipt, bookingDetails,  });
+  console.log("Create order called for authenticated user and turf:", authenticatedUser._id, bookingDetails?.turfId || subscriptionDetails?.turfId);
   let options = {
-    amount: amount * 100,
+    amount: Math.round(Number(amount) * 100),
     currency: "INR",
-    receipt: receipt,
+    receipt: String(receipt || `booking_${Date.now()}`).slice(0, 40),
   };
 
-  const user = await User.findById(bookingDetails ? bookingDetails.userId : subscriptionDetails.userId)
+  const user = authenticatedUser;
   // user.firstBooking == true;
   // console.log("user first booking", user.firstBooking)
   if (!user) {
@@ -179,45 +255,33 @@ const createOrder = async (req, res) => {
 
   // }
   try {
-    console.log("Creating order with options:", options);
     if (subscriptionDetails) {
       const { turfId, userId, fromDate, toDate, slot } = subscriptionDetails;
+      const requestedStart = Number(slot.start.slice(0, 2)) * 60 + Number(slot.start.slice(3, 5));
+      const requestedEndRaw = Number(slot.end.slice(0, 2)) * 60 + Number(slot.end.slice(3, 5));
+      const requestedEnd = requestedEndRaw <= requestedStart ? requestedEndRaw + 1440 : requestedEndRaw;
+      const turf = await turfModel.findById(turfId);
       const existingUserBooking = await subscriptionModel.findOne({
-        turfId,
-        userId,
-        fromDate,
-        slot: {
-          $elemMatch: {
-            start: { $lt: subscriptionDetails.slot.end },
-            end: { $gt: subscriptionDetails.slot.start }
-          }
-        },
+        turfId, userId, startDate: { $lte: new Date(`${toDate}T23:59:59.999Z`) },
+        endDate: { $gte: new Date(`${fromDate}T00:00:00.000Z`) }, status: { $ne: "cancelled" },
+        "slot.start": slot.start,
       });
-
-      if (existingUserBooking) {
-        return res.status(409).json({
-          success: false,
-          message: "You've already booked one of these slots",
-        });
-      }
-
-      const overlappingBooking = await Booking.findOne({
-        turfId: subscriptionDetails.turfId,
-        date: subscriptionDetails.date,
-        slots: {
-          $elemMatch: {
-            start: { $lt: subscriptionDetails.slot.end },
-            end: { $gt: subscriptionDetails.slot.start }
-          }
-        },
-        status: { $ne: "cancelled" },
+      const subscriptionConflict = turf?.subscriptionSlots?.some((entry) => {
+        const inDateRange = entry.fromDate <= toDate && entry.toDate >= fromDate;
+        const occupiedStart = Number(entry.slot.start.slice(0, 2)) * 60 + Number(entry.slot.start.slice(3, 5));
+        const occupiedEndRaw = Number(entry.slot.end.slice(0, 2)) * 60 + Number(entry.slot.end.slice(3, 5));
+        const occupiedEnd = occupiedEndRaw <= occupiedStart ? occupiedEndRaw + 1440 : occupiedEndRaw;
+        return inDateRange && requestedStart < occupiedEnd && requestedEnd > occupiedStart;
       });
-
-      if (overlappingBooking) {
-        return res.status(409).json({
-          success: false,
-          message: "One or more slots are already booked",
-        });
+      const ordinaryConflict = turf?.bookedSlots?.some((day) => day.date >= fromDate && day.date <= toDate &&
+        day.slots?.some((occupied) => {
+          const occupiedStart = Number(occupied.start.slice(0, 2)) * 60 + Number(occupied.start.slice(3, 5));
+          const occupiedEndRaw = Number(occupied.end.slice(0, 2)) * 60 + Number(occupied.end.slice(3, 5));
+          const occupiedEnd = occupiedEndRaw <= occupiedStart ? occupiedEndRaw + 1440 : occupiedEndRaw;
+          return requestedStart < occupiedEnd && requestedEnd > occupiedStart;
+        }));
+      if (existingUserBooking || subscriptionConflict || ordinaryConflict) {
+        return res.status(409).json({ success: false, message: "One or more slots are already booked" });
       }
 
       const pendingPayment = await Payment.findOne({
@@ -245,42 +309,15 @@ const createOrder = async (req, res) => {
       });
 
       return res.json({ order });
-      return res.json({ order });
 
     } else {
-      const { turfId, userId, date, slots } = bookingDetails
-      const existingUserBooking = await Booking.findOne({
+      const { turfId, userId, date, slots } = bookingDetails;
+      const requestedSlot = slots[0];
+      const overlappingBooking = await Booking.findOne({
         turfId,
-        userId,
         date,
         slots: {
-          $elemMatch: {
-            $or: bookingDetails?.slots.map((slot) => ({
-              start: { $lt: slot.end },
-              end: { $gt: slot.start },
-            })),
-          },
-        },
-
-        status: { $ne: "cancelled" },
-      });
-
-      if (existingUserBooking) {
-        return res.status(409).json({
-          success: false,
-          message: "You've already booked one of these slots",
-        });
-      }
-      const overlappingBooking = await Booking.findOne({
-        turfId: bookingDetails.turfId,
-        date: bookingDetails.date,
-        slots: {
-          $elemMatch: {
-            $or: bookingDetails.slots.map((slot) => ({
-              start: slot.start,
-              end: slot.end,
-            })),
-          },
+          $elemMatch: { start: { $lt: requestedSlot.end }, end: { $gt: requestedSlot.start } },
         },
         status: { $ne: "cancelled" },
       });
@@ -292,18 +329,24 @@ const createOrder = async (req, res) => {
         });
       }
 
-      const pendingPayment = await Payment.findOne({
-        userId: bookingDetails.userId,
+      const activeSince = new Date(Date.now() - 15 * 60 * 1000);
+      const pendingQuery = {
         status: { $in: ['created', 'attempted'] },
-        "booking.turfId": bookingDetails.turfId,
-        "booking.date": bookingDetails.date,
-        "booking.slots.0.start": bookingDetails.slots[0].start
-      });
+        createdAt: { $gte: activeSince },
+        "booking.turfId": turfId,
+        "booking.date": date,
+        "booking.slots": { $elemMatch: { start: { $lt: requestedSlot.end }, end: { $gt: requestedSlot.start } } }
+      };
+      const pendingPayment = await Payment.findOne({ ...pendingQuery, userId });
 
       if (pendingPayment) {
         return res.json({
           order: { id: pendingPayment.orderId, amount: pendingPayment.amount }
         });
+      }
+      const anotherCustomerPayment = await Payment.exists(pendingQuery);
+      if (anotherCustomerPayment) {
+        return res.status(409).json({ success: false, message: "This slot has a payment in progress" });
       }
 
       const order = await razorpay.orders.create(options);
@@ -350,34 +393,22 @@ const updateSubscriptionSlots = async (turfId, subscriptionDetails) => {
   }
 };
 const updateTurfBookedSlots = async (turfId, bookingDetails) => {
-  const turf = await turfModel.findById(turfId);
-
-  const exists = turf.bookedSlots.find(
-    (entry) => entry.date === bookingDetails.date
+  const slot = bookingDetails.slots[0];
+  const overlaps = { start: { $lt: slot.end }, end: { $gt: slot.start } };
+  const existingDateUpdate = await turfModel.updateOne(
+    {
+      _id: turfId,
+      bookedSlots: { $elemMatch: { date: bookingDetails.date, slots: { $not: { $elemMatch: overlaps } } } },
+    },
+    { $push: { "bookedSlots.$.slots": slot } }
   );
+  if (existingDateUpdate.modifiedCount === 1) return true;
 
-  if (exists) {
-    await turfModel.updateOne(
-      { _id: turfId, "bookedSlots.date": bookingDetails.date },
-      {
-        $push: {
-          "bookedSlots.$.slots": bookingDetails.slots[0],
-        },
-      }
-    );
-  } else {
-    await turfModel.updateOne(
-      { _id: turfId },
-      {
-        $push: {
-          bookedSlots: {
-            date: bookingDetails.date,
-            slots: bookingDetails.slots,
-          },
-        },
-      }
-    );
-  }
+  const newDateUpdate = await turfModel.updateOne(
+    { _id: turfId, bookedSlots: { $not: { $elemMatch: { date: bookingDetails.date } } } },
+    { $push: { bookedSlots: { date: bookingDetails.date, slots: [slot] } } }
+  );
+  return newDateUpdate.modifiedCount === 1;
 };
 
 const confirmBookingWithoutAdvance = async (req, res) => {
@@ -387,14 +418,19 @@ const confirmBookingWithoutAdvance = async (req, res) => {
       return res.status(403).json({ success: false, message: "User account required" });
     }
     const { bookingDetails } = req.body;
-    const { turfId, date, slots, sport, slotFees } = bookingDetails || {};
+    const { turfId, date, slots, sport } = bookingDetails || {};
     const slot = slots?.[0];
-    if (!turfId || !date || !slot?.start || !slot?.end || !sport || !Number.isFinite(Number(slotFees)) || Number(slotFees) <= 0) {
+    if (!turfId || !date || !slot?.start || !slot?.end || !sport) {
       return res.status(400).json({ success: false, message: "Invalid booking details" });
     }
 
     const turf = await turfModel.findById(turfId).populate("owner", "turfname phone");
     if (!turf) return res.status(404).json({ success: false, message: "Turf not found" });
+
+    const slotFees = calculateBookingTotal({ ...turf.toObject(), start: slot.start, end: slot.end });
+    if (slotFees === null || slotFees <= 0) {
+      return res.status(400).json({ success: false, message: "Invalid booking time or price" });
+    }
 
     const existingDate = turf.bookedSlots?.find((entry) => entry.date === date);
     const overlaps = (existing) => existing.start < slot.end && existing.end > slot.start;
@@ -415,7 +451,11 @@ const confirmBookingWithoutAdvance = async (req, res) => {
       paymentType: "Manual",
       status: "confirmed",
     });
-    await updateTurfBookedSlots(turfId, { date, slots: [slot] });
+    const reserved = await updateTurfBookedSlots(turfId, { date, slots: [slot] });
+    if (!reserved) {
+      await Booking.deleteOne({ _id: booking._id });
+      return res.status(409).json({ success: false, message: "This time slot is no longer available" });
+    }
 
     const slotTimeText = `${slot.start} - ${slot.end}`;
     await Promise.all([
@@ -449,8 +489,9 @@ const confirmBookingWithoutAdvance = async (req, res) => {
 
 const verifyOrder = async (req, res) => {
   try {
-    const { data: user, role } = req.auth
-    const {
+    const { data: user, role } = req.auth;
+    if (role !== "user") return res.status(403).json({ success: false, message: "User account required" });
+    let {
       razorpay_order_id,
       razorpay_payment_id,
       razorpay_signature,
@@ -458,28 +499,11 @@ const verifyOrder = async (req, res) => {
       subscriptionDetails
     } = req.body;
 
-    if (user.firstBooking && bookingDetails) {
-      user.firstBooking = false
-      await user.save()
-    }
+    let details = subscriptionDetails ? subscriptionDetails : bookingDetails;
+    const userId = user._id;
 
-
-    const details = subscriptionDetails ? subscriptionDetails : bookingDetails
-    const userId = user._id || details.userId;
-
-    const userData = await User.findById(userId);
-    const turf = await turfModel
-      .findById(details.turfId)
-      .populate("owner", "turfname phone");
-
-    const turfName = turf?.owner?.turfname || "your turf";
-
-    const alreadyProcessed = await Booking.findOne({
-      $or: [
-        { razorpay_payment_id },
-        { razorpay_order_id }
-      ]
-    });
+    const alreadyProcessed = await Booking.findOne({ userId, $or: [{ razorpay_payment_id }, { razorpay_order_id }] }) ||
+      await subscriptionModel.findOne({ userId, $or: [{ razorpay_payment_id }, { razorpay_order_id }] });
 
     if (alreadyProcessed) {
       return res.status(200).json({
@@ -490,6 +514,7 @@ const verifyOrder = async (req, res) => {
     }
     const paymentExists = await Payment.findOne({
       orderId: razorpay_order_id,
+      userId,
       status: { $in: ["created", "attempted"] }
     });
 
@@ -499,6 +524,23 @@ const verifyOrder = async (req, res) => {
         message: "Invalid or expired payment order"
       });
     }
+
+    if (paymentExists.booking?.turfId) {
+      bookingDetails = paymentExists.booking.toObject?.() || paymentExists.booking;
+      subscriptionDetails = null;
+      details = bookingDetails;
+    } else if (paymentExists.subscription?.turfId) {
+      subscriptionDetails = paymentExists.subscription.toObject?.() || paymentExists.subscription;
+      bookingDetails = null;
+      details = subscriptionDetails;
+    } else {
+      return res.status(400).json({ success: false, message: "Booking data is missing from this payment order" });
+    }
+
+    const userData = user;
+    const turf = await turfModel.findById(details.turfId).populate("owner", "turfname phone");
+    if (!turf) return res.status(404).json({ success: false, message: "Turf not found" });
+    const turfName = turf?.owner?.turfname || turf.name || "your turf";
 
     const sign = razorpay_order_id + "|" + razorpay_payment_id;
     const expectedSignature = crypto
@@ -512,14 +554,26 @@ const verifyOrder = async (req, res) => {
         .json({ success: false, message: "Invalid payment signature" });
     }
 
+    const razorpayPayment = await razorpay.payments.fetch(razorpay_payment_id);
+    if (razorpayPayment.order_id !== razorpay_order_id ||
+        razorpayPayment.status !== "captured" ||
+        Number(razorpayPayment.amount) !== Number(paymentExists.amount)) {
+      return res.status(400).json({ success: false, message: "Payment amount or status could not be verified" });
+    }
+
+    if (!subscriptionDetails) {
+      const reserved = await updateTurfBookedSlots(details.turfId, details);
+      if (!reserved) {
+        await razorpay.payments.refund(razorpay_payment_id, { amount: Number(paymentExists.amount) });
+        await Payment.updateOne({ orderId: razorpay_order_id }, { $set: { status: "failed" } });
+        return res.status(409).json({ success: false, message: "The slot was taken during payment. The payment has been refunded." });
+      }
+    }
+
     await Payment.updateOne(
       { orderId: razorpay_order_id },
       { $set: { status: "paid" } }
     );
-
-    if (!subscriptionDetails) {
-      await updateTurfBookedSlots(details.turfId, details);
-    }
 
 
     if (!userId) {
@@ -539,6 +593,7 @@ const verifyOrder = async (req, res) => {
         slot: subscriptionDetails.slot,
         sport: subscriptionDetails.sport,
         durationDays: subscriptionDetails.durationDays,
+        daysOfWeek: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
         amountPaid: subscriptionDetails.advanceAmount,
         totalAmount: subscriptionDetails.totalAmount,
         razorpay_payment_id,
@@ -559,12 +614,23 @@ const verifyOrder = async (req, res) => {
         originalPrice: bookingDetails.originalPrice,
         finalPrice: bookingDetails.finalPrice,
         amountPaid: bookingDetails.amount,
+        paymentHistory: bookingDetails.amount > 0 ? [{
+          amount: bookingDetails.amount,
+          method: "online",
+          receivedAt: new Date(),
+          reference: razorpay_payment_id,
+        }] : [],
         razorpay_payment_id,
         razorpay_order_id,
         paymentType: bookingDetails.paymentType,
         status: "confirmed",
         reminderSent: false,
       });
+    }
+
+    if (user.firstBooking && bookingDetails) {
+      user.firstBooking = false;
+      await user.save();
     }
 
     if (!subscriptionDetails) {
@@ -578,6 +644,7 @@ const verifyOrder = async (req, res) => {
         phoneNumber: userData.phone,
         notification_data: {
           name: userData.fullname.split(" ")[0],
+          bookingReference: String(newBooking._id).slice(-8).toUpperCase(),
           turfName: turfName,
           date: new Date(bookingDetails.date).toDateString(),
           time: slotTimeText,
@@ -594,6 +661,7 @@ const verifyOrder = async (req, res) => {
         notification_data: {
           user: userData.fullname,
           phone: userData.phone,
+          bookingReference: String(newBooking._id).slice(-8).toUpperCase(),
           date: new Date(bookingDetails.date).toDateString(),
           slotStart: bookingDetails.slots[0].start,
           slotEnd: bookingDetails.slots[0].end,
@@ -632,7 +700,6 @@ const verifyOrder = async (req, res) => {
     }
     else if (subscriptionDetails) {
 
-      await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
       await UserSubscriptionUpdate({
         phoneNumber: userData.phone,
         notification_data: {
@@ -707,14 +774,77 @@ const getAllBookings = async (req, res) => {
         .json({ success: false, message: "Unauthorised, Login First" });
     }
     const allBookings = await Booking.find({ userId: userId }).populate("turfId", "name");
-    console.log("all bookings", allBookings)
     res.status(200).json({ success: true, allBookings: allBookings });
   } catch (error) {
-    console.log("Error to Fetch Bookings", error);
+    console.error("Error fetching bookings:", error.message);
     return res.status(500).json({
       success: false,
       message: "Fetch Bookings Error",
     });
+  }
+};
+
+const getBookingConfirmation = async (req, res) => {
+  try {
+    const { data: user, role } = req.auth || {};
+    if (role !== "user") return res.status(403).json({ success: false, message: "User account required" });
+    const booking = await Booking.findOne({ _id: req.params.bookingId, userId: user._id })
+      .populate("turfId", "name location");
+    if (booking) return res.json({ success: true, booking, kind: "booking" });
+    const subscription = await subscriptionModel.findOne({ _id: req.params.bookingId, userId: user._id })
+      .populate("turfId", "name location");
+    if (!subscription) return res.status(404).json({ success: false, message: "Booking not found" });
+    return res.json({ success: true, subscription, kind: "subscription" });
+  } catch (error) {
+    return res.status(400).json({ success: false, message: "Invalid booking reference" });
+  }
+};
+
+const cancelCustomerBooking = async (req, res) => {
+  try {
+    const { data: user, role } = req.auth || {};
+    if (role !== "user") return res.status(403).json({ success: false, message: "User account required" });
+    const booking = await Booking.findOne({ _id: req.params.bookingId, userId: user._id });
+    if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+    if (booking.status !== "confirmed") return res.status(409).json({ success: false, message: "Only confirmed bookings can be cancelled" });
+
+    const firstSlot = booking.slots?.[0];
+    const interval = getBookingInterval(booking.date, firstSlot);
+    if (!interval || !booking.createdAt) {
+      return res.status(400).json({ success: false, message: "Booking date or time is invalid" });
+    }
+    if (!isCancellationEligible({ createdAt: booking.createdAt, date: booking.date, slot: firstSlot })) {
+      return res.status(409).json({ success: false, message: "Cancellation is available only within 24 hours of booking and more than 24 hours before the slot" });
+    }
+    if (Number(booking.amountPaid || 0) > 0 || booking.razorpay_payment_id) {
+      return res.status(409).json({ success: false, message: "This booking has a payment. Please contact the turf to arrange cancellation and any refund." });
+    }
+
+    const turf = await turfModel.findById(booking.turfId);
+    if (!turf) return res.status(404).json({ success: false, message: "Turf not found" });
+    const dateKey = booking.date.toISOString().slice(0, 10);
+    const day = turf.bookedSlots.find((entry) => entry.date === dateKey);
+    if (!day) return res.status(409).json({ success: false, message: "This slot is no longer listed as booked" });
+    const bookingSlots = booking.slots || [];
+    const cancellation = await Booking.updateOne(
+      { _id: booking._id, userId: user._id, status: "confirmed", amountPaid: { $in: [null, 0] }, $or: [{ razorpay_payment_id: { $exists: false } }, { razorpay_payment_id: null }] },
+      { $set: { status: "cancelled" } }
+    );
+    if (cancellation.modifiedCount !== 1) return res.status(409).json({ success: false, message: "This booking can no longer be cancelled" });
+
+    const removed = await turfModel.updateOne(
+      { _id: turf._id, bookedSlots: { $elemMatch: { date: dateKey, slots: { $elemMatch: { $or: bookingSlots.map(({ start, end }) => ({ start, end })) } } } } },
+      { $pull: { "bookedSlots.$.slots": { $or: bookingSlots.map(({ start, end }) => ({ start, end })) } } }
+    );
+    if (removed.modifiedCount !== 1) {
+      await Booking.updateOne({ _id: booking._id, status: "cancelled" }, { $set: { status: "confirmed" } });
+      return res.status(409).json({ success: false, message: "Could not release the booked slot. Please try again." });
+    }
+    const cancelledBooking = await Booking.findById(booking._id).populate("turfId", "name");
+    return res.json({ success: true, booking: cancelledBooking, message: "Booking cancelled" });
+  } catch (error) {
+    console.error("Customer cancellation failed:", error.message);
+    return res.status(500).json({ success: false, message: "Could not cancel this booking" });
   }
 };
 
@@ -952,15 +1082,9 @@ const getAllNotifications = async (req, res) => {
 
     }
 
-    if (!notifications || notifications.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: "No notifications found",
-      });
-    }
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      notifications,
+      notifications: notifications || [],
     });
   } catch (error) {
     console.error("Error fetching notifications:", error);
@@ -1152,6 +1276,8 @@ module.exports = {
   confirmBookingWithoutAdvance,
   verifyOrder,
   getAllBookings,
+  getBookingConfirmation,
+  cancelCustomerBooking,
   updateUser,
   deleteUser,
   addFavorite,

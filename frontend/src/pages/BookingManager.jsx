@@ -1,6 +1,6 @@
 /* eslint-disable react/prop-types */
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import { ArrowLeft, CalendarDays } from "lucide-react";
@@ -18,6 +18,19 @@ const LANGS = [
 const TEXT = { en, mr, hi };
 
 const DURATIONS = [1, 1.5, 2, 3];
+const formatINR = (amount) => `\u20b9${(Number(amount) || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const calculateIntervalTotal = (turf, startMinute, durationHours) => {
+  const [cutoffHour, cutoffMinute = 0] = (turf?.nightPriceStart || "").split(":").map(Number);
+  const cutoff = Number.isFinite(cutoffHour) ? cutoffHour * 60 + cutoffMinute : null;
+  const endMinute = startMinute + durationHours * 60;
+  let total = 0;
+  for (let minute = startMinute; minute < endMinute; minute += 1) {
+    const minuteOfDay = minute % 1440;
+    const rate = cutoff !== null && minuteOfDay >= cutoff ? Number(turf.nightPrice) : Number(turf.dayPrice);
+    total += rate / 60;
+  }
+  return Math.round((total + Number.EPSILON) * 100) / 100;
+};
 const durationLabel = (d, t) => d === 1
   ? t("durationOne")
   : d === 1.5
@@ -97,12 +110,14 @@ const BookingManager = () => {
   };
   const location = useLocation();
   const navigate = useNavigate();
+  const { turfId: routeTurfId } = useParams();
+  const [searchParams] = useSearchParams();
+  const requestedTurfId = routeTurfId || searchParams.get("turfId") || location.state?.turfId;
   const timeStepRef = useRef(null);
   const durationStepRef = useRef(null);
   const summaryRef = useRef(null);
 
-  const plan = location.state?.plan; // set when the customer picked a monthly plan
-  const isSubscription = plan?.days > 0;
+  const selectedPlanId = searchParams.get("planId");
 
   const [turf, setTurf] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -121,8 +136,7 @@ const BookingManager = () => {
   /* ---- load the (single) turf ---- */
 
   useEffect(() => {
-    const turfId = location.state?.turfId;
-    if (!turfId) {
+    if (!requestedTurfId) {
       setLoading(false);
       toast.error(
         t("turfIdMissing"),
@@ -133,7 +147,7 @@ const BookingManager = () => {
     const load = async () => {
       try {
         const res = await axios.get("/api/turfs/getSingleTurf", {
-          params: { id: turfId },
+          params: { id: requestedTurfId },
         });
         setTurf(res.data.turf);
       } catch (error) {
@@ -146,7 +160,13 @@ const BookingManager = () => {
     };
 
     load();
-  }, [location.state?.turfId]);
+  }, [requestedTurfId]);
+
+  const plan = selectedPlanId
+    ? turf?.subscription?.find((item) => item._id === selectedPlanId)
+    : location.state?.plan;
+  const invalidPlan = Boolean(selectedPlanId && turf && !plan);
+  const isSubscription = Number(plan?.days) > 0;
 
   useEffect(() => {
     if (!turf) return;
@@ -234,7 +254,7 @@ const BookingManager = () => {
       ? turf.nightPrice
       : turf.dayPrice;
   };
-  const feeFor = (start, hours) => hours * priceFor(start);
+  const feeFor = (start, hours) => calculateIntervalTotal(turf, start, hours);
 
   const money = useMemo(() => {
     if (!turf || startMin === null || !duration) return null;
@@ -250,7 +270,7 @@ const BookingManager = () => {
       };
     }
     const total = feeFor(startMin, duration);
-    const payNow = Math.round(total * 0.2) * Math.floor(duration);
+    const payNow = Math.round(total * 0.2 * 100) / 100;
     return { total, payNow, fee: 0, payLater: Math.max(total - payNow, 0) };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [turf, startMin, duration, isSubscription, plan]);
@@ -313,17 +333,7 @@ const BookingManager = () => {
       };
       const { data } = await axios.post("/api/users/confirmBooking", { bookingDetails });
       if (!data.success) throw new Error(data.message || t("bookingError"));
-      navigate("/booking/confirmation", {
-        state: {
-          confirmation: {
-            date: fullDate(date),
-            time: `${to12h(startMin)} â€“ ${to12h(startMin + duration * 60)}`,
-            payLater: money.total,
-            isSubscription: false,
-          },
-          turfName: turf.name,
-        },
-      });
+      navigate(`/booking/confirmation/${data.booking._id}`);
     } catch (error) {
       toast.error(error.response?.data?.message || error.message || t("failed"));
     } finally {
@@ -360,7 +370,7 @@ const BookingManager = () => {
             razorpay_signature: response.razorpay_signature,
             ...verifyBody,
           });
-          if (verify.data.success) onDone();
+          if (verify.data.success && verify.data.booking?._id) onDone(verify.data.booking);
           else toast.error(t("failed"));
         } catch (err) {
           console.error(err);
@@ -385,18 +395,12 @@ const BookingManager = () => {
     const start = toMilitary(startMin);
     const end = toMilitary(startMin + duration * 60);
     const durationText = duration.toFixed(1);
-    const summary = {
-      date: fullDate(date),
-      time: `${to12h(startMin)} â€“ ${to12h(startMin + duration * 60)}`,
-      payLater: money.payLater,
-      isSubscription,
-    };
-
     try {
       if (isSubscription) {
         const subscriptionDetails = {
           turfId: turf._id,
           userId: userInfo._id,
+          planId: plan._id,
           durationDays: parseInt(plan.days),
           fromDate: dateKey(date),
           toDate: dateKey(planEnd),
@@ -419,7 +423,7 @@ const BookingManager = () => {
           title: `${turf.name} Subscription (Advance)`,
           description: `Subscription advance for ${sport}`,
           verifyBody: { subscriptionDetails },
-          onDone: () => navigate("/booking/confirmation", { state: { confirmation: summary, turfName: turf.name } }),
+          onDone: (booking) => navigate(`/booking/confirmation/${booking._id}`),
         });
       } else {
         const bookingDetails = {
@@ -448,7 +452,7 @@ const BookingManager = () => {
           title: `${turf.name} Booking`,
           description: `Booking for ${sport}`,
           verifyBody: { bookingDetails },
-          onDone: () => navigate("/booking/confirmation", { state: { confirmation: summary, turfName: turf.name } }),
+          onDone: (booking) => navigate(`/booking/confirmation/${booking._id}`),
         });
       }
     } catch (error) {
@@ -465,6 +469,15 @@ const BookingManager = () => {
     return (
       <div className="text-white text-center mt-24 text-xl px-6">
         {t("turfNotFound")}
+      </div>
+    );
+  }
+
+  if (invalidPlan) {
+    return (
+      <div className="mx-auto mt-24 max-w-xl px-6 text-center text-white">
+        <p className="text-xl font-bold">{t("turfNotFound")}</p>
+        <button onClick={() => navigate(`/overview/${turf._id}`)} className="mt-5 rounded-xl bg-lime-400 px-5 py-3 font-bold text-gray-950">Back to turf</button>
       </div>
     );
   }
@@ -604,7 +617,7 @@ const BookingManager = () => {
           />
           <Row
             label={t("time")}
-            value={`${to12h(startMin)} â€“ ${to12h(startMin + duration * 60)}`}
+            value={`${to12h(startMin)} - ${to12h(startMin + duration * 60)}`}
           />
           <Row label={t("stepHours")} value={durationLabel(duration, t)} />
           <Row label={t("hourlyRate")} value={`\u20b9${Math.round(money.total / duration)}`} />
@@ -612,20 +625,20 @@ const BookingManager = () => {
             label={t("game")}
             value={<span className="capitalize">{sport}</span>}
           />
-          <Row label={t("total")} value={`â‚¹${money.total}`} />
+          <Row label={t("total")} value={`${money.total}`} />
           {money.fee > 0 && (
-            <Row label={t("onlineFee")} value={`â‚¹${money.fee}`} />
+            <Row label={t("onlineFee")} value={`${money.fee}`} />
           )}
           <div className="mt-3 pt-3 border-t border-white/15">
             <Row
               label={t("payNow")}
               value={
                 <span className="text-2xl font-extrabold text-lime-400">
-                  â‚¹{money.payNow}
+                  {money.payNow}
                 </span>
               }
             />
-            <Row label={t("payAtTurf")} value={`â‚¹${money.payLater}`} />
+            <Row label={t("payAtTurf")} value={`${money.payLater}`} />
           </div>
 
       {turf.onSitePolicies?.length > 0 && (
@@ -635,7 +648,7 @@ const BookingManager = () => {
               </summary>
               <ul className="mt-2 space-y-1">
                 {turf.onSitePolicies.map((p, i) => (
-                  <li key={i}>â€¢ {p}</li>
+                  <li key={i}> {p}</li>
                 ))}
               </ul>
             </details>
@@ -649,7 +662,7 @@ const BookingManager = () => {
           {ready && (
             <div className="mb-2 flex items-center justify-between gap-3 px-1 text-sm">
               <span className="truncate text-gray-300">{fullDate(date)} | {to12h(startMin)} | {durationLabel(duration, t)}</span>
-              <span className="shrink-0 font-extrabold text-white">{"\u20b9"}{money.total}</span>
+              <span className="shrink-0 font-extrabold text-white">{money.total}</span>
             </div>
           )}
           <button
@@ -681,9 +694,9 @@ const BookingManager = () => {
               <Row label={t("common.time")} value={`${to12h(startMin)} - ${to12h(startMin + duration * 60)}`} />
               <Row label={t("common.game")} value={<span className="capitalize">{sport}</span>} />
               {isSubscription && <Row label={t("plan")} value={`${plan.days} ${t("common.days")}`} />}
-              <Row label={t("total")} value={`\u20b9${money.total}`} />
-              <Row label={t("payNow")} value={<span className="font-extrabold text-lime-400">\u20b9{money.payNow}</span>} />
-              <Row label={t("payAtTurf")} value={`\u20b9${money.payLater}`} />
+              <Row label={t("total")} value={formatINR(money.total)} />
+              <Row label={t("payNow")} value={<span className="font-extrabold text-lime-400">{formatINR(money.payNow)}</span>} />
+              <Row label={t("payAtTurf")} value={formatINR(money.payLater)} />
             </div>
 
             {checkoutStep === "confirmation" && (
@@ -720,14 +733,14 @@ const BookingManager = () => {
                     <legend className="mb-2 text-sm font-bold text-gray-200">{t("paymentChoice")}</legend>
                     <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${paymentChoice === "later" ? "border-lime-400 bg-lime-400/10" : "border-white/10 bg-white/5"}`}>
                       <input type="radio" name="booking-payment-choice" value="later" checked={paymentChoice === "later"} onChange={() => setPaymentChoice("later")} className="mt-1 accent-lime-400" />
-                      <span><span className="block font-bold text-white">{t("withoutAdvance")}</span><span className="text-sm text-gray-400">{t("payAtTurfAmount", { amount: money.total })}</span></span>
+                      <span><span className="block font-bold text-white">{t("withoutAdvance")}</span><span className="text-sm text-gray-400">{t("payAtTurfAmount", { amount: Number(money.total).toLocaleString("en-IN", { maximumFractionDigits: 2 }) })}</span></span>
                     </label>
                     <label className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 ${paymentChoice === "advance" ? "border-lime-400 bg-lime-400/10" : "border-white/10 bg-white/5"}`}>
                       <input type="radio" name="booking-payment-choice" value="advance" checked={paymentChoice === "advance"} onChange={() => setPaymentChoice("advance")} className="mt-1 accent-lime-400" />
-                      <span><span className="block font-bold text-white">{t("withAdvance")}</span><span className="text-sm text-gray-400">{t("advanceDescription", { amount: money.payNow })}</span></span>
+                      <span><span className="block font-bold text-white">{t("withAdvance")}</span><span className="text-sm text-gray-400">{t("advanceDescription", { amount: Number(money.payNow).toLocaleString("en-IN", { maximumFractionDigits: 2 }) })}</span></span>
                     </label>
                   </fieldset>
-                ) : <p className="mt-4 text-sm text-gray-300">{t("subscriptionAdvance", { amount: money.payNow })}</p>}
+                ) : <p className="mt-4 text-sm text-gray-300">{t("subscriptionAdvance", { amount: Number(money.payNow).toLocaleString("en-IN", { maximumFractionDigits: 2 }) })}</p>}
                 <p className="mt-4 text-sm text-gray-300">{t("phoneVerified")}</p>
                 <button disabled={paying} onClick={paymentChoice === "advance" || isSubscription ? pay : confirmWithoutAdvance} className="mt-5 w-full rounded-xl bg-lime-400 py-3 font-extrabold text-gray-950 disabled:opacity-50">{paying ? t("pleaseWait") : paymentChoice === "advance" || isSubscription ? t("payAmount", { amount: money.payNow }) : t("confirmNoAdvance")}</button>
               </>

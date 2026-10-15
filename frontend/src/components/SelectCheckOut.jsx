@@ -1,33 +1,13 @@
-import React, { useEffect, useState, useContext } from "react";
+/* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
-import { Clock3 } from "lucide-react";
-import { BookContext } from "../constexts/bookContext";
 const SelectCheckOut = ({
   selectedCheckOut,
   selectedCheckIn,
   handleCheckOut,
   allSlots,
   selectedDate,
-  getSingleTurf
+  turfInfo
 }) => {
-  const [turfInfo, setTurfInfo] = useState(null);
-  const {turfs, selectedTurfId} = useContext(BookContext)
-  const turfData = turfs.find((turf)=>turf._id===selectedTurfId)
-  useEffect(() => {
-   
-    const fetchTurfInfo = async () => {
-      const turfId = localStorage.getItem("selectedTurf");
-      if (turfId) {
-        const data = await getSingleTurf(turfId);
-        setTurfInfo(data);
-      }
-    };
-    !turfData?
-    fetchTurfInfo():setTurfInfo(turfData);
-    
-  }, []);
-
-  console.log("allSlots", selectedCheckIn)
 
   const timeStringToMinutes = time => {
     const [h, m] = time.split(':').map(Number);
@@ -59,12 +39,11 @@ const SelectCheckOut = ({
     } else {
       nextBookingIndex = Math.min(nextBookingIndex, maxCheckoutIndex);
     }
-    return allSlots.slice(checkInIndex + 2, nextBookingIndex + 1).map((slot, idx) => ({
+    return allSlots.slice(checkInIndex + 2, nextBookingIndex + 1).map((slot) => ({
       display: slot.display,
       duration: ((timeStringToMinutes(slot.military) - timeStringToMinutes(selectedCheckIn)) / 60).toFixed(1),
     }));
   };
-  console.log("slots", allSlots.map(slot=>slot))
   return (
     <motion.div
       className="mt-8"

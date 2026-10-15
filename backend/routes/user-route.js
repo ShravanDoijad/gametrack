@@ -2,7 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const userRouter = express.Router();
 
-const { userRegister, userLogout, createOrder, confirmBookingWithoutAdvance, verifyOrder, getAllBookings, updateUser, deleteUser, addFavorite, getFavoriteTurfs, login, removeFavoriteTurf, getAllNotifications, getBookedSlots, submitReview, getPendingReviews, addSubscriptionSlot, getSubscriptionSlots, userSubscription, completeProfile } = require('../controllers/user-controller');
+const { userRegister, userLogout, createOrder, confirmBookingWithoutAdvance, verifyOrder, getAllBookings, getBookingConfirmation, cancelCustomerBooking, updateUser, deleteUser, addFavorite, getFavoriteTurfs, login, removeFavoriteTurf, getAllNotifications, getBookedSlots, submitReview, getPendingReviews, addSubscriptionSlot, getSubscriptionSlots, userSubscription, completeProfile } = require('../controllers/user-controller');
 const {authMiddleware} = require("../middleware/authMiddleware")
 
 
@@ -52,6 +52,8 @@ userRouter.post("/createOrder", authMiddleware,createOrder );
 userRouter.post("/confirmBooking", authMiddleware, confirmBookingWithoutAdvance);
 userRouter.post("/verifyPayment", authMiddleware, verifyOrder );
 userRouter.get("/allBookings", authMiddleware, getAllBookings);
+userRouter.get("/bookings/:bookingId", authMiddleware, getBookingConfirmation);
+userRouter.post("/bookings/:bookingId/cancel", authMiddleware, cancelCustomerBooking);
 userRouter.post("/updateUser", authMiddleware, updateUser);
 userRouter.post("/addFavorite", authMiddleware, addFavorite);
 userRouter.get("/getFavoriteTurfs", authMiddleware, getFavoriteTurfs);

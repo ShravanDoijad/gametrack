@@ -2,21 +2,20 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/user-model');
 const Owner = require('../models/owner-model');
 const Otp = require('../models/otp-model');
+const crypto = require('crypto');
+const { sendWhatsAppTemplate } = require('../twilio/sendMessage');
 
 function generateOtp(length = 6) {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
-const accountSid = process.env.TWILIO_ACCOUNT_SID;
-const authToken = process.env.TWILIO_AUTH_TOKEN;
-const client = require('twilio')(accountSid, authToken);
 
 async function sendOtp({ identifier, role }) {
+  let targetPhone;
   const otp = generateOtp();
   const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
   try {
-    let targetPhone
     if (role === 'owner') {
       const owner = await Owner.findOne({ email: identifier });
       if (!owner) {
@@ -34,24 +33,18 @@ async function sendOtp({ identifier, role }) {
     await Otp.deleteMany({ identifier: targetPhone, role });
     await Otp.create({ identifier: targetPhone, role, otp, expiresAt });
 
-    client.messages
-      .create({
-        from: `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`,
-        to: `whatsapp:+91${targetPhone}`,
-        contentSid: process.env.TWILIO_CONTENT_SID,
-        contentVariables: JSON.stringify({
-          "1": otp,
-          "2": "5 minutes"
-        })
-      })
-      .then(message => console.log("send", message.sid))
-
-
-
-    return ({ success: true, message: 'OTP sent successfully' });
+    const message = await sendWhatsAppTemplate({
+      phoneNumber: targetPhone,
+      contentSid: process.env.TWILIO_CONTENT_SID,
+      templateName: "TWILIO_CONTENT_SID",
+      variables: { 1: otp, 2: "5 minutes" },
+    });
+    console.log("OTP WhatsApp template sent:", message.sid);
+    return { success: true, message: 'OTP sent successfully' };
   } catch (err) {
-    console.error('Failed to send OTP:', err);
-    return { success: false };
+    if (targetPhone) await Otp.deleteOne({ identifier: targetPhone, role, otp }).catch(() => {});
+    console.error('Failed to send OTP:', err.message);
+    return { success: false, message: 'Could not send OTP. Please try again.' };
   }
 }
 
@@ -59,7 +52,6 @@ async function sendOtp({ identifier, role }) {
 const verifyOtp = async (req, res) => {
   try {
     const { identifier, otp } = req.body;
-    console.log("identifier, otp", identifier, otp);
     if (!identifier || !otp) {
       return res.status(400).json({ success: false, message: 'Credentials and OTP are required.' });
     }
@@ -71,11 +63,7 @@ const verifyOtp = async (req, res) => {
 
     let user = await User.findOne({ $or: [{ email: identifier }, { phone: identifier }] });
 
-    if( !user && !owner) {
-      user = await User.create({ email: identifier, phone: identifier });
-    }
-
-    let name = user ? user.fullname : owner ? owner.fullname : "Guest";
+    let name;
     if (owner) {
       role = 'owner';
       targetPhone = owner.phone;
@@ -106,8 +94,11 @@ const verifyOtp = async (req, res) => {
       account = owner;
     }
     else  {
-      account = user;
+      account = user || await User.create(
+        identifier.includes('@') ? { email: identifier.toLowerCase() } : { phone: identifier }
+      );
     }
+    name = account.fullname || "Guest";
     if (account) {
     account.isVerified = true;
     await account.save();
@@ -132,7 +123,7 @@ const verifyOtp = async (req, res) => {
       maxAge: 30 * 86400000 // 1 day
     });
 
-    await Otp.deleteMany({ identifier: identifier, role: role });
+    await Otp.deleteMany({ identifier: targetPhone, role });
 
     return res.status(200).json({
       success: true,

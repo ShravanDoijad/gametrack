@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import { useContext, useState } from 'react';
 import { BookContext } from '../constexts/bookContext';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 
 const Profile = () => {
-    const { userInfo, isLoading, setloginPanel, setuserInfo, handleLogout, token } = useContext(BookContext);
+    const { userInfo, isLoading, setloginPanel, setuserInfo, handleLogout } = useContext(BookContext);
     const navigate = useNavigate();
     const [isEditing, setIsEditing] = useState(false);
     const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
@@ -474,7 +474,7 @@ const Profile = () => {
                                 <Star size={32} className="text-gray-600" />
                             </div>
                             <h3 className="text-xl text-white font-semibold mb-2">No Favorites Yet</h3>
-                            <p className="text-gray-400 mb-6 max-w-md mx-auto">You haven't marked any turf as a favorite. Browse our collection and save the ones you love!</p>
+                            <p className="text-gray-400 mb-6 max-w-md mx-auto">You haven&apos;t marked any turf as a favorite. Browse our collection and save the ones you love!</p>
                             <button onClick={()=>navigate("/")} className="px-8 py-3 bg-white/5 hover:bg-white/10 text-white border border-white/10 font-semibold rounded-xl transition-colors">
                                 Explore Turfs
                             </button>

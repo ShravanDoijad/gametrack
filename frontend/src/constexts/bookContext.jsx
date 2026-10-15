@@ -1,5 +1,6 @@
-import React, { createContext } from 'react';
-import { useState, useEffect } from 'react';
+/* eslint-disable react/prop-types */
+import { createContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 export const BookContext = createContext();
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -16,32 +17,36 @@ const BookContextProvider = ({ children }) => {
     const [menuPanel, setmenuPanel] = useState(false)
     const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
     const [turfs, setTurfs] = useState([]);
-    const [selectedTurfId, setSelectedTurfId] = useState(turfs._id);
+    const [selectedTurfId, setSelectedTurfId] = useState(null);
     const [bookings, setbookings] = useState([])
+    const [ownerBookingsLoading, setOwnerBookingsLoading] = useState(false);
      const [sidebarOpen, setSidebarOpen] = useState(false);
     
     const [cancelled, setCancelled] = useState(false);
       const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
       const closeSidebar = () => setSidebarOpen(false);
     
-   useEffect(() => {
-  if (token && userInfo?.role === 'owner' && selectedTurfId) {
-    setisLoading(true);
-    const fetchBookings = async () => {
-      try {
-        const response = await axios.get(`/owner/turfAllBookings?turfId=${selectedTurfId}`);
-        setbookings(response.data.bookings);
-      } catch (err) {
-        console.error("Error fetching bookings:", err);
-        toast.error("Failed to fetch bookings");
-      } finally {
-        setisLoading(false);
-      }
-    };
-    fetchBookings();
-  }
-}, [token, userInfo, selectedTurfId, cancelled]);
+    const refreshOwnerData = useCallback(async () => {
+        if (!token || userInfo?.role !== 'owner' || !selectedTurfId) return;
+        setOwnerBookingsLoading(true);
+        try {
+            const [bookingsResponse, turfsResponse] = await Promise.all([
+                axios.get(`/owner/turfAllBookings?turfId=${selectedTurfId}`),
+                axios.get('/owner/ownedTurfs'),
+            ]);
+            setbookings(bookingsResponse.data.bookings || []);
+            setTurfs(turfsResponse.data.turfs || []);
+        } catch (error) {
+            console.error("Failed to refresh owner bookings and availability:", error);
+            toast.error("Could not refresh owner bookings. Please try again.");
+        } finally {
+            setOwnerBookingsLoading(false);
+        }
+    }, [token, userInfo?.role, selectedTurfId]);
 
+    useEffect(() => {
+        refreshOwnerData();
+    }, [refreshOwnerData, cancelled]);
 
 
     const fetchToken = async () => {
@@ -53,18 +58,22 @@ const BookContextProvider = ({ children }) => {
 
             if (userRes.data.success) {
                 settoken(true);
-                setuserInfo({
+                const authenticatedUser = {
                     ...userRes.data.user,
                     role: userRes.data.role,
-                });
+                };
+                setuserInfo(authenticatedUser);
+                return authenticatedUser;
             } else {
                 settoken(false);
                 setuserInfo(null);
+                return null;
             }
         } catch (error) {
-            console.log(error)
+            console.error("Authentication check failed", error.message);
             settoken(false);
             setuserInfo(null);
+            return null;
         } finally {
             setisLoading(false);
             setHasCheckedAuth(true);
@@ -83,12 +92,17 @@ const BookContextProvider = ({ children }) => {
         e.preventDefault()
         try {
 
-            const response = await axios.post('/api/users/userLogout', {
+            await axios.post('/api/users/userLogout', {
                 role: userInfo.role
             });
 
             settoken(false);
+            setuserInfo(null);
+            setbookings([]);
+            setTurfs([]);
+            setSelectedTurfId(null);
             setmenuPanel(false);
+            setSidebarOpen(false);
             navigate('/');
 
         } catch (error) {
@@ -105,23 +119,25 @@ const BookContextProvider = ({ children }) => {
             const response = await axios.get('/owner/ownedTurfs');
             console.log("response", response);
             
-            setTurfs(response.data.turfs || []);
-            if (response.data.turfs.length > 0) {
-              setSelectedTurfId(response.data.turfs[0]._id);
-             
-            }
+            const ownedTurfs = response.data.turfs || [];
+            setTurfs(ownedTurfs);
+            let savedId = null;
+            try { savedId = localStorage.getItem("ownerSelectedTurf"); } catch { /* Storage is optional. */ }
+            const resolvedId = ownedTurfs.some((turf) => turf._id === savedId) ? savedId : ownedTurfs[0]?._id || null;
+            setSelectedTurfId(resolvedId);
           } catch (error) {
             console.error('Failed to fetch turfs:', error);
           } 
         };
-         if(token && userInfo.role === "owner"){
+         if(token && userInfo?.role === "owner"){
         fetchTurfs();
          }
       }, [token, userInfo]);
 
-      useEffect(()=>{
-         selectedTurfId && localStorage.setItem("selectedTurf", selectedTurfId)
-      }, [selectedTurfId])
+     useEffect(()=>{
+         if (!selectedTurfId || userInfo?.role !== "owner") return;
+         try { localStorage.setItem("ownerSelectedTurf", selectedTurfId); } catch { /* Storage is optional. */ }
+      }, [selectedTurfId, userInfo?.role])
 
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
         const R = 6371;
@@ -146,6 +162,8 @@ const BookContextProvider = ({ children }) => {
         handleLogout,
         bookings,
         setbookings,
+        refreshOwnerData,
+        ownerBookingsLoading,
         loginPanel,
         settoken,
         token,
@@ -177,4 +195,4 @@ const BookContextProvider = ({ children }) => {
     )
 }
 
-export default BookContextProvider; 
+export default BookContextProvider;

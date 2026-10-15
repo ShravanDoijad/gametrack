@@ -1,303 +1,177 @@
-import React, { useEffect, useState, useContext, useMemo } from 'react';
-import axios from 'axios';
-import { BookContext } from '../constexts/bookContext';
+import { useContext, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, Cell
-} from 'recharts';
-import {
-  TrendingUp, IndianRupee, CalendarCheck, Users,
-  Flame, Clock3, BarChart2, ArrowUpRight, ArrowDownRight
-} from 'lucide-react';
+  ArrowRight, Banknote, CalendarDays, CalendarPlus, CheckCircle2,
+  Clock3, RefreshCw, Wallet,
+} from "lucide-react";
+import { BookContext } from "../constexts/bookContext";
 
-const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const money = (value) => `₹${(Number(value) || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const dateKey = (value) => {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+const minutes = (value) => {
+  const [hours, mins] = String(value || "").split(":").map(Number);
+  return Number.isFinite(hours) && Number.isFinite(mins) ? hours * 60 + mins : null;
+};
+const displayTime = (value) => {
+  const minute = minutes(value);
+  if (minute === null) return value || "—";
+  const hour = Math.floor(minute / 60) % 24;
+  const suffix = hour >= 12 ? "PM" : "AM";
+  return `${hour % 12 || 12}:${String(minute % 60).padStart(2, "0")} ${suffix}`;
+};
 
 const Dashboard = () => {
-  const [dashboardData, setDashboardData] = useState([]);
-  const [view, setView] = useState('month');
-  const { selectedTurfId, turfs } = useContext(BookContext);
+  const navigate = useNavigate();
+  const { bookings = [], ownerBookingsLoading, selectedTurfId, turfs = [], setCancelled } = useContext(BookContext);
+  const turf = turfs.find((item) => item._id === selectedTurfId);
+  const today = dateKey(new Date());
+  const todayBookings = useMemo(() => bookings
+    .filter((booking) => dateKey(booking.date) === today && booking.status !== "cancelled")
+    .sort((a, b) => (minutes(a.slots?.[0]?.start) ?? 0) - (minutes(b.slots?.[0]?.start) ?? 0)), [bookings, today]);
 
-  useEffect(() => {
-    if (!selectedTurfId) return;
-    axios.get(`/owner/dashboardDetails?turfId=${selectedTurfId}`)
-      .then(r => setDashboardData(r.data.details || []))
-      .catch(console.error);
-  }, [selectedTurfId]);
-
-  const now = new Date();
-
-  /* ── chart data ── */
-  const chartData = useMemo(() => {
-    const map = {};
-    if (view === '7days') {
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(); d.setDate(now.getDate() - i);
-        const k = `${d.getDate()} ${d.toLocaleString('default', { month: 'short' })}`;
-        map[k] = { date: k, revenue: 0, bookings: 0 };
-      }
-    } else if (view === 'week') {
-      [1,2,3,4,5].forEach(w => { map[`Week ${w}`] = { date: `Week ${w}`, revenue: 0, bookings: 0 }; });
-    } else {
-      const days = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      for (let i = 1; i <= days; i++) {
-        const k = `${i} ${now.toLocaleString('default', { month: 'short' })}`;
-        map[k] = { date: k, revenue: 0, bookings: 0 };
-      }
+  const collected = todayBookings.reduce((sum, booking) => sum + (Number(booking.amountPaid) || 0), 0);
+  const pending = todayBookings.reduce((sum, booking) => sum + Math.max(0, (Number(booking.slotFees) || 0) - (Number(booking.amountPaid) || 0)), 0);
+  const schedule = useMemo(() => {
+    if (!turf?.openingTime || !turf?.closingTime) return [];
+    const opening = minutes(turf.openingTime);
+    const closing = minutes(turf.closingTime);
+    if (opening === null || closing === null || closing <= opening) return [];
+    const bookedDay = turf.bookedSlots?.find((day) => day.date === today);
+    const intervals = (bookedDay?.slots || []).map((slot) => ({ start: minutes(slot.start), end: minutes(slot.end) }));
+    const steps = [];
+    for (let start = opening; start + 60 <= closing; start += 60) {
+      const end = start + 60;
+      const booking = todayBookings.find((item) => (item.slots || []).some((slot) => {
+        const slotStart = minutes(slot.start);
+        const slotEnd = minutes(slot.end);
+        return slotStart !== null && slotEnd !== null && start < slotEnd && end > slotStart;
+      }));
+      const blocked = bookedDay?.status === "unavailable" || intervals.some((slot) => slot.start !== null && slot.end !== null && start < slot.end && end > slot.start);
+      steps.push({ start, end, booking, blocked: blocked && !booking });
     }
-    dashboardData.forEach(b => {
-      const bd = new Date(b.date);
-      if (bd.getMonth() !== now.getMonth() || bd.getFullYear() !== now.getFullYear()) return;
-      let key;
-      if (view === '7days') key = `${bd.getDate()} ${now.toLocaleString('default', { month: 'short' })}`;
-      else if (view === 'week') key = `Week ${Math.ceil(bd.getDate() / 7)}`;
-      else key = `${bd.getDate()} ${now.toLocaleString('default', { month: 'short' })}`;
-      if (map[key]) { map[key].revenue += b.amountPaid || 0; map[key].bookings += 1; }
-    });
-    return Object.values(map);
-  }, [dashboardData, view]);
+    return steps;
+  }, [turf, today, todayBookings]);
 
-  /* ── real stats ── */
-  const totalRevenue = dashboardData.reduce((s, b) => s + (b.amountPaid || 0), 0);
-  const totalBookings = dashboardData.length;
+  const availableCount = schedule.filter((slot) => !slot.booking && !slot.blocked).length;
+  const cards = [
+    { label: "Bookings today", value: todayBookings.length, detail: "Confirmed reservations", icon: CalendarDays, tone: "text-emerald-700 bg-emerald-50" },
+    { label: "Collected today", value: money(collected), detail: "Payments received", icon: Wallet, tone: "text-blue-700 bg-blue-50" },
+    { label: "Still to collect", value: money(pending), detail: "Outstanding on today’s bookings", icon: Banknote, tone: "text-amber-700 bg-amber-50" },
+    { label: "Available slots", value: schedule.length ? availableCount : "—", detail: schedule.length ? "One-hour slots remaining" : "Set operating hours to see slots", icon: Clock3, tone: "text-violet-700 bg-violet-50" },
+  ];
 
-  const todayBookings = useMemo(() =>
-    dashboardData.filter(b => {
-      const d = new Date(b.date);
-      return d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-    }).length, [dashboardData]);
-
-  const uniqueCustomers = useMemo(() =>
-    new Set(dashboardData.map(b => b.userId?._id || b.phone).filter(Boolean)).size,
-    [dashboardData]);
-
-  /* ── peak day (by booking count) ── */
-  const peakDay = useMemo(() => {
-    const dayCounts = {};
-    dashboardData.forEach(b => {
-      const d = new Date(b.date).getDay();
-      dayCounts[d] = (dayCounts[d] || 0) + 1;
-    });
-    if (!Object.keys(dayCounts).length) return { day: '—', count: 0 };
-    const topDay = Object.entries(dayCounts).sort((a, b) => b[1] - a[1])[0];
-    return { day: DAYS[topDay[0]], count: topDay[1] };
-  }, [dashboardData]);
-
-  /* ── prime hour ── */
-  const primeHour = useMemo(() => {
-    const hourCounts = {};
-    dashboardData.forEach(b => {
-      b.slots?.forEach(slot => {
-        const h = parseInt(slot.start?.split(':')[0] || 0);
-        hourCounts[h] = (hourCounts[h] || 0) + 1;
-      });
-    });
-    if (!Object.keys(hourCounts).length) return '—';
-    const top = Object.entries(hourCounts).sort((a, b) => b[1] - a[1])[0];
-    const h = parseInt(top[0]);
-    return `${h > 12 ? h - 12 : h === 0 ? 12 : h}:00 ${h >= 12 ? 'PM' : 'AM'}`;
-  }, [dashboardData]);
-
-  /* ── occupancy rate (booked hours / total possible hours this month) ── */
-  const occupancyRate = useMemo(() => {
-    if (!dashboardData.length) return 0;
-    const turf = turfs?.find(t => t._id === selectedTurfId);
-    if (!turf) return 0;
-    const [oh] = (turf.openingTime || '06:00').split(':').map(Number);
-    const [ch] = (turf.closingTime || '23:00').split(':').map(Number);
-    const hoursPerDay = ch - oh;
-    const daysElapsed = now.getDate();
-    const totalHours = hoursPerDay * daysElapsed;
-    const bookedHours = dashboardData.reduce((s, b) => {
-      return s + (b.slots?.reduce((ss, sl) => {
-        const [sh, sm] = (sl.start || '00:00').split(':').map(Number);
-        const [eh, em] = (sl.end || '00:00').split(':').map(Number);
-        return ss + ((eh * 60 + em) - (sh * 60 + sm)) / 60;
-      }, 0) || 0);
-    }, 0);
-    return Math.min(100, Math.round((bookedHours / totalHours) * 100));
-  }, [dashboardData, turfs, selectedTurfId]);
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="bg-[#1a1a1a] border border-white/10 rounded-xl px-4 py-3 text-sm shadow-xl">
-        <p className="text-gray-400 mb-1">{label}</p>
-        {payload.map((p, i) => (
-          <p key={i} style={{ color: p.color }} className="font-semibold">
-            {p.name === 'revenue' ? `₹${p.value.toLocaleString()}` : `${p.value} bookings`}
-          </p>
-        ))}
-      </div>
-    );
-  };
-
-  const statCards = [
-    {
-      label: 'Total Revenue',
-      value: `₹${totalRevenue.toLocaleString()}`,
-      icon: IndianRupee,
-      color: 'text-lime-400',
-      bg: 'bg-lime-500/10',
-      sub: `This month`,
-      up: true,
-    },
-    {
-      label: 'Total Bookings',
-      value: totalBookings,
-      icon: CalendarCheck,
-      color: 'text-blue-400',
-      bg: 'bg-blue-500/10',
-      sub: `${todayBookings} today`,
-      up: todayBookings > 0,
-    },
-    {
-      label: 'Unique Customers',
-      value: uniqueCustomers,
-      icon: Users,
-      color: 'text-purple-400',
-      bg: 'bg-purple-500/10',
-      sub: 'All time',
-      up: true,
-    },
-    {
-      label: 'Occupancy Rate',
-      value: `${occupancyRate}%`,
-      icon: TrendingUp,
-      color: 'text-amber-400',
-      bg: 'bg-amber-500/10',
-      sub: 'This month',
-      up: occupancyRate > 50,
-    },
+  const actions = [
+    { label: "Add a booking", description: "Reserve a slot for a caller or walk-in", to: "/owner/time-slots", icon: CalendarPlus, primary: true },
+    { label: "View calendar", description: "Check availability and manage slots", to: "/owner/time-slots", icon: CalendarDays },
+    { label: "Track payments", description: "Review collections and balances", to: "/owner/revenue", icon: Wallet },
+    { label: "Manage bookings", description: "Search and update reservations", to: "/owner/bookings", icon: CheckCircle2 },
   ];
 
   return (
-    <div className="p-5 min-h-screen bg-[#0a0a0a] text-white space-y-6">
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {statCards.map(({ label, value, icon: Icon, color, bg, sub, up }) => (
-          <div key={label} className="bg-[#111] border border-white/5 rounded-2xl p-4 hover:border-white/10 transition-all">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`p-2 rounded-xl ${bg}`}>
-                <Icon size={16} className={color} />
-              </div>
-              <span className={`flex items-center gap-0.5 text-xs font-medium ${up ? 'text-lime-400' : 'text-red-400'}`}>
-                {up ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
-              </span>
-            </div>
-            <p className="text-2xl font-bold text-white">{value}</p>
-            <p className="text-xs text-gray-500 mt-1">{label}</p>
-            <p className="text-[10px] text-gray-600 mt-0.5">{sub}</p>
+    <div className="min-h-full bg-slate-50 px-4 py-5 text-slate-900 sm:px-6 sm:py-7 lg:px-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-emerald-700">{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p>
+            <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">Today at a glance</h1>
+            <p className="mt-1 text-sm text-slate-600">{turf?.name || "Your turf"}{turf?.location?.city ? ` · ${turf.location.city}` : ""}</p>
           </div>
-        ))}
-      </div>
+          <button
+            type="button"
+            onClick={() => setCancelled((value) => !value)}
+            disabled={ownerBookingsLoading}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={ownerBookingsLoading ? "animate-spin" : ""} /> Refresh
+          </button>
+        </header>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Revenue Bar */}
-        <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <BarChart2 size={16} className="text-lime-400" />
-              <span className="text-sm font-medium">Revenue</span>
+        {!selectedTurfId && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900" role="status">
+            Select or set up a turf to see bookings and availability.
+          </div>
+        )}
+
+        <section aria-label="Today's business summary" className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {cards.map(({ label, value, detail, icon: Icon, tone }) => (
+            <article key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${tone}`}><Icon size={19} /></div>
+                <span className="text-xs font-medium text-slate-500">Today</span>
+              </div>
+              <p className="mt-4 text-2xl font-bold tabular-nums">{ownerBookingsLoading ? "…" : value}</p>
+              <h2 className="mt-1 text-sm font-semibold text-slate-700">{label}</h2>
+              <p className="mt-1 text-xs text-slate-500">{detail}</p>
+            </article>
+          ))}
+        </section>
+
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.6fr)_minmax(17rem,0.8fr)]">
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-labelledby="today-schedule-title">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+              <div>
+                <h2 id="today-schedule-title" className="text-lg font-bold">Today’s schedule</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Bookings and open one-hour slots</p>
+              </div>
+              <Link to="/owner/time-slots" className="inline-flex min-h-10 items-center gap-1 rounded-lg px-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">
+                Open calendar <ArrowRight size={15} />
+              </Link>
             </div>
-            <div className="flex gap-1">
-              {['7days','week','month'].map(v => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                    view === v ? 'bg-lime-500 text-black' : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {v === '7days' ? '7D' : v === 'week' ? 'WK' : 'MO'}
-                </button>
+            {ownerBookingsLoading ? (
+              <div className="p-8 text-center text-sm text-slate-500" role="status">Loading today’s schedule…</div>
+            ) : !selectedTurfId ? null : schedule.length === 0 ? (
+              <div className="p-8 text-center">
+                <CalendarDays className="mx-auto text-slate-400" size={28} />
+                <p className="mt-3 font-semibold">Operating hours aren’t set</p>
+                <p className="mt-1 text-sm text-slate-500">Add your opening and closing times to show today’s slots.</p>
+                <Link to="/owner/turf-profile" className="mt-4 inline-flex min-h-10 items-center rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white hover:bg-emerald-800">Set operating hours</Link>
+              </div>
+            ) : (
+              <ol className="divide-y divide-slate-100">
+                {schedule.slice(0, 12).map((slot) => {
+                  const status = slot.booking ? "Booked" : slot.blocked ? "Blocked" : "Available";
+                  const who = slot.booking?.userId?.fullname || slot.booking?.fullname || slot.booking?.phone || "Customer";
+                  const total = Number(slot.booking?.slotFees) || 0;
+                  const paid = Number(slot.booking?.amountPaid) || 0;
+                  return (
+                    <li key={slot.start} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-4 sm:px-5">
+                      <time className="w-28 shrink-0 text-sm font-semibold tabular-nums text-slate-700">{displayTime(`${String(Math.floor(slot.start / 60)).padStart(2, "0")}:${String(slot.start % 60).padStart(2, "0")}`)} – {displayTime(`${String(Math.floor(slot.end / 60)).padStart(2, "0")}:${String(slot.end % 60).padStart(2, "0")}`)}</time>
+                      <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-semibold ${slot.booking ? "bg-emerald-100 text-emerald-800" : slot.blocked ? "bg-slate-200 text-slate-700" : "bg-blue-50 text-blue-800"}`}>{status}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{slot.booking ? who : slot.blocked ? "Unavailable for booking" : "Open for booking"}</p>
+                        {slot.booking && <p className="mt-0.5 text-xs text-slate-500">{slot.booking.paymentType === "Manual" ? "Manual" : "Online"} · {money(paid)} received{total > paid ? ` · ${money(total - paid)} due` : " · Paid"}</p>}
+                      </div>
+                      {!slot.booking && !slot.blocked && (
+                        <button type="button" onClick={() => navigate("/owner/time-slots", { state: { date: today, startTime: slot.start } })} className="min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-semibold text-slate-700 hover:border-emerald-600 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600">Add booking</button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+            {schedule.length > 12 && <div className="border-t border-slate-100 px-5 py-3 text-sm text-slate-500">Showing first 12 slots · <Link to="/owner/time-slots" className="font-semibold text-emerald-800">See full calendar</Link></div>}
+          </section>
+
+          <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+            <h2 className="text-lg font-bold">Quick actions</h2>
+            <p className="mt-1 text-sm text-slate-500">Common tasks, one tap away.</p>
+            <div className="mt-4 space-y-2">
+              {actions.map(({ label, description, to, icon: Icon, primary }) => (
+                <Link key={label} to={to} className={`flex min-h-[4.25rem] items-center gap-3 rounded-xl border p-3 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${primary ? "border-emerald-800 bg-emerald-800 text-white hover:bg-emerald-900" : "border-slate-200 bg-white text-slate-800 hover:border-emerald-300 hover:bg-emerald-50"}`}>
+                  <Icon size={19} className={primary ? "shrink-0 text-white" : "shrink-0 text-emerald-800"} />
+                  <span className="min-w-0 flex-1"><span className="block text-sm font-semibold">{label}</span><span className={`mt-0.5 block text-xs ${primary ? "text-emerald-100" : "text-slate-500"}`}>{description}</span></span>
+                  <ArrowRight size={16} className="shrink-0" />
+                </Link>
               ))}
             </div>
-          </div>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} barSize={view === 'month' ? 4 : 12}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} interval={view === 'month' ? 4 : 0} />
-                <YAxis tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: '#ffffff08' }} />
-                <Bar dataKey="revenue" radius={[4,4,0,0]} animationDuration={1200}>
-                  {chartData.map((_, i) => (
-                    <Cell key={i} fill={`rgba(163,230,53,${0.4 + (chartData[i]?.revenue / (Math.max(...chartData.map(d => d.revenue)) || 1)) * 0.6})`} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* Booking trend line */}
-        <div className="bg-[#111] border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp size={16} className="text-blue-400" />
-            <span className="text-sm font-medium">Booking Trends</span>
-          </div>
-          <div className="h-52">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff08" vertical={false} />
-                <XAxis dataKey="date" tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} interval={view === 'month' ? 4 : 0} />
-                <YAxis tick={{ fill: '#555', fontSize: 10 }} axisLine={false} tickLine={false} allowDecimals={false} />
-                <Tooltip content={<CustomTooltip />} />
-                <Line
-                  type="monotone"
-                  dataKey="bookings"
-                  stroke="#60a5fa"
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4, fill: '#60a5fa', strokeWidth: 0 }}
-                  animationDuration={1200}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
-
-      {/* Insights — now with real data */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-lime-500/20 transition-all">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-xl bg-amber-500/10">
-              <Flame size={16} className="text-amber-400" />
-            </div>
-            <p className="text-sm font-medium">Peak Day</p>
-          </div>
-          <p className="text-3xl font-bold text-white">{peakDay.day}</p>
-          {peakDay.count > 0
-            ? <p className="text-xs text-gray-500 mt-1">{peakDay.count} bookings — your busiest day</p>
-            : <p className="text-xs text-gray-600 mt-1">Not enough data yet</p>
-          }
-        </div>
-
-        <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-blue-500/20 transition-all">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-xl bg-blue-500/10">
-              <Clock3 size={16} className="text-blue-400" />
-            </div>
-            <p className="text-sm font-medium">Prime Hour</p>
-          </div>
-          <p className="text-3xl font-bold text-white">{primeHour}</p>
-          <p className="text-xs text-gray-500 mt-1">Most popular booking start time</p>
-        </div>
-
-        <div className="bg-[#111] border border-white/5 rounded-2xl p-5 hover:border-purple-500/20 transition-all">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="p-2.5 rounded-xl bg-purple-500/10">
-              <TrendingUp size={16} className="text-purple-400" />
-            </div>
-            <p className="text-sm font-medium">Avg. per Booking</p>
-          </div>
-          <p className="text-3xl font-bold text-white">
-            ₹{totalBookings > 0 ? Math.round(totalRevenue / totalBookings).toLocaleString() : '0'}
-          </p>
-          <p className="text-xs text-gray-500 mt-1">Average revenue per booking</p>
+          </aside>
         </div>
       </div>
     </div>

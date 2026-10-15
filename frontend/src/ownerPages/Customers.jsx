@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useContext } from "react";
+import { useEffect, useState, useContext } from "react";
 import axios from "axios";
 import {
-  User, Mail, Phone, CalendarDays,
+  Mail, Phone, CalendarDays,
   Loader2, Star, Crown, Activity,
   TrendingUp, Zap, Award, Clock, Search, MessageSquare, X, CheckCircle
 } from "lucide-react";

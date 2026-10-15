@@ -1,10 +1,9 @@
-import React, { useEffect, useState, useContext } from 'react';
+import { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
 import { parse, format, isToday, parseISO } from 'date-fns';
 import { BookContext } from '../constexts/bookContext';
 import {
-  Clock, User, Phone, IndianRupee, CheckCircle2,
-  ChevronDown, ChevronUp, CalendarX, CreditCard, BadgeCheck, Loader2, Repeat
+  IndianRupee, CalendarX, BadgeCheck, Loader2, Repeat
 } from 'lucide-react';
 
 const formatTime = (t) => {
@@ -23,7 +22,6 @@ const TodaysBookings = () => {
   const { bookings, selectedTurfId } = useContext(BookContext);
   const [loading, setLoading]       = useState(true);
   const [subsLoading, setSubsLoading] = useState(true);
-  const [expanded, setExpanded]     = useState(null);
   const [todayBookings, setToday]   = useState([]);
   const [todaySubs, setTodaySubs]   = useState([]);
 

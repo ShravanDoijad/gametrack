@@ -1,6 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { parse, format, isToday, isPast, parseISO, getHours, differenceInDays } from 'date-fns';
+import { format, isToday, parseISO, differenceInDays, isValid } from 'date-fns';
+import { toast } from 'react-toastify';
+
+const parseSlotDateTime = (dateValue, timeValue) => {
+    if (!dateValue || !timeValue) return null;
+    const date = parseISO(String(dateValue));
+    if (!isValid(date)) return null;
+    let hours;
+    let minutes;
+    const time24 = String(timeValue).match(/^(\d{1,2}):(\d{2})$/);
+    const time12 = String(timeValue).match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (time24) {
+        hours = Number(time24[1]);
+        minutes = Number(time24[2]);
+        if (hours > 23 || minutes > 59) return null;
+    } else if (time12) {
+        hours = Number(time12[1]) % 12 + (time12[3].toUpperCase() === 'PM' ? 12 : 0);
+        minutes = Number(time12[2]);
+    } else return null;
+    date.setHours(hours, minutes, 0, 0);
+    return date;
+};
+
+const formatINR = (amount) => `\u20b9${(Number(amount) || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+
+const getBookingEnd = (booking) => {
+    const endTimes = (booking.slots || []).map((slot) => {
+        const start = parseSlotDateTime(booking.date, slot.start);
+        const end = parseSlotDateTime(booking.date, slot.end);
+        if (!start || !end) return null;
+        if (end <= start) end.setDate(end.getDate() + 1);
+        return end;
+    }).filter(Boolean);
+    return endTimes.length ? new Date(Math.max(...endTimes.map((date) => date.getTime()))) : null;
+};
 
 const UserBookings = () => {
     const [bookings, setBookings] = useState([]);
@@ -8,6 +42,9 @@ const UserBookings = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('upcoming');
     const [expandedCard, setExpandedCard] = useState(null);
+    const [cancelingId, setCancelingId] = useState(null);
+    const [loadError, setLoadError] = useState('');
+    const [reloadCount, setReloadCount] = useState(0);
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -19,42 +56,27 @@ const UserBookings = () => {
                 
                 setBookings(bookingsResponse.data.allBookings || []);
                 setSubscriptions(subscriptionsResponse.data.subscriptions || []);
-                setLoading(false);
+                setLoadError('');
             } catch (error) {
                 console.error('Error fetching user data:', error);
+                setLoadError('Could not load your bookings. Check your connection and try again.');
+            } finally {
                 setLoading(false);
             }
         };
         fetchUserData();
-    }, []);
+    }, [reloadCount]);
 
     const categorizeBookings = () => {
         const now = new Date();
-        const currentHour = getHours(now);
-        const currentMinutes = now.getMinutes();
 
         return bookings.reduce((acc, booking) => {
             const bookingDate = parseISO(booking.date);
-            const isPastDate = isPast(bookingDate) && !isToday(bookingDate);
-            const isTodayBooking = isToday(bookingDate);
-            const slots = booking.slots || [];
-
-            const hasUpcomingSlots = slots.some(slot => {
-                const slotTime = parse(slot.start, 'hh:mm a', new Date());
-                return slotTime.getHours() > currentHour ||
-                    (slotTime.getHours() === currentHour && slotTime.getMinutes() > currentMinutes);
-            });
-
-            const hasPastSlots = slots.every(slot => {
-                const slotTime = parse(slot.start, 'hh:mm a', new Date());
-                return slotTime.getHours() < currentHour ||
-                    (slotTime.getHours() === currentHour && slotTime.getMinutes() < currentMinutes);
-            });
-
-            if (isTodayBooking && hasUpcomingSlots) {
-                acc.today.push(booking);
-            } else if (isPastDate || (isTodayBooking && hasPastSlots)) {
+            const bookingEnd = getBookingEnd(booking);
+            if (!isValid(bookingDate) || !bookingEnd || booking.status === 'cancelled' || bookingEnd <= now) {
                 acc.history.push(booking);
+            } else if (isToday(bookingDate)) {
+                acc.today.push(booking);
             } else {
                 acc.upcoming.push(booking);
             }
@@ -66,13 +88,16 @@ const UserBookings = () => {
     const { upcoming, history, today } = categorizeBookings();
     const filteredBookings = activeTab === 'upcoming' ? [...today, ...upcoming] : history;
 
-    const formatDate = (dateString) => format(parseISO(dateString), 'PPpp');
+    const formatDate = (dateString) => {
+        const date = parseISO(String(dateString || ''));
+        return isValid(date) ? format(date, 'PPpp') : 'Date unavailable';
+    };
     
     const formatTime = (timeString) => {
         if (!timeString) return "Invalid time";
         try {
-            const parsed = parse(timeString, 'HH:mm', new Date()); 
-            return format(parsed, 'hh:mm a');
+            const parsed = parseSlotDateTime(new Date().toISOString(), timeString);
+            return parsed ? format(parsed, 'hh:mm a') : 'Time unavailable';
         } catch (err) {
             console.error("Time format error:", timeString, err);
             return "Invalid time";
@@ -90,19 +115,27 @@ const UserBookings = () => {
 
     console.log("subscription", subscriptions)
     const canCancelBooking = (booking) => {
-        const now = new Date();
+        const now = Date.now();
+        const bookingCreatedAt = new Date(booking.createdAt).getTime();
+        const firstStart = parseSlotDateTime(booking.date, booking.slots?.[0]?.start);
+        return booking.status === 'confirmed' && Number(booking.amountPaid || 0) === 0 &&
+            !booking.razorpay_payment_id && Number.isFinite(bookingCreatedAt) &&
+            now >= bookingCreatedAt && now - bookingCreatedAt <= 24 * 60 * 60 * 1000 && firstStart &&
+            firstStart.getTime() - now > 24 * 60 * 60 * 1000;
+    };
 
-        const isWithin24Hours = booking.slots.some(slot => {
-            const slotDateTime = parse(slot.start, 'hh:mm a', parseISO(booking.date));
-            const timeDiff = slotDateTime.getTime() - now.getTime();
-            return timeDiff < 24 * 60 * 60 * 1000 && timeDiff > 0;
-        });
-
-        const bookingCreatedAt = new Date(booking.createdAt);
-        const timeSinceBooking = now.getTime() - bookingCreatedAt.getTime();
-        const isAfter24HoursFromBooking = timeSinceBooking < 24 * 60 * 60 * 1000;
-
-        return !isWithin24Hours && isAfter24HoursFromBooking;
+    const cancelBooking = async (booking) => {
+        if (!window.confirm('Cancel this booking?')) return;
+        setCancelingId(booking._id);
+        try {
+            const { data } = await axios.post(`/api/users/bookings/${booking._id}/cancel`);
+            setBookings((current) => current.map((item) => item._id === booking._id ? { ...item, ...data.booking, turfId: item.turfId } : item));
+            toast.success(data.message || 'Booking cancelled');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Could not cancel this booking');
+        } finally {
+            setCancelingId(null);
+        }
     };
 
     if (loading) {
@@ -125,6 +158,8 @@ const UserBookings = () => {
                         {activeTab === 'upcoming' ? "Upcoming reservations and active subscriptions" : "Booking history"}
                     </p>
                 </div>
+
+                {loadError && <div role="alert" className="mb-6 rounded-xl border border-red-400/20 bg-red-400/10 p-4 text-center text-red-200">{loadError}<button onClick={() => { setLoading(true); setReloadCount((count) => count + 1); }} className="ml-3 underline">Retry</button></div>}
 
                 <div className="flex justify-center mb-8">
                     <div className="inline-flex rounded-full bg-gray-800 p-1">
@@ -201,11 +236,11 @@ const UserBookings = () => {
                                         <div className="flex justify-between items-center pt-3 border-t border-gray-700">
                                             <div>
                                                 <div className="text-gray-400 text-xs">Advance Paid</div>
-                                                <div className="text-white font-bold">₹{subscription.amountPaid || 0}</div>
+                                                <div className="text-white font-bold">{formatINR(subscription.amountPaid || 0)}</div>
                                             </div>
                                             <div>
                                                 <div className="text-gray-500 text-s">Due</div>
-                                                <div className="text-white font-bold">₹{subscription.totalAmount -subscription.amountPaid || 0}</div>
+                                                <div className="text-white font-bold">{formatINR(Math.max(0, Number(subscription.totalAmount || 0) - Number(subscription.amountPaid || 0)))}</div>
                                             </div>
                                             <div className="text-right">
                                                 <div className="text-gray-400 text-xs">Remaining Days</div>
@@ -239,7 +274,8 @@ const UserBookings = () => {
                         <div className="space-y-3">
                             {filteredBookings.map((booking) => {
                                 const isExpanded = expandedCard === booking._id;
-                                const isTodayBooking = isToday(parseISO(booking.date));
+                                const bookingDate = parseISO(String(booking.date || ''));
+                                const isTodayBooking = isValid(bookingDate) && isToday(bookingDate);
                                 const isConfirmed = booking.status === 'confirmed';
                                 const showCancelButton = canCancelBooking(booking);
 
@@ -270,7 +306,7 @@ const UserBookings = () => {
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-white font-bold text-lg">₹{booking.amountPaid}</p>
+                                                    <p className="text-white font-bold text-lg">{formatINR(booking.amountPaid)}</p>
                                                     {isTodayBooking && (
                                                         <p className="text-cyan-400 text-xs font-medium">Today</p>
                                                     )}
@@ -305,12 +341,12 @@ const UserBookings = () => {
                                                     </div>
                                                 </div>
 
-                                                {!showCancelButton && (
-                                                    <div className="mt-4 text-right">
-                                                        <p className="text-sm text-gray-400 italic">
-                                                            Cancellation not allowed due to policy.
-                                                        </p>
-                                                    </div>
+                                                {showCancelButton ? (
+                                                    <button type="button" disabled={cancelingId === booking._id} onClick={(event) => { event.stopPropagation(); cancelBooking(booking); }} className="mt-4 rounded-lg border border-red-400/40 px-4 py-2 text-sm font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-50">
+                                                        {cancelingId === booking._id ? 'Cancelling' : 'Cancel booking'}
+                                                    </button>
+                                                ) : booking.status === 'confirmed' && (
+                                                    <p className="mt-4 text-right text-sm text-gray-400">Cancellation is available within 24 hours of booking, more than 24 hours before the slot. Paid bookings require contacting the turf for refund arrangements.</p>
                                                 )}
                                             </div>
                                         )}

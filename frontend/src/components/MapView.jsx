@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { X, Timer, MapPinHouse } from "lucide-react";
@@ -105,21 +105,22 @@ const MapView = ({
         animate={{ y: 0 }}
         exit={{ y: "100%" }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
-        className="fixed inset-0 z-50 bg-white shadow-xl rounded-t-2xl overflow-hidden"
+        className="fixed inset-0 z-50 overflow-hidden bg-white shadow-xl"
       >
         <button
           onClick={() => {
             setmapView(false);
           }}
-          className="absolute top-4 right-4 z-50 bg-black/80 p-2 rounded-full text-white hover:bg-black"
+          aria-label="Close map"
+          className="absolute right-3 top-[max(env(safe-area-inset-top),0.75rem)] z-50 flex h-11 w-11 items-center justify-center rounded-full bg-black/80 text-white transition hover:bg-black sm:right-5 sm:top-5"
         >
           <X className="w-5 h-5" />
         </button>
 
-        <div ref={mapContainerRef} className="w-full h-[85vh]" />
+        <div ref={mapContainerRef} className="h-full min-h-[100dvh] w-full" />
 
         {durationInMin && distanceInKm && (
-          <div className="absolute bottom-35 left-6 z-50 backdrop-blur-md bg-white/70 px-4 py-2 rounded-xl shadow-xl border border-gray-200 flex items-center justify-center gap-4 text-gray-800 text-sm font-medium">
+          <div className="absolute bottom-[max(env(safe-area-inset-bottom),1rem)] left-3 right-3 z-50 flex items-center justify-center gap-3 rounded-xl border border-gray-200 bg-white/90 px-3 py-3 text-sm font-medium text-gray-800 shadow-xl backdrop-blur-md sm:bottom-6 sm:left-6 sm:right-auto sm:gap-4 sm:px-4 sm:py-2">
             <div className="flex items-center gap-1">
               <Timer color="#010101" />
               <span className="sora font-semibold">{durationInMin} min</span>

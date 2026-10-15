@@ -1,5 +1,4 @@
 // src/Owner.jsx
-import React from "react";
 import { Routes, Route } from "react-router-dom";
 import OwnerLayout from "./ownerComponents/OwnerLayout";
 import Dashboard from "./ownerPages/Dashboard";

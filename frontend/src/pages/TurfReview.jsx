@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
@@ -35,7 +35,7 @@ const TurfReview = () => {
 
     } catch (err) {
       console.error(err);
-      toast.error(response.err?.data?.message || "An error occurred while submitting the review.");
+      toast.error(err.response?.data?.message || "An error occurred while submitting the review.");
     } finally {
       setSubmitting(false);
     }

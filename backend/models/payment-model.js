@@ -37,7 +37,12 @@ const paymentSchema = new mongoose.Schema(
           start: String,
           end: String
         }
-      ]
+      ],
+      sport: String,
+      slotFees: Number,
+      amount: Number,
+      duration: String,
+      paymentType: String
     },
 
     // For subscription
@@ -46,12 +51,20 @@ const paymentSchema = new mongoose.Schema(
         type: mongoose.Schema.Types.ObjectId,
         ref: "Turf"
       },
+      planId: mongoose.Schema.Types.ObjectId,
       fromDate: String,
       toDate: String,
       slot: {
         start: String,
         end: String
-      }
+      },
+      durationDays: Number,
+      sport: String,
+      duration: String,
+      totalAmount: Number,
+      advanceAmount: Number,
+      platformFee: Number,
+      paymentType: String
     }
   },
   { timestamps: true }

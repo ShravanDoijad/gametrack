@@ -19,7 +19,6 @@ import Owner from './Owner';
 import OwnerPrivateRoute from './OwnerPrivateRoute';
 import { Error404 } from './components/Error404';
 import { Error403 } from './components/Error403';
-import TurfSwitcher from './components/TurfSwitcher';
 import { toast } from "react-toastify"
 
 import BookingManager from './pages/BookingManager';
@@ -43,8 +42,7 @@ const LoginRoute = () => {
 
 
 function App() {
-  const { loginPanel, token, userInfo, isLoading, hasCheckedAuth } = useContext(BookContext);
-  const [showSplash, setShowSplash] = useState(true);
+  const { loginPanel, token, userInfo } = useContext(BookContext);
   const [pendingReviews, setpendingReviews] = useState([])
   const [defferedPrompt, setdefferedPrompt] = useState()
   const [installed, setinstalled] = useState(false)
@@ -95,15 +93,12 @@ function App() {
   }, [token, userInfo]);
 
 
-  console.log('pendingReviews', pendingReviews.length);
-
-
   useEffect(() => {
     if (pendingReviews.length > 0) {
       const { bookingId, turfId } = pendingReviews[0];
       navigate(`/review?turfId=${turfId}&bookingId=${bookingId}`);
     }
-  }, [pendingReviews]);
+  }, [pendingReviews, navigate]);
 
 
   const getPendingReviews = async () => {
@@ -120,41 +115,21 @@ function App() {
   }
 
 
-useEffect(() => {
-  if (isLoading ) {
-    setShowSplash(true);
-  }
-}, [isLoading]);
-
-
-
   return (
-    <div className="max-w-screen min-h-[92vh] bg-gradient-to-b pb-20 from-gray-900 to-gray-950 box-border flex flex-col">
-      <div className={`flex  fixed z-100 items-center ${installed? "hidden" :"block"} px-2 py-1 md:hidden bg-white shadow-md w-full max-w-sm mx-auto text-center`}>
-      <X onClick={()=>setinstalled(true)} className=' text-gray-500 mb-10 mt-1 '  size={25}/>
-      <img
-        src="/icons/logo-512.png" // replace with your logo path
-        alt="App Logo"
-        className="w-15 h-15 "
-      />
-      
-
-
-      <div className='flex flex-col  w-full justify-center  items-center ml-2'>
-      <h2 className="text-sm sora font-semibold ">Install Our App</h2>
-      <p className="text-gray-600 text-xs ">
-        Get faster access and smoother experience
-      </p>
+    <div className="flex min-h-[100dvh] w-full flex-col overflow-x-clip bg-gradient-to-b from-gray-900 to-gray-950 pb-20">
+      <div className={`${installed ? "hidden" : "grid"} fixed inset-x-0 top-0 z-[120] mx-auto grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-b-2xl bg-white px-3 py-2 text-left shadow-lg md:hidden`}>
+        <button type="button" onClick={() => setinstalled(true)} aria-label="Dismiss install prompt" className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100">
+          <X size={20} />
+        </button>
+        <img src="/icons/logo-512.png" alt="GameTrack app" className="h-10 w-10 rounded-xl object-cover" />
+        <div className="min-w-0">
+          <h2 className="truncate text-sm font-semibold text-gray-900">Install GameTrack</h2>
+          <p className="truncate text-xs text-gray-600">Get faster access on your device</p>
+        </div>
+        <button type="button" onClick={handleInstallClick} className="min-h-10 rounded-xl bg-lime-600 px-3 text-xs font-bold text-white shadow-sm transition hover:bg-lime-700 sm:px-4 sm:text-sm">
+          Install
+        </button>
       </div>
-
-      {/* Button */}
-      <button
-      onClick={handleInstallClick}
-        className="bg-lime-600 hover:bg-lime-600 text-white font-semibold text-sm px-2 py-2 rounded-xl shadow-md"
-      >
-        Install App
-      </button>
-    </div>
       {loginPanel && <Register />}
       <Navbar />
 
@@ -173,9 +148,10 @@ useEffect(() => {
 
           {/* Guests can choose a slot before verifying their phone. */}
           <Route path="/booking" element={<BookingManager />} />
+          <Route path="/booking/:turfId" element={<BookingManager />} />
 
           <Route element={<PrivateRoute />}>
-            <Route path="/booking/confirmation" element={<BookingConfirmation />} />
+            <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
             <Route path="/notification" element={<Notifications />} />
             <Route path="/userBookings" element={<UserBookings />} />
             <Route path="/profile" element={<Profile />} />

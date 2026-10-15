@@ -4,9 +4,9 @@ import { BookContext } from './constexts/bookContext';
 
 const OwnerPrivateRoute = () => {
 
-  const { token, isLoading, userInfo } = useContext(BookContext);
+  const { token, isLoading, hasCheckedAuth, userInfo } = useContext(BookContext);
 
-  if (isLoading) {
+  if (isLoading || !hasCheckedAuth) {
     return <div className="text-white p-6">Checking auth...</div>;
   }
 

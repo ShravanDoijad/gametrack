@@ -11,12 +11,19 @@ const ownerMiddleware = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    const owner = await Owner.findOne({
-      $or: [{ email: decoded.email }, { phone: decoded.phone }]
-    }).select("-__v -password");
+    if (decoded.role !== "owner" || !decoded.id) {
+      return res.status(403).json({ message: "Owner access required." });
+    }
+
+    const owner = await Owner.findById(decoded.id).select("-__v -password");
 
     if (!owner) {
       return res.status(401).json({ message: "Owner not found." });
+    }
+
+    const requestedTurfId = req.query?.turfId || req.body?.turfId;
+    if (requestedTurfId && !(owner.turfIds || []).some((id) => id.toString() === String(requestedTurfId))) {
+      return res.status(403).json({ message: "This turf is not managed by your account." });
     }
 
     req.auth = { data: owner, role: "owner" };

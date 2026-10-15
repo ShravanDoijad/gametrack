@@ -1,17 +1,15 @@
-import React, { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useContext } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { AlertTriangle, PlusCircle, Loader2, CalendarDays, Calendar, Clock3 } from "lucide-react";
-import TimePicker from "react-time-picker";
+import { PlusCircle, CalendarDays } from "lucide-react";
 import "react-time-picker/dist/TimePicker.css";
-import { addDays, format } from "date-fns";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { BookContext } from "../constexts/bookContext";
 import { toast } from "react-toastify";
 import SelectCheckOut from "../components/SelectCheckOut";
 import SelectCheckIn from "../components/SelectCheckIn";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const getNext7Days = () => {
   const days = [];
@@ -29,31 +27,52 @@ const getNext7Days = () => {
 };
 
 const TimeSlots = () => {
+  const location = useLocation();
 
-  const [slots, setSlots] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [confirmingSlot, setConfirmingSlot] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [manualSlotModal, setManualSlotModal] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedCheckIn, setSelectedCheckIn] = useState(null);
-  const [showSlotPopup, setShowSlotPopup] = useState(false);
-  const { selectedTurfId, turfs } = useContext(BookContext);
+  const [manualSlotModal, setManualSlotModal] = useState(Boolean(location.state?.date));
+  const [selectedDate, setSelectedDate] = useState(() => location.state?.date ? new Date(`${location.state.date}T12:00:00`) : null);
+  const [selectedCheckIn, setSelectedCheckIn] = useState(() => {
+    const startMinute = Number(location.state?.startTime);
+    if (!Number.isFinite(startMinute)) return null;
+    const hour = Math.floor(startMinute / 60) % 24;
+    return `${hour % 12 || 12}:${String(startMinute % 60).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`;
+  });
+  const [showSlotPopup, setShowSlotPopup] = useState(Boolean(location.state?.startTime));
+  const { selectedTurfId, turfs, setbookings, refreshOwnerData } = useContext(BookContext);
   const [availableCheckoutSlots, setavailableCheckoutSlots] = useState([])
   const [selectedCheckOut, setSelectedCheckOut] = useState(null);
-  const [customDate, setCustomDate] = useState(null);
   const [availableTimes, setAvailableTimes] = useState([]);
   const [allSlots, setallSlots] = useState([])
   const [firstName, setfirstName] = useState("")
   const [lastName, setlastName] = useState("")
   const [phone, setPhone] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState("");
+  const [paymentChoice, setPaymentChoice] = useState("unpaid");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [sport, setSport] = useState("");
   const [bookingType, setBookingType] = useState("single");
   const [durationDays, setDurationDays] = useState(30);
   const [turfInfo, setturfInfo] = useState()
   const next7Days = getNext7Days();
   const navigate = useNavigate()
+  const requestedDate = location.state?.date;
+  const requestedStartTime = location.state?.startTime;
+
+  useEffect(() => {
+    const date = requestedDate;
+    if (!date) return;
+    setSelectedDate(new Date(`${date}T12:00:00`));
+    setManualSlotModal(true);
+    if (Number.isFinite(Number(requestedStartTime))) {
+      const startMinute = Number(requestedStartTime);
+      const hour = Math.floor(startMinute / 60) % 24;
+      setSelectedCheckIn(`${hour % 12 || 12}:${String(startMinute % 60).padStart(2, "0")} ${hour >= 12 ? "PM" : "AM"}`);
+      setShowSlotPopup(true);
+    }
+  }, [location.key, requestedDate, requestedStartTime]);
 
 
   const handleDateSelect = (date) => {
@@ -119,43 +138,46 @@ const TimeSlots = () => {
     return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
   };
 
-  const calculateDuration = () => {
-    const duration = ((timeStringToMinutes(convertToMilitary(selectedCheckOut)) - timeStringToMinutes(convertToMilitary(selectedCheckIn))) / 60).toFixed(1)
-    return duration;
-  };
-  const formattedDate = selectedDate?.toISOString().split('T')[0];
-
-  const getPriceForSlot = (turfInfo, checkInTime) => {
-
-    const timeParts = checkInTime.split(/:| /);
-    let hour = parseInt(timeParts[0]);
-    const period = timeParts[2];
-
-    // Convert to 24-hour format
-    if (period === 'PM' && hour !== 12) {
-      hour += 12;
-    } else if (period === 'AM' && hour === 12) {
-      hour = 0;
-    }
-    const switchTime = parseInt(turfInfo.nightPriceStart?.split(":")[0])
-
-    return hour >= switchTime ? turfInfo.nightPrice : turfInfo.dayPrice;
-  };
+  const formattedDate = selectedDate
+    ? `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`
+    : "";
 
   const calculateFee = () => {
-    const pricePerHour = getPriceForSlot(turfInfo, selectedCheckIn);
-    return calculateDuration() * pricePerHour;
+    if (!turfInfo || !selectedCheckIn || !selectedCheckOut) return 0;
+    const startMinute = timeStringToMinutes(convertToMilitary(selectedCheckIn));
+    const endMinute = timeStringToMinutes(convertToMilitary(selectedCheckOut));
+    if (endMinute <= startMinute) return 0;
+    const cutoff = turfInfo.nightPriceStart ? timeStringToMinutes(turfInfo.nightPriceStart) : null;
+    let amount = 0;
+    for (let minute = startMinute; minute < endMinute; minute += 1) {
+      const minuteOfDay = minute % 1440;
+      const rate = cutoff !== null && minuteOfDay >= cutoff ? turfInfo.nightPrice : turfInfo.dayPrice;
+      amount += Number(rate || 0) / 60;
+    }
+    return Math.round(amount * 100) / 100;
   };
 
 
   const handleManualBooking = async () => {
-
+    if (isSubmitting) return;
+    if (!firstName.trim() || !phone.trim()) {
+      toast.error("Enter the customer’s name and mobile number.");
+      return;
+    }
+    const total = bookingType === "subscription" ? calculateFee() * durationDays : calculateFee();
+    const received = paymentChoice === "unpaid" ? 0 : paymentChoice === "full" ? total : Number(advanceAmount);
+    if (!Number.isFinite(received) || received < 0 || received > total) {
+      toast.error("The amount received must be between ₹0 and the booking total.");
+      return;
+    }
+    setIsSubmitting(true);
     try {
       if (bookingType === "single") {
         const response = await axios.post("/owner/addManualBooking", {
           fullname: `${firstName} ${lastName}`,
           phone: phone,
-          advanceAmount: advanceAmount,
+          advanceAmount: received,
+          paymentMethod,
           date: formattedDate,
           start: convertToMilitary(selectedCheckIn),
           end: convertToMilitary(selectedCheckOut),
@@ -163,12 +185,19 @@ const TimeSlots = () => {
           slotFees: calculateFee(),
           newStatus: "booked"
         });
-        toast.success(response.data.message || "Slot Booked Successfully");
+        if (response.data.booking) {
+          setbookings((current) => [
+            ...current.filter((booking) => booking._id !== response.data.booking._id),
+            response.data.booking,
+          ]);
+        }
+        await refreshOwnerData();
+        toast.success(response.data.message || "Booking confirmed.");
       } else {
         const response = await axios.post("/owner/addManualSubscription", {
           fullname: `${firstName} ${lastName}`,
           phone: phone,
-          advanceAmount: advanceAmount,
+          advanceAmount: received,
           startDate: formattedDate,
           durationDays: durationDays,
           start: convertToMilitary(selectedCheckIn),
@@ -178,21 +207,26 @@ const TimeSlots = () => {
           sport: sport || "General",
           newStatus: "booked"
         });
+        await refreshOwnerData();
         toast.success(response.data.message || "Subscription Created Successfully");
       }
       
       setConfirmingSlot(null);
+      setManualSlotModal(false);
       setBookingType("single");
       setfirstName("");
       setlastName("");
       setPhone("");
       setAdvanceAmount("");
+      setPaymentChoice("unpaid");
       setSport("");
       navigate("/owner/turfTodaysbookings");
     }
     catch (error) {
       console.log(error);
-      toast.error(error.response?.data?.message || "Internal server Error");
+      toast.error(error.response?.data?.message || "We couldn’t save this booking. Check your connection and try again.");
+    } finally {
+      setIsSubmitting(false);
     }
 
   };
@@ -303,7 +337,7 @@ const TimeSlots = () => {
       const slots = generateAvailableTimeSlots(selectedDate, turfInfo);
       setAvailableTimes(slots);
     }
-  }, [selectedDate, selectedTurfId]);
+  }, [selectedDate, turfInfo]);
 
 
 
@@ -360,125 +394,94 @@ const TimeSlots = () => {
             onClick={() => setManualSlotModal(true)}
             className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-medium transition-all shadow-lg hover:shadow-blue-500/20"
           >
-            <PlusCircle size={20} /> Create Booking
+            <PlusCircle size={20} /> Add booking
           </button>
         </div>
 
         {confirmingSlot && (
-          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center px-4 backdrop-blur-sm">
-            <div className="bg-neutral-900 p-6 rounded-xl border border-neutral-700 w-full max-w-md shadow-2xl">
-              <div className="flex flex-col items-center text-center">
-                <div className="mb-4 p-3 bg-amber-400/10 rounded-full">
-                  <AlertTriangle className="text-amber-400" size={40} />
+          <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/60 p-0 backdrop-blur-sm sm:items-center sm:p-4" role="presentation">
+            <section role="dialog" aria-modal="true" aria-labelledby="manual-booking-title" className="max-h-[92dvh] w-full max-w-xl overflow-y-auto rounded-t-3xl border border-slate-200 bg-white p-5 text-slate-900 shadow-2xl sm:rounded-3xl sm:p-7">
+              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200 sm:hidden" />
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-700">Step 2 of 2 &middot; Confirm booking</p>
+                  <h2 id="manual-booking-title" className="mt-1 text-xl font-bold">Customer and payment</h2>
+                  <p className="mt-1 text-sm text-slate-600">Check the details before reserving this slot.</p>
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3 sora">
-                  Confirm Slot Booking
-                </h3>
-                <p className="text-sm text-neutral-400 mb-6 leading-relaxed">
-                  You're about to mark <span className="font-semibold text-white">{confirmingSlot.start} - {confirmingSlot.end}</span> as Booked.
-                  <br />
-                  <span className="text-green-400 mt-2 inline-block sora font-medium">
-                    This action can be shown to All Users
-                  </span>
-                </p>
+                <button type="button" aria-label="Close booking form" onClick={() => setConfirmingSlot(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700">&times;</button>
+              </div>
 
-                {/* Inputs for phone and advance */}
-                <div className="w-full mb-4 space-y-3">
-                  {/* Booking Type Toggle */}
-                  <div className="flex bg-neutral-800 p-1 rounded-lg">
-                    <button
-                      onClick={() => setBookingType("single")}
-                      className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${bookingType === "single" ? "bg-lime-500 text-black shadow" : "text-neutral-400 hover:text-white"}`}
-                    >
-                      Single Booking
-                    </button>
-                    <button
-                      onClick={() => setBookingType("subscription")}
-                      className={`flex-1 py-2 text-sm font-semibold rounded-md transition-all ${bookingType === "subscription" ? "bg-lime-500 text-black shadow" : "text-neutral-400 hover:text-white"}`}
-                    >
-                      Subscription
-                    </button>
-                  </div>
-
-                  <div className="flex gap-1.5">
-                    <input
-                      type="text"
-                      placeholder="First Name"
-                      value={firstName}
-                      onChange={(e) => setfirstName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                    />
-                    <input type="text"
-                      placeholder="Last Name"
-                      value={lastName}
-                      onChange={(e) => setlastName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                    />
-                  </div>
-                  <input
-                    type="tel"
-                    placeholder="Phone Number"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                  />
-                  
-                  {bookingType === "subscription" && (
-                    <div className="flex gap-1.5">
-                      <select
-                        value={durationDays}
-                        onChange={(e) => setDurationDays(Number(e.target.value))}
-                        className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                      >
-                        <option value={7}>7 Days</option>
-                        <option value={15}>15 Days</option>
-                        <option value={30}>1 Month (30 Days)</option>
-                        <option value={60}>2 Months (60 Days)</option>
-                        <option value={90}>3 Months (90 Days)</option>
-                      </select>
-                      <input
-                        type="text"
-                        placeholder="Sport (e.g. Football)"
-                        value={sport}
-                        onChange={(e) => setSport(e.target.value)}
-                        className="w-full px-4 py-3 rounded-lg bg-neutral-800 text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                      />
-                    </div>
-                  )}
-
-                  <input
-                    type="number"
-                    placeholder="Advance Amount (₹)"
-                    value={advanceAmount}
-                    onChange={(e) => setAdvanceAmount(e.target.value)}
-                    className="w-full px-4 py-3 rounded-lg bg-neutral-800  text-white border border-neutral-700 placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-lime-500"
-                  />
-                  
-                  {bookingType === "subscription" && (
-                    <div className="text-sm text-lime-400 font-medium text-left px-2">
-                      Total Fee: ₹{calculateFee() * durationDays}
-                    </div>
-                  )}
-                  
+              <div className="mt-5 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                <div className="flex flex-wrap justify-between gap-2 text-sm">
+                  <span className="font-semibold">{selectedDate?.toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" })}</span>
+                  <span className="font-semibold">{selectedCheckIn} &ndash; {selectedCheckOut}</span>
                 </div>
-
-                {/* Buttons */}
-                <div className="flex gap-4 w-full">
-                  <button
-                    onClick={() => setConfirmingSlot(null)}
-                    className="flex-1 border border-neutral-700 px-4 py-3 text-neutral-300 rounded-lg hover:bg-neutral-800 transition-colors font-medium"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={() => handleManualBooking()}
-                    className="flex-1 bg-gradient-to-r from-lime-500 to-lime-600 text-black font-semibold px-4 py-3 rounded-lg hover:from-lime-400 hover:to-lime-500 transition-colors font-sora"
-                  >
-                    Confirm Booking
-                  </button>
+                <div className="mt-3 flex items-end justify-between gap-3 border-t border-emerald-100 pt-3">
+                  <span className="text-sm text-slate-600">Total booking amount</span>
+                  <span className="text-xl font-bold">?{(calculateFee() * (bookingType === "subscription" ? durationDays : 1)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
                 </div>
               </div>
-            </div>
+
+              <div className="mt-5 space-y-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="block text-sm font-semibold">Customer name <span className="text-red-600">*</span>
+                    <input autoComplete="name" value={firstName} onChange={(event) => setfirstName(event.target.value)} placeholder="Name" className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100" />
+                  </label>
+                  <label className="block text-sm font-semibold">Mobile number <span className="text-red-600">*</span>
+                    <input type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="Customer phone" className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100" />
+                  </label>
+                </div>
+
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Booking type">
+                  {[{ id: "single", label: "Single booking" }, { id: "subscription", label: "Subscription" }].map((item) => (
+                    <button key={item.id} type="button" onClick={() => setBookingType(item.id)} aria-pressed={bookingType === item.id} className={`min-h-11 rounded-xl border px-4 text-sm font-semibold ${bookingType === item.id ? "border-emerald-800 bg-emerald-800 text-white" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"}`}>{item.label}</button>
+                  ))}
+                </div>
+                {bookingType === "subscription" && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-sm font-semibold">Subscription length
+                      <select value={durationDays} onChange={(event) => setDurationDays(Number(event.target.value))} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100">
+                        <option value={7}>7 days</option><option value={15}>15 days</option><option value={30}>30 days</option><option value={60}>60 days</option><option value={90}>90 days</option>
+                      </select>
+                    </label>
+                    <label className="block text-sm font-semibold">Sport
+                      <input value={sport} onChange={(event) => setSport(event.target.value)} placeholder="e.g. Football" className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100" />
+                    </label>
+                  </div>
+                )}
+
+                <fieldset>
+                  <legend className="mb-2 text-sm font-semibold">Payment received</legend>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[{ id: "unpaid", label: "Not paid" }, { id: "partial", label: "Advance" }, { id: "full", label: "Fully paid" }].map((item) => (
+                      <button key={item.id} type="button" onClick={() => { setPaymentChoice(item.id); if (item.id === "full") setAdvanceAmount(String(calculateFee() * (bookingType === "subscription" ? durationDays : 1))); if (item.id === "unpaid") setAdvanceAmount("0"); if (item.id === "partial") setAdvanceAmount(""); }} aria-pressed={paymentChoice === item.id} className={`min-h-11 rounded-xl border px-2 text-xs font-semibold sm:text-sm ${paymentChoice === item.id ? "border-emerald-800 bg-emerald-50 text-emerald-900" : "border-slate-300 text-slate-700 hover:bg-slate-50"}`}>{item.label}</button>
+                    ))}
+                  </div>
+                </fieldset>
+
+                {paymentChoice === "partial" && (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block text-sm font-semibold">Amount received
+                      <input type="number" min="0.01" max={calculateFee() * (bookingType === "subscription" ? durationDays : 1)} step="0.01" value={advanceAmount} onChange={(event) => setAdvanceAmount(event.target.value)} placeholder="Enter amount" className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 px-3 text-sm font-normal outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100" />
+                    </label>
+                    <label className="block text-sm font-semibold">Payment method
+                      <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"><option value="cash">Cash</option><option value="upi">UPI</option><option value="other">Other</option></select>
+                    </label>
+                  </div>
+                )}
+                {paymentChoice === "full" && (
+                  <label className="block max-w-sm text-sm font-semibold">Payment method
+                    <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"><option value="cash">Cash</option><option value="upi">UPI</option><option value="other">Other</option></select>
+                  </label>
+                )}
+                <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm"><span className="text-slate-600">Still due</span><strong>?{Math.max(0, calculateFee() * (bookingType === "subscription" ? durationDays : 1) - (paymentChoice === "unpaid" ? 0 : paymentChoice === "full" ? calculateFee() * (bookingType === "subscription" ? durationDays : 1) : Number(advanceAmount) || 0)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+              </div>
+
+              <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setConfirmingSlot(null)} className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back</button>
+                <button type="button" onClick={handleManualBooking} disabled={isSubmitting || !firstName.trim() || !phone.trim() || (paymentChoice === "partial" && !(Number(advanceAmount) > 0))} className="min-h-11 rounded-xl bg-emerald-800 px-5 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">{isSubmitting ? "Saving booking?" : "Confirm booking"}</button>
+              </div>
+            </section>
           </div>
         )}
 
@@ -515,7 +518,7 @@ const TimeSlots = () => {
           showCalendar && (
             <div className="my-4 bg-[#1a1a1a] p-4 rounded-xl border border-gray-700">
               <DatePicker
-                selected={customDate}
+                selected={selectedDate}
                 onChange={(date) => handleDateSelect(date)}
                 inline
                 minDate={new Date()}
@@ -531,7 +534,7 @@ const TimeSlots = () => {
 
 
         {selectedCheckIn && showSlotPopup && !selectedCheckOut && (
-          <SelectCheckOut getFilteredCheckoutTimes={getFilteredCheckoutTimes} s selectedCheckIn={convertToMilitary(selectedCheckIn)} allSlots={allSlots} selectedDate={selectedDate} selectedCheckOut={selectedCheckOut} handleCheckOut={handleCheckOut} />
+          <SelectCheckOut getFilteredCheckoutTimes={getFilteredCheckoutTimes} s selectedCheckIn={convertToMilitary(selectedCheckIn)} allSlots={allSlots} selectedDate={selectedDate} selectedCheckOut={selectedCheckOut} handleCheckOut={handleCheckOut} turfInfo={turfInfo} />
         )}
 
 
