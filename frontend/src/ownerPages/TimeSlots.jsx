@@ -156,6 +156,9 @@ const TimeSlots = () => {
     }
     return Math.round(amount * 100) / 100;
   };
+  const money = (amount) => new Intl.NumberFormat("en-IN", {
+    style: "currency", currency: "INR", maximumFractionDigits: 2,
+  }).format(Number(amount) || 0);
 
 
   const handleManualBooking = async () => {
@@ -378,21 +381,21 @@ const TimeSlots = () => {
 
 
   return (
-    <div className="p-6 min-h-screen text-white font-sans">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-full bg-slate-50 px-4 py-5 text-slate-900 sm:px-6 sm:py-7 lg:px-8">
+      <div className="mx-auto max-w-[1440px]">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-white tracking-tight font-sora">
-              Booking Dashboard
+            <h2 className="text-2xl font-bold tracking-tight font-sora sm:text-3xl">
+              Add a booking
             </h2>
-            <p className="text-neutral-400 mt-2">
-              Manage your turf bookings and availability
+            <p className="mt-1 text-sm text-slate-600">
+              Choose an available time and enter the customer details.
             </p>
           </div>
           <button
             onClick={() => setManualSlotModal(true)}
-            className="flex items-center gap-2 px-5 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg font-medium transition-all shadow-lg hover:shadow-blue-500/20"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#15803D] px-4 text-sm font-semibold text-white transition hover:bg-[#166534] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-700 focus-visible:ring-offset-2"
           >
             <PlusCircle size={20} /> Add booking
           </button>
@@ -418,7 +421,7 @@ const TimeSlots = () => {
                 </div>
                 <div className="mt-3 flex items-end justify-between gap-3 border-t border-emerald-100 pt-3">
                   <span className="text-sm text-slate-600">Total booking amount</span>
-                  <span className="text-xl font-bold">?{(calculateFee() * (bookingType === "subscription" ? durationDays : 1)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
+                  <span className="text-xl font-bold">{money(calculateFee() * (bookingType === "subscription" ? durationDays : 1))}</span>
                 </div>
               </div>
 
@@ -474,12 +477,12 @@ const TimeSlots = () => {
                     <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-emerald-700 focus:ring-2 focus:ring-emerald-100"><option value="cash">Cash</option><option value="upi">UPI</option><option value="other">Other</option></select>
                   </label>
                 )}
-                <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm"><span className="text-slate-600">Still due</span><strong>?{Math.max(0, calculateFee() * (bookingType === "subscription" ? durationDays : 1) - (paymentChoice === "unpaid" ? 0 : paymentChoice === "full" ? calculateFee() * (bookingType === "subscription" ? durationDays : 1) : Number(advanceAmount) || 0)).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</strong></div>
+                <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm"><span className="text-slate-600">Still due</span><strong>{money(Math.max(0, calculateFee() * (bookingType === "subscription" ? durationDays : 1) - (paymentChoice === "unpaid" ? 0 : paymentChoice === "full" ? calculateFee() * (bookingType === "subscription" ? durationDays : 1) : Number(advanceAmount) || 0)))}</strong></div>
               </div>
 
               <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 <button type="button" onClick={() => setConfirmingSlot(null)} className="min-h-11 rounded-xl border border-slate-300 px-5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Back</button>
-                <button type="button" onClick={handleManualBooking} disabled={isSubmitting || !firstName.trim() || !phone.trim() || (paymentChoice === "partial" && !(Number(advanceAmount) > 0))} className="min-h-11 rounded-xl bg-emerald-800 px-5 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">{isSubmitting ? "Saving booking?" : "Confirm booking"}</button>
+                <button type="button" onClick={handleManualBooking} disabled={isSubmitting || !firstName.trim() || !phone.trim() || (paymentChoice === "partial" && !(Number(advanceAmount) > 0))} className="min-h-11 rounded-xl bg-emerald-800 px-5 text-sm font-semibold text-white hover:bg-emerald-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">{isSubmitting ? "Saving booking…" : "Confirm booking"}</button>
               </div>
             </section>
           </div>
@@ -488,35 +491,37 @@ const TimeSlots = () => {
         {manualSlotModal &&
           <div className="flex gap-3 flex-wrap pb-2">
             {next7Days.map((day, idx) => (
-              <motion.div
+              <motion.button
+                type="button"
                 key={idx}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => handleDateSelect(day.date)}
-                className={`min-w-[90px] p-3 rounded-xl text-center cursor-pointer border transition-all duration-200 ${selectedDate?.toDateString() === day.date.toDateString()
-                  ? "bg-lime-500 text-black border-lime-500"
-                  : "bg-[#1a1a1a] border-[#2a2a2a] text-white"
+                className={`min-h-[76px] min-w-[100px] rounded-xl border p-3 text-center transition-colors ${selectedDate?.toDateString() === day.date.toDateString()
+                  ? "border-green-800 bg-green-800 text-white"
+                  : "border-slate-200 bg-white text-slate-700 hover:border-green-700 hover:bg-green-50"
                   }`}
               >
                 <p className="text-sm font-semibold">{day.label.split(",")[0]}</p>
                 <p className="text-lg font-bold sora">{day.label.split(",")[1]}</p>
-              </motion.div>
+              </motion.button>
             ))}
 
-            <motion.div
+            <motion.button
+              type="button"
               whileTap={{ scale: 0.95 }}
               onClick={() => setShowCalendar(true)}
-              className="min-w-[90px] p-3 rounded-xl bg-[#1a1a1a] border border-[#2a2a2a] text-center cursor-pointer"
+              className="min-h-[76px] min-w-[100px] rounded-xl border border-slate-200 bg-white p-3 text-center text-slate-700 hover:border-green-700 hover:bg-green-50"
             >
               <CalendarDays className="mx-auto mb-1" />
               <p className="text-xs">Pick Date</p>
-            </motion.div>
+            </motion.button>
           </div>
         }
 
 
         {
           showCalendar && (
-            <div className="my-4 bg-[#1a1a1a] p-4 rounded-xl border border-gray-700">
+            <div className="my-4 overflow-x-auto rounded-xl border border-slate-200 bg-white p-4">
               <DatePicker
                 selected={selectedDate}
                 onChange={(date) => handleDateSelect(date)}

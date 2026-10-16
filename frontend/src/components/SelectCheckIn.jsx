@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Sunrise, Sun, Moon } from "lucide-react";
@@ -41,15 +40,15 @@ const SelectCheckIn = ({
 
 const visibleSlots = turfInfo ? getSlotsByTimeZone(activeZone) : [];
 
-const TimeZoneButton = ({ zone, icon, gradient }) => (
+const TimeZoneButton = ({ zone, icon }) => (
     <motion.button
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
+      type="button"
+      whileTap={{ scale: 0.98 }}
       onClick={() => setActiveZone(zone)}
       className={`flex-1 py-3 px-4 rounded-2xl flex flex-col items-center justify-center transition-all duration-300 border ${
-        activeZone === zone 
-          ? `${gradient} text-white border-transparent shadow-[0_10px_20px_rgba(0,0,0,0.3)] transform scale-105`
-          : "bg-white/5 backdrop-blur-md border-white/10 text-gray-400 hover:bg-white/10 hover:border-white/20 hover:text-white"
+        activeZone === zone
+          ? "border-green-800 bg-green-800 text-white shadow-sm"
+          : "border-slate-200 bg-white text-slate-600 hover:border-green-700 hover:bg-green-50"
       }`}
     >
       <div className="flex items-center gap-2">
@@ -66,29 +65,26 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="mb-6">
-        <h3 className="text-2xl font-extrabold text-white mb-2 tracking-tight">Select Check-in Time</h3>
-        <p className="text-gray-400 font-medium">Choose your preferred playing time</p>
+      <div className="mb-4">
+        <h3 className="mb-1 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Select a start time</h3>
+        <p className="text-sm text-slate-600">Choose from the available slots.</p>
       </div>
 
-      <div className="flex gap-3 mb-6 overflow-scroll  scroll-smooth">
+      <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
         <TimeZoneButton 
           zone="morning" 
           icon={<Sunrise className="w-5 h-5" />} 
-          gradient="bg-gradient-to-r from-amber-400 to-orange-500"
         />
         <TimeZoneButton 
           zone="afternoon" 
           icon={<Sun className="w-5 h-5" />} 
-          gradient="bg-gradient-to-r from-sky-400 to-blue-500"
         />
         <TimeZoneButton 
           zone="night" 
           icon={<Moon className="w-5 h-5" />} 
-          gradient="bg-gradient-to-r from-purple-500 to-indigo-600"
         />
       </div>
-      <div className="grid grid-cols-2 gap-3 z-50">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {visibleSlots?.map((slot, idx) => {
           const isBooked = turfInfo?.bookedSlots
             ?.find((s) => s.date === selectedDate.toISOString().split("T")[0])
@@ -97,21 +93,22 @@ const TimeZoneButton = ({ zone, icon, gradient }) => (
           const isAvailable = availableTimes.includes(slot.display);
           
           return (
-            <div
+            <button
+              type="button"
               key={idx}
               onClick={() => isAvailable && handleCheckIn(slot.display)}
               className={`px-4 py-3 rounded-xl text-center border transition-all duration-300 font-medium ${
                 selectedCheckIn === slot.display
-                  ? "bg-lime-400 text-gray-950 border-lime-400 shadow-[0_0_15px_rgba(163,230,53,0.4)] scale-105 font-bold"
+                  ? "bg-green-800 text-white border-green-800 font-bold"
                   : isBooked
-                  ? "bg-rose-500/10 text-rose-400/50 border-rose-500/20 cursor-not-allowed"
+                  ? "bg-rose-50 text-rose-400 border-rose-100 cursor-not-allowed"
                   : isAvailable
-                  ? "bg-white/5 backdrop-blur-md text-gray-200 border-white/10 hover:bg-white/10 hover:border-white/20 cursor-pointer"
-                  : "bg-white/5 text-gray-600/50 border-transparent cursor-not-allowed"
+                  ? "bg-white text-slate-700 border-slate-200 hover:border-green-700 hover:bg-green-50 cursor-pointer"
+                  : "bg-slate-100 text-slate-400 border-slate-100 cursor-not-allowed"
               }`}
             >
               {slot.display}
-            </div>
+            </button>
           );
         })}
       </div>

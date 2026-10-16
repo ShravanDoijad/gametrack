@@ -55,6 +55,7 @@ const bookingSchema = new mongoose.Schema({
     required: true,
   },
    reminderSent: { type: Boolean, default: false },
+  isReviewed: { type: Boolean, default: false },
    status: {
     type: String,
     enum: ['pending', 'confirmed', 'cancelled'],

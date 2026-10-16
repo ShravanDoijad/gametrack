@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
-import { MapPin, Clock, Star, Navigation, ChevronRight, Check } from "lucide-react";
+import { MapPin, Clock, Star, Navigation, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import SkeletonLoader from "../components/SkeletonLoader";
 
 // Turns "18:00" into "6 PM" and "06:30" into "6:30 AM". Leaves anything else untouched.
@@ -26,6 +26,7 @@ export const Overview = () => {
   const navigate = useNavigate();
   const [turf, setTurf] = useState(null);
   const [reviews, setReviews] = useState([]);
+  const reviewTrackRef = useRef(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [retryCount, setRetryCount] = useState(0);
@@ -234,24 +235,29 @@ export const Overview = () => {
           </Section>
         )}
 
-        {/* Reviews: just the latest 3, no slider */}
+        {/* Compact review carousel */}
         {reviews.length > 0 && (
           <Section title="What players say">
-            <div className="space-y-3">
-              {[...reviews]
-                .reverse()
-                .slice(0, 3)
-                .map((r, i) => (
-                  <div key={i} className="rounded-2xl bg-white/5 border border-white/10 p-4">
+            <div className="relative">
+              {reviews.length > 1 && <div className="mb-2 flex justify-end gap-2">
+                <button type="button" aria-label="Previous review" onClick={() => reviewTrackRef.current?.scrollBy({ left: -reviewTrackRef.current.clientWidth, behavior: "smooth" })} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"><ChevronLeft size={17} /></button>
+                <button type="button" aria-label="Next review" onClick={() => reviewTrackRef.current?.scrollBy({ left: reviewTrackRef.current.clientWidth, behavior: "smooth" })} className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-300 transition hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400"><ChevronRight size={17} /></button>
+              </div>}
+              <div ref={reviewTrackRef} role="region" aria-label="Player reviews" aria-roledescription="carousel" tabIndex={0} className="flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-smooth pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {[...reviews].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0)).slice(0, 10).map((r, i) => (
+                  <article key={r._id || `${r.date}-${i}`} role="group" aria-roledescription="slide" aria-label={`Review ${i + 1} of ${Math.min(reviews.length, 10)}`} className="flex min-h-40 basis-[88%] shrink-0 snap-start flex-col rounded-2xl border border-white/10 bg-white/5 p-4 sm:basis-[70%] lg:basis-[82%]">
                     <p className="font-semibold text-lg">
                       {r.name || "Player"}{" "}
-                      <span className="text-yellow-400 text-base">
-                        {"★".repeat(r.rating || 0)}
+                      <span className="text-yellow-400 text-base" aria-label={`${r.rating || 0} out of 5 stars`}>
+                        {"\u2605".repeat(Math.max(0, Math.min(5, Number(r.rating) || 0)))}
                       </span>
+                      {r.verifiedBooking && <span className="ml-2 inline-flex items-center rounded-full bg-lime-400/10 px-2 py-0.5 align-middle text-[10px] font-semibold text-lime-300">Verified booking</span>}
                     </p>
-                    {r.comment && <p className="text-gray-300 mt-1">{r.comment}</p>}
-                  </div>
+                    {r.comment && <p className="mt-2 text-sm leading-6 text-gray-300 line-clamp-3">{r.comment}</p>}
+                    {r.date && !Number.isNaN(new Date(r.date).getTime()) && <time className="mt-auto pt-3 text-xs text-gray-500" dateTime={new Date(r.date).toISOString()}>{new Date(r.date).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</time>}
+                  </article>
                 ))}
+              </div>
             </div>
           </Section>
         )}

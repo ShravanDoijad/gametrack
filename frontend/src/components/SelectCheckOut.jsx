@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { motion } from "framer-motion";
 const SelectCheckOut = ({
   selectedCheckOut,
@@ -51,35 +50,36 @@ const SelectCheckOut = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.2 }}
     >
-      <h3 className="text-2xl font-extrabold mb-6 text-white tracking-tight">
-        Select Check-out Time
+      <h3 className="mb-4 text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+        Select an end time
       </h3>
 
-      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {turfInfo &&
           getFilteredCheckoutTimes().map((slot, idx) => (
-            <motion.div
+            <motion.button
+              type="button"
               key={idx}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleCheckOut(slot.display)}
-              className={`p-4 rounded-2xl cursor-pointer transition-all duration-300 border shadow-sm flex flex-col items-center justify-center ${selectedCheckOut === slot.display
-                  ? "bg-lime-400 text-gray-950 border-lime-400 shadow-[0_0_20px_rgba(163,230,53,0.4)] scale-105"
-                  : "bg-white/5 backdrop-blur-md text-gray-200 border-white/10 hover:bg-white/10 hover:border-white/20 hover:scale-[1.02]"
+              className={`min-h-24 rounded-xl border p-3 text-center transition-colors ${selectedCheckOut === slot.display
+                  ? "bg-green-800 text-white border-green-800"
+                  : "bg-white text-slate-700 border-slate-200 hover:border-green-700 hover:bg-green-50"
                 }`}
             >
               <div className="flex flex-col items-center justify-center w-full">
-                <span className={`text-sm font-bold tracking-wide uppercase ${selectedCheckOut === slot.display ? 'text-gray-800' : 'text-lime-400'}`}>
+                <span className={`text-sm font-bold tracking-wide uppercase ${selectedCheckOut === slot.display ? 'text-green-100' : 'text-green-800'}`}>
                   {slot.duration} hour{slot.duration > 1 ? "s" : ""}
                 </span>
                 
-                <div className={`mt-2 mb-2 w-12 h-[2px] rounded-full ${selectedCheckOut === slot.display ? 'bg-gray-950/20' : 'bg-white/10'}`}></div>
+                <div className={`mt-2 mb-2 h-0.5 w-12 rounded-full ${selectedCheckOut === slot.display ? 'bg-white/30' : 'bg-slate-200'}`}></div>
 
-                <div className={`text-lg font-extrabold tracking-tight ${selectedCheckOut === slot.display ? 'text-gray-950' : 'text-white'}`}>
+                <div className="text-base font-bold tracking-tight">
                   {slot.display}
                 </div>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
       </div>
     </motion.div>

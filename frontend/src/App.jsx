@@ -11,7 +11,6 @@ import { Notifications } from './pages/Notifications';
 import { Turfs } from './pages/Turfs';
 import { BookContext } from './constexts/bookContext';
 import { Overview } from './pages/Overview';
-import axios from 'axios'
 import PrivateRoute from './PrivateRoute';
 import UserBookings from './pages/UserBookings';
 import Profile from './pages/Profile';
@@ -42,12 +41,9 @@ const LoginRoute = () => {
 
 
 function App() {
-  const { loginPanel, token, userInfo } = useContext(BookContext);
-  const [pendingReviews, setpendingReviews] = useState([])
+  const { loginPanel } = useContext(BookContext);
   const [defferedPrompt, setdefferedPrompt] = useState()
   const [installed, setinstalled] = useState(false)
-
-  const navigate = useNavigate()
 
   useEffect(() => {
 
@@ -86,35 +82,6 @@ function App() {
   setinstalled(!!isStandalone);
 },[])
 
-  useEffect(() => {
-    if (token && userInfo?.role === "user") {
-      getPendingReviews();
-    }
-  }, [token, userInfo]);
-
-
-  useEffect(() => {
-    if (pendingReviews.length > 0) {
-      const { bookingId, turfId } = pendingReviews[0];
-      navigate(`/review?turfId=${turfId}&bookingId=${bookingId}`);
-    }
-  }, [pendingReviews, navigate]);
-
-
-  const getPendingReviews = async () => {
-    try {
-      const response = await axios.get("/api/users/pendingReview");
-      if (response.data.success) {
-        await setpendingReviews(response.data.pendingReviews)
-      }
-    }
-    catch (error) {
-      console.log("error", error)
-      toast.error(error.response?.data?.message || "Internal server error")
-    }
-  }
-
-
   return (
     <div className="flex min-h-[100dvh] w-full flex-col overflow-x-clip bg-gradient-to-b from-gray-900 to-gray-950 pb-20">
       <div className={`${installed ? "hidden" : "grid"} fixed inset-x-0 top-0 z-[120] mx-auto grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-b-2xl bg-white px-3 py-2 text-left shadow-lg md:hidden`}>
@@ -144,13 +111,12 @@ function App() {
           <Route path="/otp" element={<OtpVerify />} />
           <Route path="/overview/:turfId" element={<Overview />} />
           <Route path='/contactUs' element={<ContactUs />} />
-          <Route path="/review" element={<TurfReview/>} />
-
           {/* Guests can choose a slot before verifying their phone. */}
           <Route path="/booking" element={<BookingManager />} />
           <Route path="/booking/:turfId" element={<BookingManager />} />
 
           <Route element={<PrivateRoute />}>
+            <Route path="/review" element={<TurfReview />} />
             <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
             <Route path="/notification" element={<Notifications />} />
             <Route path="/userBookings" element={<UserBookings />} />

@@ -1,5 +1,5 @@
 // src/Owner.jsx
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import OwnerLayout from "./ownerComponents/OwnerLayout";
 import Dashboard from "./ownerPages/Dashboard";
 import Bookings from "./ownerPages/Bookings";
@@ -18,7 +18,7 @@ const Owner = () => {
       <Routes>
         <Route path="/" element={<OwnerLayout />}>
         <Route element={<OwnerPrivateRoute />}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<Navigate to="/owner/dashboard" replace />} />
            <Route path="tournaments" element={<TournamentManager />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="bookings" element={<Bookings />} />

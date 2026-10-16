@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseBookingDateTime, getBookingInterval, isBookingUpcoming, isCancellationEligible } = require("./booking-time");
+const { parseBookingDateTime, getBookingInterval, isBookingUpcoming, getBookingEnd, isReviewEligible, isCancellationEligible } = require("./booking-time");
 
 test("parses stored 24-hour time on the booking date", () => {
   const actual = parseBookingDateTime("2026-10-15", "18:30");
@@ -23,6 +23,29 @@ test("classifies a booking by its end time and ignores cancelled bookings", () =
   assert.equal(isBookingUpcoming({ date: "2026-10-15", slots: [{ start: "18:00", end: "20:00" }] }, now), true);
   assert.equal(isBookingUpcoming({ date: "2026-10-15", slots: [{ start: "18:00", end: "20:00" }] }, new Date("2026-10-15T15:00:00Z")), false);
   assert.equal(isBookingUpcoming({ status: "cancelled", date: "2026-10-15", slots: [{ start: "18:00", end: "20:00" }] }, now), false);
+});
+
+test("review eligibility waits for the last slot to end", () => {
+  const booking = {
+    status: "confirmed",
+    isReviewed: false,
+    date: "2026-10-15",
+    slots: [{ start: "10:00", end: "11:00" }, { start: "11:00", end: "12:30" }],
+  };
+  const beforeEnd = new Date("2026-10-15T06:59:00.000Z");
+  const afterEnd = new Date("2026-10-15T07:01:00.000Z");
+
+  assert.equal(getBookingEnd(booking).toISOString(), "2026-10-15T07:00:00.000Z");
+  assert.equal(isReviewEligible(booking, beforeEnd), false);
+  assert.equal(isReviewEligible(booking, afterEnd), true);
+});
+
+test("review eligibility rejects reviewed, cancelled, and invalid bookings", () => {
+  const now = new Date("2026-10-16T12:00:00.000Z");
+  const base = { status: "confirmed", date: "2026-10-15", slots: [{ start: "10:00", end: "11:00" }] };
+  assert.equal(isReviewEligible({ ...base, isReviewed: true }, now), false);
+  assert.equal(isReviewEligible({ ...base, status: "cancelled" }, now), false);
+  assert.equal(isReviewEligible({ ...base, slots: [] }, now), false);
 });
 
 test("enforces the booking age and 24-hour-before-slot cancellation window", () => {

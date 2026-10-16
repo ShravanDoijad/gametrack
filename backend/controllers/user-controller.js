@@ -14,7 +14,7 @@ const bookingModel = require("../models/booking-model");
 const subscriptionModel = require('../models/subscription-model')
 const Payment = require("../models/payment-model");
 const { calculateBookingTotal, calculateAdvance } = require("../utils/booking-pricing");
-const { getBookingInterval, isCancellationEligible } = require("../utils/booking-time");
+const { getBookingInterval, getBookingEnd, isReviewEligible, isCancellationEligible } = require("../utils/booking-time");
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_SECRET,
@@ -1099,46 +1099,22 @@ const getAllNotifications = async (req, res) => {
 
 const getPendingReviews = async (req, res) => {
   try {
-    const { data: user, role } = req.auth;
-    const currentTime = new Date();
-
-    const bookings = await bookingModel.find({ userId: user._id }).populate("turfId");
-    const turfs = await turfModel.find();
-    const pendingReviews = [];
-    if (bookings.length === 0) {
-      return res.status(200).json({ success: true, pendingReviews: [] });
-    }
-    const booking = bookings.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
-   
-      const turf = booking.turfId;
-      const alreadyReviewed = turf.reviews.some(
-        (rev) => rev.user._id.toString() === user._id.toString()
-      );
-    
-      console.log("alreadyReviewed:", alreadyReviewed);
-
-      for (let slot of booking.slots) {
-        const bookingDateTime = new Date(booking.date);
-        const [endHour, endMinute] = slot.end.split(":").map(Number);
-        bookingDateTime.setHours(endHour, endMinute);
-
-        if (bookingDateTime < currentTime && !alreadyReviewed) {
-          pendingReviews.push({
-            turfId: turf._id,
-            turfName: turf.name,
-            bookingId: booking._id,
-            bookingDate: booking.date,
-            startTime: slot.start,
-            endTime: slot.end,
-          });
-          break; // No need to push multiple entries for the same booking
-        }
-        else {
-          return res.status(200).json({ success: true, pendingReviews: [] });
-        }
-      }
-    
-
+    const { data: user, role } = req.auth || {};
+    if (role !== "user") return res.status(403).json({ success: false, message: "User account required" });
+    const bookings = await bookingModel.find({ userId: user._id, status: "confirmed", isReviewed: { $ne: true } })
+      .populate("turfId", "name")
+      .sort({ date: -1 });
+    const pendingReviews = bookings.filter((booking) => booking.turfId && isReviewEligible(booking))
+      .map((booking) => {
+        const end = getBookingEnd(booking);
+        return {
+          turfId: booking.turfId._id,
+          turfName: booking.turfId.name,
+          bookingId: booking._id,
+          bookingDate: booking.date,
+          endTime: end,
+        };
+      });
     return res.status(200).json({ success: true, pendingReviews });
   } catch (error) {
     console.error("Error in getPendingReviews:", error);
@@ -1149,58 +1125,52 @@ const getPendingReviews = async (req, res) => {
 
 const submitReview = async (req, res) => {
   try {
-    const { data: user } = req.auth;
-    const { bookingId, turfId, rating, comment } = req.body;
+    const { data: user, role } = req.auth || {};
+    const { bookingId, turfId, rating, comment } = req.body || {};
+    if (role !== "user") return res.status(403).json({ success: false, message: "User account required" });
+    const numericRating = Number(rating);
+    const reviewComment = typeof comment === "string" ? comment.trim() : "";
+    if (!bookingId || !turfId) return res.status(400).json({ success: false, message: "Booking and turf are required" });
+    if (!/^[a-f\d]{24}$/i.test(String(bookingId)) || !/^[a-f\d]{24}$/i.test(String(turfId))) {
+      return res.status(400).json({ success: false, message: "Booking or turf reference is invalid" });
+    }
+    if (!Number.isInteger(numericRating) || numericRating < 1 || numericRating > 5) {
+      return res.status(400).json({ success: false, message: "Choose a rating from 1 to 5 stars" });
+    }
+    if (reviewComment.length > 1000) return res.status(400).json({ success: false, message: "Review must be 1,000 characters or less" });
 
-    const userBooking = await bookingModel.findById(bookingId);
+    const userBooking = await bookingModel.findOne({ _id: bookingId, userId: user._id, turfId, status: "confirmed" });
     if (!userBooking) {
-      return res.status(400).json({ message: 'User booking not found' });
+      return res.status(404).json({ success: false, message: "Completed booking not found" });
+    }
+    if (!isReviewEligible(userBooking)) {
+      return res.status(userBooking.isReviewed ? 409 : 400).json({ success: false, message: userBooking.isReviewed ? "You already reviewed this booking" : "You can review this booking after its last slot ends" });
     }
 
-    if (userBooking.userId.toString() !== user._id.toString()) {
-      return res.status(403).json({ message: 'Unauthorized action' });
-    }
-
-    // Optional: Check if booking has ended
-    const currentTime = new Date();
-    const bookingDateTime = new Date(`${userBooking.date}T${userBooking.endTime}`);
-    if (currentTime < bookingDateTime) {
-      return res.status(400).json({ message: 'You can review only after the slot ends' });
-    }
-
-    if (userBooking.isReviewed) {
-      return res.status(400).json({ message: 'You already submitted a review for this booking' });
-    }
-
-    const turf = await turfModel.findById(turfId);
-    if (!turf) {
-      return res.status(400).json({ message: 'Turf not found' });
-    }
-    const alreadyReviewed = turf.reviews.find(
-      (rev) => rev.user.toString() === user._id.toString()
-    );
-
-    if (alreadyReviewed) {
-      return res.status(400).json({ message: "You've already reviewed this turf." });
-    }
-
-
-    turf.reviews.push({
+    const review = {
       user: user._id,
-      name: user.fullname?.split(" ")[0] || user.fullname,
-      rating,
-      comment
-    });
+      booking: userBooking._id,
+      verifiedBooking: true,
+      name: user.fullname?.split(" ")[0] || "Player",
+      rating: numericRating,
+      comment: reviewComment,
+    };
+    const updatedTurf = await turfModel.findOneAndUpdate(
+      { _id: turfId, "reviews.booking": { $ne: userBooking._id } },
+      { $push: { reviews: review } },
+      { new: true, runValidators: true }
+    );
+    if (!updatedTurf) {
+      const turfExists = await turfModel.exists({ _id: turfId });
+      return res.status(turfExists ? 409 : 404).json({ success: false, message: turfExists ? "You already reviewed this booking" : "Turf not found" });
+    }
 
-    userBooking.isReviewed = true;
-
-    await turf.save();
-    await userBooking.save();
-
-    return res.status(200).json({status:'success', message: 'Review submitted successfully' });
+    await bookingModel.updateOne({ _id: userBooking._id, userId: user._id }, { $set: { isReviewed: true } });
+    await turfModel.updateOne({ _id: turfId }, [{ $set: { averageRating: { $round: [{ $avg: "$reviews.rating" }, 1] } } }]);
+    return res.status(201).json({ success: true, message: "Thanks for sharing your experience" });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({ message: 'Something went wrong while submitting review' });
+    return res.status(500).json({ success: false, message: "Something went wrong while submitting your review" });
   }
 };
 

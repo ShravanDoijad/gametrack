@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Link } from 'react-router-dom';
 import { format, isToday, parseISO, differenceInDays, isValid } from 'date-fns';
 import { toast } from 'react-toastify';
 
@@ -278,6 +279,8 @@ const UserBookings = () => {
                                 const isTodayBooking = isValid(bookingDate) && isToday(bookingDate);
                                 const isConfirmed = booking.status === 'confirmed';
                                 const showCancelButton = canCancelBooking(booking);
+                                const bookingEnd = getBookingEnd(booking);
+                                const canReview = isConfirmed && !booking.isReviewed && bookingEnd && bookingEnd <= new Date();
 
                                 return (
                                     <div
@@ -305,11 +308,12 @@ const UserBookings = () => {
                                                         {booking.slots.map(slot => `${formatTime(slot.start)} - ${formatTime(slot.end)}`).join(', ')}
                                                     </p>
                                                 </div>
-                                                <div className="text-right">
+                                                <div className="flex items-end gap-2 text-right sm:items-center">
                                                     <p className="text-white font-bold text-lg">{formatINR(booking.amountPaid)}</p>
                                                     {isTodayBooking && (
                                                         <p className="text-cyan-400 text-xs font-medium">Today</p>
                                                     )}
+                                                    {canReview && <Link to={`/review?turfId=${booking.turfId?._id || booking.turfId}&bookingId=${booking._id}`} onClick={(event) => event.stopPropagation()} className="rounded-lg bg-lime-400 px-3 py-2 text-xs font-bold text-black transition hover:bg-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">Rate visit</Link>}
                                                 </div>
                                             </div>
                                         </div>
@@ -348,6 +352,7 @@ const UserBookings = () => {
                                                 ) : booking.status === 'confirmed' && (
                                                     <p className="mt-4 text-right text-sm text-gray-400">Cancellation is available within 24 hours of booking, more than 24 hours before the slot. Paid bookings require contacting the turf for refund arrangements.</p>
                                                 )}
+                                                {isConfirmed && booking.isReviewed && <p className="mt-4 text-sm font-medium text-lime-300">Review submitted</p>}
                                             </div>
                                         )}
                                     </div>

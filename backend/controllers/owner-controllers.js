@@ -147,11 +147,31 @@ const getTurfDetails = async (req, res) => {
 
 const updateTurfProfile = async (req, res) => {
   try {
-    const { data: owner, role } = req.auth;
+    const { data: owner } = req.auth;
     const { turfId } = req.query;
-    const turfData = req.body;
+    if (!turfId || !owner?._id) {
+      return res.status(400).json({ success: false, message: "Turf ID is required" });
+    }
+    const allowedFields = ["name", "dayPrice", "nightPrice", "openingTime", "closingTime", "nightPriceStart"];
+    const turfData = {};
+    for (const field of allowedFields) {
+      if (Object.prototype.hasOwnProperty.call(req.body, field)) {
+        turfData[field] = req.body[field];
+      }
+    }
+    if (req.body.location && typeof req.body.location === "object") {
+      for (const field of ["address", "city", "pincode"]) {
+        if (Object.prototype.hasOwnProperty.call(req.body.location, field)) {
+          turfData[`location.${field}`] = req.body.location[field];
+        }
+      }
+    }
 
-    const updatedTurf = await Turf.findByIdAndUpdate(turfId, turfData, { new: true });
+    const updatedTurf = await Turf.findOneAndUpdate(
+      { _id: turfId, owner: owner._id },
+      { $set: turfData },
+      { new: true, runValidators: true }
+    );
     if (!updatedTurf) {
       return res.status(404).json({ success: false, message: "Turf not found" });
     }

@@ -27,6 +27,20 @@ const isBookingUpcoming = (booking, now = new Date()) => {
   return endTimes.length > 0 && endTimes.some((end) => end > now);
 };
 
+const getBookingEnd = (booking) => {
+  if (!booking || !Array.isArray(booking.slots)) return null;
+  const ends = booking.slots
+    .map((slot) => getBookingInterval(booking.date, slot)?.end)
+    .filter(Boolean);
+  return ends.length ? new Date(Math.max(...ends.map((date) => date.getTime()))) : null;
+};
+
+const isReviewEligible = (booking, now = new Date()) => {
+  if (!booking || booking.status !== "confirmed" || booking.isReviewed) return false;
+  const end = getBookingEnd(booking);
+  return Boolean(end && end <= now);
+};
+
 const isCancellationEligible = ({ createdAt, date, slot, now = new Date() }) => {
   const created = new Date(createdAt);
   const interval = getBookingInterval(date, slot);
@@ -36,4 +50,4 @@ const isCancellationEligible = ({ createdAt, date, slot, now = new Date() }) => 
   return elapsed >= 0 && elapsed <= 24 * 60 * 60 * 1000 && untilStart > 24 * 60 * 60 * 1000;
 };
 
-module.exports = { parseBookingDateTime, getBookingInterval, isBookingUpcoming, isCancellationEligible };
+module.exports = { parseBookingDateTime, getBookingInterval, isBookingUpcoming, getBookingEnd, isReviewEligible, isCancellationEligible };

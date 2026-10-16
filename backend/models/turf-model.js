@@ -96,9 +96,11 @@ const TurfSchema = new mongoose.Schema({
   reviews: [
     {
       user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      booking: { type: mongoose.Schema.Types.ObjectId, ref: "Booking" },
+      verifiedBooking: { type: Boolean, default: false },
       name: String,
       rating: { type: Number, min: 1, max: 5 },
-      comment: String,
+      comment: { type: String, maxlength: 1000 },
       date: { type: Date, default: Date.now },
     },
   ],
