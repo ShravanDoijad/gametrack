@@ -24,7 +24,7 @@ const calculateBookingTotal = ({ start, end, dayPrice, nightPrice, nightPriceSta
   let total = 0;
   for (let minute = startMinute; minute < endMinute; minute += 1) {
     const minuteOfDay = minute % (24 * 60);
-    const rate = minuteOfDay >= cutoff ? nightRate : dayRate;
+    const rate = cutoff !== null && minuteOfDay >= cutoff ? nightRate : dayRate;
     total += rate / 60;
   }
   return roundMoney(total);

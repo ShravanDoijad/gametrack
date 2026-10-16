@@ -390,7 +390,8 @@ const addManualBooking = async (req, res) => {
     });
 
     // Customer and owner notifications are best-effort after the booking is safely stored.
-    await sendMessage({
+    try {
+      await sendMessage({
       phoneNumber: cleanPhone,
       notification_data: {
         customerName: cleanName,
@@ -408,7 +409,10 @@ const addManualBooking = async (req, res) => {
         contactPhone: turf.owner?.phone,
         website: "https://gametrack.in",
       },
-    });
+      });
+    } catch (notificationError) {
+      console.error("Manual booking saved, but customer notification failed:", notificationError.message);
+    }
 
     try {
       if (turf.owner?.phone) {

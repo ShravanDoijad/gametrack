@@ -458,26 +458,52 @@ const confirmBookingWithoutAdvance = async (req, res) => {
     }
 
     const slotTimeText = `${slot.start} - ${slot.end}`;
-    await Promise.all([
-      Notification.create({
-        user: user._id,
-        owner: turf.owner?._id,
-        title: "Booking Confirmed",
-        message: `Your booking on ${date} at ${slotTimeText} is confirmed at ${turf.owner?.turfname || turf.name}`,
-        type: "booking",
-        role: "user",
-        date: new Date(),
-      }),
-      Notification.create({
-        user: user._id,
-        owner: turf.owner?._id,
-        title: "New Booking Alert",
-        message: `New booking on ${date} at ${slotTimeText} at ${turf.owner?.turfname || turf.name}`,
-        type: "booking",
-        role: "owner",
-        date: new Date(),
-      }),
-    ]);
+    // The no-advance path confirms the booking without calling the payment
+    // verification handler, so send the customer template from this path too.
+    await sendMessage({
+      phoneNumber: user.phone,
+      notification_data: {
+        customerName: user.fullname || "Guest",
+        turfName: turf.owner?.turfname || turf.name || "GameTrack turf",
+        date: new Date(`${date}T00:00:00.000Z`).toLocaleDateString("en-IN", {
+          dateStyle: "long",
+          timeZone: "UTC",
+        }),
+        startTime: slot.start,
+        endTime: slot.end,
+        bookingReference: String(booking._id).slice(-8).toUpperCase(),
+        totalAmount: slotFees,
+        advancePaid: 0,
+        remainingAmount: slotFees,
+        contactPhone: turf.owner?.phone,
+        website: "https://gametrack.in",
+      },
+    });
+
+    try {
+      await Promise.all([
+        Notification.create({
+          user: user._id,
+          owner: turf.owner?._id,
+          title: "Booking Confirmed",
+          message: `Your booking on ${date} at ${slotTimeText} is confirmed at ${turf.owner?.turfname || turf.name}`,
+          type: "booking",
+          role: "user",
+          date: new Date(),
+        }),
+        Notification.create({
+          user: user._id,
+          owner: turf.owner?._id,
+          title: "New Booking Alert",
+          message: `New booking on ${date} at ${slotTimeText} at ${turf.owner?.turfname || turf.name}`,
+          type: "booking",
+          role: "owner",
+          date: new Date(),
+        }),
+      ]);
+    } catch (notificationError) {
+      console.error("Booking confirmed, but notification creation failed:", notificationError.message);
+    }
 
     return res.status(201).json({ success: true, booking });
   } catch (error) {
@@ -488,6 +514,9 @@ const confirmBookingWithoutAdvance = async (req, res) => {
 
 
 const verifyOrder = async (req, res) => {
+  let reservedBookingSlot = null;
+  let reservedSubscriptionSlot = null;
+  let bookingPersisted = false;
   try {
     const { data: user, role } = req.auth;
     if (role !== "user") return res.status(403).json({ success: false, message: "User account required" });
@@ -502,10 +531,18 @@ const verifyOrder = async (req, res) => {
     let details = subscriptionDetails ? subscriptionDetails : bookingDetails;
     const userId = user._id;
 
-    const alreadyProcessed = await Booking.findOne({ userId, $or: [{ razorpay_payment_id }, { razorpay_order_id }] }) ||
-      await subscriptionModel.findOne({ userId, $or: [{ razorpay_payment_id }, { razorpay_order_id }] });
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ success: false, message: "Payment verification details are incomplete" });
+    }
+
+    const alreadyProcessed = await Booking.findOne({ userId, razorpay_order_id }) ||
+      await subscriptionModel.findOne({ userId, razorpay_order_id });
 
     if (alreadyProcessed) {
+      await Payment.updateOne(
+        { orderId: razorpay_order_id, userId },
+        { $set: { status: "paid" } }
+      );
       return res.status(200).json({
         success: true,
         message: "Payment already processed",
@@ -515,7 +552,7 @@ const verifyOrder = async (req, res) => {
     const paymentExists = await Payment.findOne({
       orderId: razorpay_order_id,
       userId,
-      status: { $in: ["created", "attempted"] }
+      status: { $in: ["created", "attempted", "processing"] }
     });
 
     if (!paymentExists) {
@@ -561,6 +598,22 @@ const verifyOrder = async (req, res) => {
       return res.status(400).json({ success: false, message: "Payment amount or status could not be verified" });
     }
 
+    const staleProcessingBefore = new Date(Date.now() - 2 * 60 * 1000);
+    const claim = await Payment.updateOne(
+      {
+        orderId: razorpay_order_id,
+        userId,
+        $or: [
+          { status: { $in: ["created", "attempted"] } },
+          { status: "processing", updatedAt: { $lt: staleProcessingBefore } },
+        ],
+      },
+      { $set: { status: "processing", updatedAt: new Date() } }
+    );
+    if (claim.modifiedCount !== 1) {
+      return res.status(409).json({ success: false, message: "Payment confirmation is already being processed. Please refresh your bookings shortly." });
+    }
+
     if (!subscriptionDetails) {
       const reserved = await updateTurfBookedSlots(details.turfId, details);
       if (!reserved) {
@@ -568,13 +621,8 @@ const verifyOrder = async (req, res) => {
         await Payment.updateOne({ orderId: razorpay_order_id }, { $set: { status: "failed" } });
         return res.status(409).json({ success: false, message: "The slot was taken during payment. The payment has been refunded." });
       }
+      reservedBookingSlot = { turfId: details.turfId, date: details.date, slot: details.slots[0] };
     }
-
-    await Payment.updateOne(
-      { orderId: razorpay_order_id },
-      { $set: { status: "paid" } }
-    );
-
 
     if (!userId) {
       return res.status(400).json({
@@ -585,6 +633,13 @@ const verifyOrder = async (req, res) => {
     let newBooking;
     if (subscriptionDetails) {
       await updateSubscriptionSlots(subscriptionDetails.turfId, subscriptionDetails)
+      reservedSubscriptionSlot = {
+        turfId: subscriptionDetails.turfId,
+        userId,
+        fromDate: subscriptionDetails.fromDate,
+        toDate: subscriptionDetails.toDate,
+        slot: subscriptionDetails.slot,
+      };
       newBooking = await subscriptionModel.create({
         turfId: subscriptionDetails.turfId,
         userId,
@@ -627,12 +682,22 @@ const verifyOrder = async (req, res) => {
         reminderSent: false,
       });
     }
+    bookingPersisted = true;
+
+    // Persist the booking before marking the captured payment complete. This keeps
+    // a database write failure retryable and avoids reporting a paid booking that
+    // was never stored.
+    await Payment.updateOne(
+      { orderId: razorpay_order_id, userId },
+      { $set: { status: "paid" } }
+    );
 
     if (user.firstBooking && bookingDetails) {
       user.firstBooking = false;
       await user.save();
     }
 
+    try {
     if (!subscriptionDetails) {
 
       const slotTimeText = `${bookingDetails.slots[0].start} - ${bookingDetails.slots[0].end}`;
@@ -697,8 +762,7 @@ const verifyOrder = async (req, res) => {
           date: new Date(),
         }),
       ]);
-    }
-    else if (subscriptionDetails) {
+    } else if (subscriptionDetails) {
 
       await UserSubscriptionUpdate({
         phoneNumber: userData.phone,
@@ -737,6 +801,9 @@ const verifyOrder = async (req, res) => {
 
 
     }
+    } catch (notificationError) {
+      console.error("Booking saved, but confirmation notification failed:", notificationError.message);
+    }
     return res.status(200).json({
       success: true,
       message: "Payment verified and booking confirmed",
@@ -745,13 +812,27 @@ const verifyOrder = async (req, res) => {
 
   } catch (err) {
     console.error(" Payment verification error:", err);
-    if (req.body?.razorpay_order_id) {
-      await Payment.updateOne(
-        { orderId: req.body.razorpay_order_id },
-        { $set: { status: "failed" } }
-      );
+    if (!bookingPersisted && reservedBookingSlot) {
+      const { turfId, date, slot } = reservedBookingSlot;
+      await turfModel.updateOne(
+        { _id: turfId },
+        { $pull: { "bookedSlots.$[day].slots": slot } },
+        { arrayFilters: [{ "day.date": date }] }
+      ).catch((cleanupError) => console.error("Could not release failed booking reservation:", cleanupError.message));
     }
-
+    if (!bookingPersisted && reservedSubscriptionSlot) {
+      const { turfId, userId, fromDate, toDate, slot } = reservedSubscriptionSlot;
+      await turfModel.updateOne(
+        { _id: turfId },
+        { $pull: { subscriptionSlots: { user: userId, fromDate, toDate, "slot.start": slot.start, "slot.end": slot.end } } }
+      ).catch((cleanupError) => console.error("Could not release failed subscription reservation:", cleanupError.message));
+    }
+    if (!bookingPersisted && req.body?.razorpay_order_id) {
+      await Payment.updateOne(
+        { orderId: req.body.razorpay_order_id, userId: req.auth?.data?._id, status: "processing" },
+        { $set: { status: "attempted" } }
+      ).catch((cleanupError) => console.error("Could not reset payment for retry:", cleanupError.message));
+    }
     return res.status(500).json({
       success: false,
       message: "Internal server error",

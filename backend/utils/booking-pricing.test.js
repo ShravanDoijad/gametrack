@@ -29,6 +29,12 @@ test("pricing accounts for minutes and crosses midnight", () => {
   assert.equal(total, 1500);
 });
 
+test("uses the day rate when no night-rate start time is configured", () => {
+  assert.equal(calculateBookingTotal({
+    dayPrice: 1200, nightPrice: 1800, start: "21:00", end: "22:00",
+  }), 1200);
+});
+
 test("invalid time and price inputs are rejected", () => {
   assert.equal(calculateBookingTotal({ ...rates, start: "25:00", end: "26:00" }), null);
   assert.equal(calculateAdvance(-1), null);
