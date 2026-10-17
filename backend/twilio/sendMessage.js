@@ -67,7 +67,14 @@ const sendMessage = async ({ phoneNumber, data, notification_data }) => {
     console.log("WhatsApp booking template sent:", response.sid);
     return response;
   } catch (error) {
-    console.error("WhatsApp booking template failed:", error.message);
+    console.error("WhatsApp booking template failed:", {
+      message: error.message,
+      code: error.code,
+      status: error.status,
+      moreInfo: error.moreInfo,
+      templateConfigured: Boolean(process.env.TWILIO_BOOKING_SID),
+      senderConfigured: Boolean(process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER),
+    });
     return null;
   }
 };

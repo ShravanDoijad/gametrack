@@ -49,8 +49,10 @@ const userRegister = async (req, res) => {
           message: "User already exists. Please login.",
         });
       } else {
-        console.log("existing user", existingUser.phone);
-        await sendOtp({ identifier: existingUser.phone, role: "user" });
+        const otpResult = await sendOtp({ identifier: existingUser.phone, role: "user" });
+        if (!otpResult.success) {
+          return res.status(502).json({ success: false, message: otpResult.message });
+        }
         return res.status(200).json({
           success: true,
           message: "OTP sent for verification",
@@ -64,7 +66,10 @@ const userRegister = async (req, res) => {
       isVerified: false,
     });
 
-    await sendOtp({ identifier: phone, role: "user" });
+    const otpResult = await sendOtp({ identifier: phone, role: "user" });
+    if (!otpResult.success) {
+      return res.status(502).json({ success: false, message: otpResult.message, userId: newUser._id });
+    }
 
     return res.status(200).json({
       success: true,
@@ -105,6 +110,9 @@ const login = async (req, res) => {
 
     if (owner) {
       const result = await sendOtp({ identifier, role: "owner" });
+      if (!result.success) {
+        return res.status(502).json({ success: false, message: result.message });
+      }
       return res.status(200).json({
         success: true,
         message: `OTP sent to owner account`,
@@ -112,6 +120,9 @@ const login = async (req, res) => {
     }
     else {
       const result = await sendOtp({ identifier, role: "user" });
+      if (!result.success) {
+        return res.status(502).json({ success: false, message: result.message });
+      }
       return res.status(200).json({
         success: true,
         message: `OTP sent to user account`,
@@ -708,12 +719,12 @@ const verifyOrder = async (req, res) => {
       await sendMessage({
         phoneNumber: userData.phone,
         notification_data: {
-          name: userData.fullname.split(" ")[0],
+          name: (userData.fullname || "Guest").split(" ")[0],
           bookingReference: String(newBooking._id).slice(-8).toUpperCase(),
           turfName: turfName,
           date: new Date(bookingDetails.date).toDateString(),
           time: slotTimeText,
-          location: turf.location.city,
+          location: turf.location?.city || "Not provided",
           amount: bookingDetails.slotFees,
           sport: bookingDetails.sport,
           advance: bookingDetails.amount,

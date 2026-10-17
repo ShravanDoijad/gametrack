@@ -20,7 +20,7 @@ const OtpSchema = new mongoose.Schema({
     default: () => Date.now() + 5 * 60 * 1000,
   }
 });
-OtpSchema.index({ identifier: 1, type: 1 }, { unique: true });
+OtpSchema.index({ identifier: 1, role: 1 }, { unique: true });
 OtpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model("Otp", OtpSchema);

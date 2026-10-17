@@ -893,14 +893,27 @@ const addManualSubscription = async (req, res) => {
 
 const sendWhatsAppCampaign = async (req, res) => {
   try {
-    const { targets, message, link } = req.body;
+    const { turfId, targets, discountAmount, offerDay, expiryDate, link } = req.body;
+
+    if (!turfId) {
+      return res.status(400).json({ success: false, message: "A turf is required for this campaign." });
+    }
+
+    const turf = await Turf.findOne({ _id: turfId, owner: req.auth.data._id }).select("name");
+    if (!turf) {
+      return res.status(404).json({ success: false, message: "Turf not found for this owner." });
+    }
     
     if (!targets || !Array.isArray(targets) || targets.length === 0) {
       return res.status(400).json({ success: false, message: "A list of targets is required." });
     }
     
-    if (!message || message.trim() === "") {
-      return res.status(400).json({ success: false, message: "Message content is required." });
+    if (typeof discountAmount !== "string" || !discountAmount.trim() ||
+        typeof offerDay !== "string" || !offerDay.trim() || !expiryDate) {
+      return res.status(400).json({ success: false, message: "Discount, eligible day, and expiry date are required." });
+    }
+    if (Number.isNaN(Date.parse(expiryDate))) {
+      return res.status(400).json({ success: false, message: "Enter a valid offer expiry date." });
     }
 
     const contentSid = process.env.TWILIO_CAMPAIGN_SID;
@@ -911,6 +924,10 @@ const sendWhatsAppCampaign = async (req, res) => {
 
     let sentCount = 0;
     let failedCount = 0;
+    const expiryLabel = new Date(`${expiryDate}T00:00:00.000Z`).toLocaleDateString("en-IN", {
+      dateStyle: "long",
+      timeZone: "UTC",
+    });
 
     for (const target of targets) {
       if (!target.phone) continue;
@@ -920,9 +937,12 @@ const sendWhatsAppCampaign = async (req, res) => {
           contentSid,
           templateName: "TWILIO_CAMPAIGN_SID",
           variables: {
-            1: String(target.name ? target.name.split(" ")[0] : "Customer"),
-            2: String(message),
-            3: String(link || "https://gametrack.in"),
+            1: String(turf.name),
+            2: String(target.name ? target.name.split(" ")[0] : "Customer"),
+            3: String(discountAmount.trim()),
+            4: String(offerDay.trim()),
+            5: expiryLabel,
+            6: String(link?.trim() || `https://gametrack.in/booking/${turfId}`),
           },
         });
         sentCount++;

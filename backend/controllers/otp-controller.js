@@ -30,8 +30,33 @@ async function sendOtp({ identifier, role }) {
       return { success: false, message: 'Invalid role.' };
     }
 
-    await Otp.deleteMany({ identifier: targetPhone, role });
-    await Otp.create({ identifier: targetPhone, role, otp, expiresAt });
+    try {
+      await Otp.findOneAndUpdate(
+        { identifier: targetPhone, role },
+        { $set: { otp, expiresAt }, $setOnInsert: { identifier: targetPhone, role } },
+        { upsert: true, new: true, runValidators: true, setDefaultsOnInsert: true }
+      );
+    } catch (otpWriteError) {
+      if (otpWriteError.code !== 11000) throw otpWriteError;
+
+      // A second login request can race the upsert. If the first request has
+      // already created this OTP, let it send the message instead of failing
+      // with a duplicate-key error or replacing the code it is about to send.
+      const concurrentOtp = await Otp.findOne({ identifier: targetPhone, role });
+      if (concurrentOtp) {
+        return { success: true, message: 'An OTP request is already being processed. Please check WhatsApp shortly.' };
+      }
+
+      // Legacy databases may still have a unique index on `identifier` alone.
+      // Reuse that record if this same phone is entering through another role.
+      const legacyOtp = await Otp.findOne({ identifier: targetPhone });
+      if (!legacyOtp) throw otpWriteError;
+      await Otp.updateOne(
+        { identifier: targetPhone },
+        { $set: { role, otp, expiresAt } },
+        { runValidators: true }
+      );
+    }
 
     const message = await sendWhatsAppTemplate({
       phoneNumber: targetPhone,
@@ -43,7 +68,14 @@ async function sendOtp({ identifier, role }) {
     return { success: true, message: 'OTP sent successfully' };
   } catch (err) {
     if (targetPhone) await Otp.deleteOne({ identifier: targetPhone, role, otp }).catch(() => {});
-    console.error('Failed to send OTP:', err.message);
+    console.error('Failed to send OTP:', {
+      message: err.message,
+      code: err.code,
+      status: err.status,
+      moreInfo: err.moreInfo,
+      templateConfigured: Boolean(process.env.TWILIO_CONTENT_SID),
+      senderConfigured: Boolean(process.env.TWILIO_WHATSAPP_NUMBER || process.env.TWILIO_PHONE_NUMBER),
+    });
     return { success: false, message: 'Could not send OTP. Please try again.' };
   }
 }

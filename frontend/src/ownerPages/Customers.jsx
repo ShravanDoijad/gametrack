@@ -30,10 +30,12 @@ const Customers = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
-  const { selectedTurfId, token } = useContext(BookContext);
+  const { selectedTurfId, token, turfs } = useContext(BookContext);
 
   const [showCampaignModal, setShowCampaignModal] = useState(false);
-  const [campaignMessage, setCampaignMessage] = useState("");
+  const [discountAmount, setDiscountAmount] = useState("");
+  const [offerDay, setOfferDay] = useState("");
+  const [expiryDate, setExpiryDate] = useState("");
   const [campaignLink, setCampaignLink] = useState("");
   const [campaignStatus, setCampaignStatus] = useState("idle"); // idle, sending, success, error
   const [campaignResult, setCampaignResult] = useState("");
@@ -55,6 +57,8 @@ const Customers = () => {
       (c.phone || "").includes(q)
     );
   });
+  const selectedTurf = turfs.find(turf => String(turf._id) === String(selectedTurfId));
+  const bookingLink = campaignLink.trim() || `https://gametrack.in/booking/${selectedTurfId || ""}`;
 
 
   const counts = ["VIP", "Regular", "Active", "Inactive"].reduce((acc, s) => {
@@ -71,7 +75,7 @@ const Customers = () => {
   }
 
   const handleSendCampaign = async () => {
-    if (!campaignMessage.trim() || displayed.length === 0) return;
+    if (!discountAmount.trim() || !offerDay.trim() || !expiryDate || displayed.length === 0 || !selectedTurfId) return;
     setCampaignStatus("sending");
     try {
       const targets = displayed.map(c => ({ phone: c.phone, name: c.name || "Customer" }));
@@ -79,9 +83,12 @@ const Customers = () => {
       const uniqueTargets = Array.from(new Map(targets.filter(t => t.phone).map(item => [item.phone, item])).values());
       
       const res = await axios.post('/owner/campaign/whatsapp', {
+        turfId: selectedTurfId,
         targets: uniqueTargets,
-        message: campaignMessage,
-        link: campaignLink
+        discountAmount: discountAmount.trim(),
+        offerDay: offerDay.trim(),
+        expiryDate,
+        link: bookingLink,
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -91,7 +98,9 @@ const Customers = () => {
       setTimeout(() => {
         setShowCampaignModal(false);
         setCampaignStatus("idle");
-        setCampaignMessage("");
+        setDiscountAmount("");
+        setOfferDay("");
+        setExpiryDate("");
         setCampaignLink("");
       }, 4000);
     } catch (err) {
@@ -285,7 +294,7 @@ const Customers = () => {
       {/* Campaign Modal */}
       {showCampaignModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+          <div className="bg-gray-900 border border-white/10 rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl">
             <div className="flex justify-between items-center p-5 border-b border-white/5 bg-white/5">
               <h2 className="text-lg font-bold text-white flex items-center gap-2">
                 <MessageSquare size={18} className="text-lime-400" />
@@ -310,37 +319,56 @@ const Customers = () => {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-300">Campaign Preview</label>
-                <div className="bg-[#111] border border-white/10 rounded-xl p-3 text-sm text-gray-400">
-                  <p>Hi <span className="text-lime-400 font-semibold">[Customer Name]</span>,</p>
-                  <p className="mt-2 text-white bg-white/5 p-2 rounded border border-white/10 break-words">
-                    {campaignMessage || "Your custom message will appear here..."}
-                  </p>
-                  <div className="mt-3 flex justify-center">
-                     <button className="bg-lime-500/20 text-lime-400 border border-lime-500/30 px-4 py-1.5 rounded-lg text-xs font-semibold w-full">
-                       {campaignLink ? "Open Link" : "Book Now"}
-                     </button>
-                  </div>
+                <div className="bg-[#111] border border-white/10 rounded-xl p-4 text-sm text-gray-300 space-y-2">
+                  <p className="font-bold text-white">Special Offer from {selectedTurf?.name || "[Turf name]"}</p>
+                  <p>Hi <span className="text-lime-400 font-semibold">[Customer name]</span>,</p>
+                  <p><span className="font-semibold">{selectedTurf?.name || "[Turf name]"}</span> is offering you <span className="font-semibold text-lime-300">{discountAmount || "[Discount]"} off</span> your booking for {offerDay || "[Eligible day]"}.</p>
+                  <p>Book your slot before {expiryDate || "[Expiry date]"} to take advantage of this offer.</p>
+                  <p className="break-all"><span className="font-semibold text-white">Book now:</span> {bookingLink}</p>
+                  <p className="pt-1 text-xs text-gray-500">Reply STOP to opt out of promotional messages.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">Discount amount (Variable 3)</label>
+                  <input
+                    value={discountAmount}
+                    onChange={(e) => setDiscountAmount(e.target.value)}
+                    placeholder="20% or ₹100"
+                    className="w-full bg-[#111] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-lime-500/50"
+                    disabled={campaignStatus === "sending" || campaignStatus === "success"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">Eligible day (Variable 4)</label>
+                  <input
+                    value={offerDay}
+                    onChange={(e) => setOfferDay(e.target.value)}
+                    placeholder="Weekend bookings"
+                    className="w-full bg-[#111] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-lime-500/50"
+                    disabled={campaignStatus === "sending" || campaignStatus === "success"}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-300">Offer expiry date (Variable 5)</label>
+                  <input
+                    type="date"
+                    value={expiryDate}
+                    onChange={(e) => setExpiryDate(e.target.value)}
+                    className="w-full bg-[#111] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-lime-500/50"
+                    disabled={campaignStatus === "sending" || campaignStatus === "success"}
+                  />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">Message Body (Variable 2)</label>
-                <textarea
-                  value={campaignMessage}
-                  onChange={(e) => setCampaignMessage(e.target.value)}
-                  placeholder="E.g. Get 50% off all turf bookings this weekend! Use code WEEKEND50"
-                  className="w-full h-20 bg-[#111] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-lime-500/50 resize-none"
-                  disabled={campaignStatus === "sending" || campaignStatus === "success"}
-                ></textarea>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-300">Call-To-Action Link (Variable 3) <span className="text-gray-500 font-normal">- Optional</span></label>
+                <label className="text-sm font-medium text-gray-300">Turf booking link (Variable 6) <span className="text-gray-500 font-normal">- Optional</span></label>
                 <input
                   type="url"
                   value={campaignLink}
                   onChange={(e) => setCampaignLink(e.target.value)}
-                  placeholder="https://gametrack.in/..."
+                  placeholder={`https://gametrack.in/booking/${selectedTurfId || "turf-id"}`}
                   className="w-full bg-[#111] border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-lime-500/50"
                   disabled={campaignStatus === "sending" || campaignStatus === "success"}
                 />
@@ -370,7 +398,7 @@ const Customers = () => {
               </button>
               <button
                 onClick={handleSendCampaign}
-                disabled={!campaignMessage.trim() || displayed.length === 0 || campaignStatus === "sending" || campaignStatus === "success"}
+                disabled={!discountAmount.trim() || !offerDay.trim() || !expiryDate || !selectedTurfId || displayed.length === 0 || campaignStatus === "sending" || campaignStatus === "success"}
                 className="px-4 py-2 rounded-xl text-sm font-bold bg-lime-500 hover:bg-lime-400 text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {campaignStatus === "sending" ? (
