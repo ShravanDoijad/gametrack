@@ -26,6 +26,7 @@ import ContactUs from './pages/ContactUs';
 import { X } from 'lucide-react';
 
 import TurfReview from './pages/TurfReview';
+import { ProductTourProvider } from './contexts/ProductTourContext';
 
 const LoginRoute = () => {
   const { setloginPanel } = useContext(BookContext);
@@ -83,6 +84,7 @@ function App() {
 },[])
 
   return (
+    <ProductTourProvider>
     <div className="flex min-h-[100dvh] w-full flex-col overflow-x-clip bg-gradient-to-b from-gray-900 to-gray-950 pb-20">
       <div className={`${installed ? "hidden" : "grid"} fixed inset-x-0 top-0 z-[120] mx-auto grid-cols-[auto_auto_minmax(0,1fr)_auto] items-center gap-2 rounded-b-2xl bg-white px-3 py-2 text-left shadow-lg md:hidden`}>
         <button type="button" onClick={() => setinstalled(true)} aria-label="Dismiss install prompt" className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100">
@@ -135,6 +137,7 @@ function App() {
 
       <Menu />
     </div>
+    </ProductTourProvider>
   );
 }
 

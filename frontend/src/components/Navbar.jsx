@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, useContext } from 'react';
-import { Bell, LogOut, User, ChevronDown, Menu, Home, UserRound, ShieldCheck } from 'lucide-react';
+import { Bell, LogOut, User, ChevronDown, Menu, Home, UserRound, ShieldCheck, Compass } from 'lucide-react';
 import { BookContext } from '../constexts/bookContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useProductTour } from '../contexts/ProductTourContext';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const { token, handleLogout, userInfo, toggleSidebar, setloginPanel } = useContext(BookContext);
+  const { startTour } = useProductTour();
   const [showDropdown, setShowDropdown] = useState(false);
   const accountRef = useRef(null);
 
@@ -66,6 +68,7 @@ const Navbar = () => {
             aria-expanded={showDropdown}
             aria-haspopup="menu"
             aria-label={token ? 'Open account menu' : 'Open account and log in menu'}
+            data-tour="login-button"
             className={`flex h-11 items-center gap-2 rounded-full border px-1.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400 sm:pl-1.5 sm:pr-3 ${showDropdown ? 'border-lime-400/60 bg-white/10' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-lime-300 to-emerald-500 text-gray-950 shadow-md shadow-lime-500/20">
@@ -92,6 +95,7 @@ const Navbar = () => {
                       {userInfo?.role === 'owner' && <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-300"><ShieldCheck size={13} /> Turf owner</span>}
                     </div>
                     <button type="button" role="menuitem" onClick={goHome} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><Home size={17} className="text-gray-400" /> Home</button>
+                    {userInfo?.role !== 'owner' && <button type="button" role="menuitem" onClick={() => { setShowDropdown(false); startTour(); }} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><Compass size={17} className="text-lime-400" /> Replay product tour</button>}
                     <button type="button" role="menuitem" onClick={() => goTo('/profile')} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><UserRound size={17} className="text-gray-400" /> My profile</button>
                     {userInfo?.role === 'owner' && <button type="button" role="menuitem" onClick={() => goTo('/owner/dashboard')} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><ShieldCheck size={17} className="text-lime-400" /> Owner dashboard</button>}
                     <button type="button" role="menuitem" onClick={(event) => { setShowDropdown(false); handleLogout(event); }} className="flex min-h-12 w-full items-center gap-3 border-t border-white/10 px-5 text-left text-sm font-semibold text-rose-300 transition hover:bg-rose-400/10"><LogOut size={17} /> Log out</button>
@@ -102,6 +106,7 @@ const Navbar = () => {
                       <p className="text-base font-bold text-white">Welcome to GameTrack</p>
                       <p className="mt-1 text-sm leading-5 text-gray-400">Log in to manage your bookings and notifications.</p>
                     </div>
+                    <button type="button" role="menuitem" onClick={() => { setShowDropdown(false); startTour(); }} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5 hover:text-white"><Compass size={17} className="text-lime-400" /> Replay product tour</button>
                     <button type="button" role="menuitem" onClick={goHome} className="flex min-h-12 w-full items-center gap-3 px-5 text-left text-sm font-medium text-gray-200 transition hover:bg-white/5"><Home size={17} className="text-gray-400" /> Home</button>
                     <div className="p-3 pt-2">
                       <button type="button" onClick={() => { setShowDropdown(false); setloginPanel(true); }} className="min-h-12 w-full rounded-xl bg-lime-400 px-4 text-sm font-extrabold text-gray-950 shadow-lg shadow-lime-500/10 transition hover:bg-lime-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">Log in</button>

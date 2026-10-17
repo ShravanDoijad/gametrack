@@ -43,6 +43,7 @@ const commonTabs = isOwner ? [
                   onClick={() => navigate(tab.path)}
                   aria-current={tab.active ? 'page' : undefined}
                   aria-label={tab.label}
+                  data-tour={tab.id === 'home' && !isOwner ? 'explore-turfs' : undefined}
                   className={`relative flex min-w-0 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl px-1 transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-lime-400 ${tab.primary ? "-translate-y-2 rounded-2xl bg-emerald-700 text-white shadow-lg shadow-black/30" : tab.active ? 'text-lime-300' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
                 >
                   <div className="relative">

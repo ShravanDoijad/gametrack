@@ -3,7 +3,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
-import { ArrowLeft, CalendarDays } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check } from "lucide-react";
 import { BookContext } from "../constexts/bookContext";
 import SkeletonLoader from "../components/SkeletonLoader";
 import en from "../multilingual/locales/en.json";
@@ -73,11 +73,40 @@ const Chip = ({ active, disabled, onClick, children, className = "", unavailable
   </button>
 );
 
-const Step = ({ title, children, sectionRef }) => (
-  <section ref={sectionRef} className="mt-7">
+const Step = ({ title, children, sectionRef, tourTarget, tourComplete }) => (
+  <section ref={sectionRef} data-tour={tourTarget} data-tour-complete={tourComplete ? "true" : "false"} className="mt-7">
     <h3 className="text-xl font-extrabold text-white mb-3">{title}</h3>
     {children}
   </section>
+);
+
+const FlowNavigator = ({ steps, activeIndex }) => (
+  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3" aria-label="Booking progress">
+    {steps.map((step, index) => {
+      const complete = index < activeIndex;
+      const active = index === activeIndex;
+      return (
+        <div
+          key={step.id}
+          aria-current={active ? "step" : undefined}
+          className={`flex min-w-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold sm:text-sm ${
+            active
+              ? "border-lime-400/60 bg-lime-400/10 text-lime-300"
+              : complete
+                ? "border-emerald-400/30 bg-emerald-400/5 text-emerald-300"
+                : "border-white/10 bg-white/[0.03] text-gray-500"
+          }`}
+        >
+          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs ${
+            active ? "bg-lime-400 text-gray-950" : complete ? "bg-emerald-400 text-gray-950" : "bg-white/10 text-gray-400"
+          }`}>
+            {complete ? <Check size={14} strokeWidth={3} /> : index + 1}
+          </span>
+          <span className="truncate">{step.title}</span>
+        </div>
+      );
+    })}
+  </div>
 );
 
 /* ------------------------------------------------------------------ */
@@ -278,6 +307,21 @@ const BookingManager = () => {
   const planEnd =
     isSubscription && date ? addDays(date, parseInt(plan.days) - 1) : null;
   const ready = !!(date && startMin !== null && duration && money && sport);
+  const needsPhoneVerification = !token || !userInfo?._id;
+  const flowSteps = [
+    { id: "slot", title: t("stepDay") },
+    { id: "review", title: t("summary") },
+    ...(needsPhoneVerification ? [{ id: "verify", title: t("verifyOtp") }] : []),
+    { id: "payment", title: t("paymentChoice") },
+  ];
+  const flowStepId = checkoutStep === "closed"
+    ? "slot"
+    : checkoutStep === "confirmation"
+      ? "review"
+      : checkoutStep === "phone" || checkoutStep === "otp"
+        ? "verify"
+        : "payment";
+  const activeFlowIndex = Math.max(0, flowSteps.findIndex((step) => step.id === flowStepId));
 
   const beginCheckout = () => {
     if (!ready || paying) return;
@@ -508,6 +552,16 @@ const BookingManager = () => {
       <div className="fixed top-[5.25rem] right-3 z-[60] flex rounded-full border border-gray-200 bg-white p-1 shadow-lg md:hidden">
         {LANGS.map((item) => <button key={item.id} onClick={() => changeLang(item.id)} className={`px-3 py-1 rounded-full text-sm font-bold ${lang === item.id ? "bg-lime-400 text-gray-950" : "text-gray-700"}`}>{item.name}</button>)}
       </div>
+      <section className="mt-6 rounded-2xl border border-lime-400/20 bg-gradient-to-br from-lime-400/[0.08] to-transparent p-4 sm:p-5">
+        <div className="mb-3 flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-400 font-black text-gray-950">G</span>
+          <div className="min-w-0">
+            <h2 className="font-extrabold text-white">GameTrack <span className="font-semibold text-lime-300">· {t("title")}</span></h2>
+            <p className="mt-1 text-xs leading-relaxed text-gray-400 sm:text-sm">{t("confirmDetails")}</p>
+          </div>
+        </div>
+        <FlowNavigator steps={flowSteps} activeIndex={activeFlowIndex} />
+      </section>
       {isSubscription && (
         <div className="mt-4 rounded-2xl bg-lime-400/10 border border-lime-400/30 p-4 text-lg">
           <span className="font-bold text-lime-400">{t("plan")}:</span>{" "}
@@ -517,7 +571,7 @@ const BookingManager = () => {
       )}
 
       {/* 1. Day */}
-      <Step title={t("stepDay")}>
+      <Step title={t("stepDay")} tourTarget={!date || (date && duration && !anyFree) ? "booking-selection" : undefined} tourComplete={ready}>
         <div className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2">
           {quickDays.map((d, i) => (
             <Chip key={i} active={sameDay(d, date)} onClick={() => pickDate(d)} className="min-w-[112px] snap-start px-4 py-3">
@@ -552,7 +606,7 @@ const BookingManager = () => {
 
       {/* 3. Duration */}
       {date && (
-        <Step title={t("stepHours")} sectionRef={durationStepRef}>
+        <Step title={t("stepHours")} sectionRef={durationStepRef} tourTarget={date && !duration ? "booking-selection" : undefined} tourComplete={ready}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {DURATIONS.map((d) => (
               <Chip key={d} active={duration === d} onClick={() => { setDuration(d); setStartMin(null); }} className="py-3">
@@ -583,7 +637,7 @@ const BookingManager = () => {
 
       {/* 4. Time: availability covers the entire selected duration */}
       {date && duration && (
-        <Step title={t("stepTime")} sectionRef={timeStepRef}>
+        <Step title={t("stepTime")} sectionRef={timeStepRef} tourTarget={date && duration && anyFree ? "booking-selection" : undefined} tourComplete={ready}>
           {!anyFree ? (
             <p className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4 text-base text-amber-200">{t("noTimesForDuration", { duration: durationLabel(duration, t) })}</p>
           ) : (
@@ -666,6 +720,8 @@ const BookingManager = () => {
             </div>
           )}
           <button
+            data-tour="book-now"
+            data-tour-complete={checkoutStep !== "closed" ? "true" : "false"}
             onClick={checkoutStep === "payment" ? pay : beginCheckout}
             disabled={!ready || paying}
             className={`block w-full rounded-xl py-3 text-lg font-extrabold transition active:scale-[0.99] ${
@@ -688,6 +744,9 @@ const BookingManager = () => {
                 <h2 className="mt-1 text-2xl font-extrabold">{turf.name}</h2>
               </div>
               <button onClick={() => setCheckoutStep("closed")} className="rounded-full bg-white/10 px-3 py-1 text-gray-300" aria-label={t("common.close")}>&times;</button>
+            </div>
+            <div className="mt-4">
+              <FlowNavigator steps={flowSteps} activeIndex={activeFlowIndex} />
             </div>
             <div className="mt-5 space-y-2 rounded-2xl bg-white/5 p-4 text-base">
               <Row label={t("common.date")} value={fullDate(date)} />

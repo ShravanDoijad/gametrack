@@ -93,7 +93,7 @@ export const Overview = () => {
   return (
     <div className="w-full overflow-x-clip pb-32 text-white sm:pb-36 lg:pb-16">
       {/* Photos: swipe sideways, no library needed */}
-      <div className="mx-auto flex w-full snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-4 [scrollbar-width:none] sm:px-6 lg:grid lg:max-w-7xl lg:grid-cols-3 lg:grid-flow-row lg:overflow-visible lg:px-8">
+      <div data-tour="turf-card" data-tour-route={`/booking/${turf._id}`} className="mx-auto flex w-full snap-x snap-mandatory gap-3 overflow-x-auto px-4 pt-4 [scrollbar-width:none] sm:px-6 lg:grid lg:max-w-7xl lg:grid-cols-3 lg:grid-flow-row lg:overflow-visible lg:px-8">
         {turf.images?.map((src, i) => (
           <img
             key={i}
